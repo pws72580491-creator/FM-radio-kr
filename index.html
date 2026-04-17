@@ -949,27 +949,33 @@ audio.addEventListener('ended', () => { if (current && playing) scheduleRetry();
 audio.addEventListener('error', () => { if (current && !loading && !hls) scheduleRetry(); });
 
 // 전화 등 외부 인터럽트 처리
-// ① pause 이벤트: 외부에서 멈춤 감지
-// ② visibilitychange visible: 화면 복귀 시 재연결 (전화로 멈춘 경우만)
-// ③ play 이벤트: 시스템 자동 재개 차단 (Android 일부 기기)
-let _needReconnect = false;
+// pause 이벤트로 상태 저장 → 화면 복귀 or 시스템 재개 시 재연결
+// _wasPlaying: playStation() 내부에서 초기화되지 않도록 별도 플래그 사용
+let _wasPlaying    = false;   // 전화 전 재생 중이었는지
+let _needReconnect = false;   // 시스템 자동 재개 차단용
 
 audio.addEventListener('pause', () => {
-  if (playing && current && !loading) _needReconnect = true;
+  // 외부 인터럽트(전화 등)로 멈춘 경우만 플래그 세팅
+  if (playing && current && !loading) {
+    _wasPlaying    = true;
+    _needReconnect = true;
+  }
 });
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && _needReconnect && current) {
-    // 전화에 의해 멈춘 상태로 화면 복귀 → 즉시 재연결
+  // 전화로 멈춘 상태에서 화면 복귀 → 라이브 재연결
+  if (document.visibilityState === 'visible' && _wasPlaying && current) {
+    _wasPlaying    = false;
     _needReconnect = false;
     playStation(current);
   }
 });
 
 audio.addEventListener('play', () => {
-  // 시스템이 audio를 자동 재개하려 할 때 차단 (Android 일부)
+  // 시스템이 오디오를 자동 재개하려 할 때 차단 (Android 일부)
   if (_needReconnect && current) {
     _needReconnect = false;
+    _wasPlaying    = false;
     audio.pause();
     playStation(current);
   }

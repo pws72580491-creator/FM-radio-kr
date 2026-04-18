@@ -6,8 +6,8 @@
    · 스트림·Firebase → 항상 네트워크 (캐싱 금지)
    · install 시 외부 CDN 제외 → 설치 실패 방지
 ══════════════════════════════════════════ */
-const CACHE_NAME    = 'kr-radio-v4';
-const CACHE_STATIC  = 'kr-radio-static-v4';
+const CACHE_NAME    = 'kr-radio-v5';
+const CACHE_STATIC  = 'kr-radio-static-v5';
 
 /* 설치 시 캐싱할 로컬 앱 셸만 포함 (외부 CDN 제외) */
 const PRECACHE_ASSETS = [

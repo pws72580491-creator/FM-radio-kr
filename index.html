@@ -987,7 +987,7 @@ function renderStations() {
       const id = parseInt(card.id.replace('card-',''));
       const s  = STATIONS.find(x => x.id === id);
       if (!s) return;
-      const on = !!(current && S.current.id === id);
+      const on = !!(S.current && S.current.id === id);
       card.classList.toggle('active', on);
       card.style.borderColor = on ? s.color : '';
       card.style.boxShadow   = on ? `0 0 16px ${s.color}33` : '';
@@ -1056,7 +1056,7 @@ function clearRetryTimer() {
 function scheduleRetry() {
   if (S.retryCount >= 5) { showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.'); return; }
   S.retryCount++;
-  const delay = Math.min(2000 * Math.pow(2, retryCount - 1), 30000);
+  const delay = Math.min(2000 * Math.pow(2, S.retryCount - 1), 30000);
   showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
   S.retryTimer = setTimeout(() => { if (S.current) playStation(S.current); }, delay);
 }
@@ -1064,7 +1064,7 @@ function scheduleRetry() {
 function retryPlay() {
   if (!S.current) return;
   clearRetryTimer(); S.retryCount = 0;
-  playStation(current, true);
+  playStation(S.current, true);
 }
 
 /* ════════════════════════════════════════
@@ -1090,14 +1090,17 @@ async function resolveStreamUrl(s, forceRefresh) {
 ════════════════════════════════════════ */
 function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
-  S.needReconnect = false; S.wasPlaying = false;   // 채널 변경 시 인터럽트 플래그 초기화
+  S.needReconnect = false; S.wasPlaying = false;   // 인터럽트 플래그 초기화
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
   updateNowPlaying(); renderStations();
   if (S.hls) { S.hls.destroy(); S.hls = null; }
+  // audio.pause/src='' 에 의한 pause 이벤트를 내부 동작으로 표시
   S.userPaused = true;
-  audio.pause(); audio.src = '';
+  audio.pause();
+  S.userPaused = true;  // src='' 할당 후 추가 이벤트 대비 재세팅
+  audio.src = '';
 
   // Firebase 동기화
   if (syncMode && fbReady) {
@@ -1105,16 +1108,16 @@ function playStation(s, forceRefresh = false) {
   }
 
   resolveStreamUrl(s, forceRefresh).then(url => {
-    if (thisCall !== callId) return;
+    if (thisCall !== S.callId) return;
 
     function onOK() {
-      if (thisCall !== callId) return;
+      if (thisCall !== S.callId) return;
       S.playing = true; S.loading = false; S.retryCount = 0;
-      localStorage.setItem('radio_playing', '1');  // 재생 중 상태 저장
+      localStorage.setItem('radio_playing', '1');
       updateNowPlaying(); renderStations(); updateMediaSession();
     }
     function onFail(retry) {
-      if (thisCall !== callId) return;
+      if (thisCall !== S.callId) return;
       S.loading = false; S.playing = false;
       updateNowPlaying(); renderStations();
       if (retry) scheduleRetry();
@@ -1147,7 +1150,7 @@ function playStation(s, forceRefresh = false) {
       S.loading = false; updateNowPlaying(); renderStations();
     }
   }).catch(() => {
-    if (thisCall !== callId) return;
+    if (thisCall !== S.callId) return;
     S.loading = false; S.playing = false;
     updateNowPlaying(); renderStations();
     showError('스트림 주소를 가져오지 못했습니다.');
@@ -1155,7 +1158,7 @@ function playStation(s, forceRefresh = false) {
 }
 
 function togglePlay() {
-  if (!current || S.loading) return;
+  if (!S.current || S.loading) return;
   if (S.playing) {
     clearRetryTimer();
     if (S.hls) S.hls.stopLoad();
@@ -1178,8 +1181,10 @@ audio.addEventListener('error', () => { if (S.current && S.playing && !S.loading
 // ── 외부 인터럽트 처리 ──────────────────────────────
 // pause 이벤트로 상태 저장 → 화면 복귀 or 시스템 재개 시 재연결
 audio.addEventListener('pause', () => {
-  if (S.userPaused) { S.userPaused = false; return; } // 직접 정지는 무시
-  if (S.playing && S.current && !S.loading) {
+  // 직접 정지(userPaused) 또는 로딩 중 내부 pause는 무시
+  if (S.userPaused) { S.userPaused = false; return; }
+  if (S.loading) return;  // 연결 중 내부 pause 이벤트 무시
+  if (S.playing && S.current) {
     S.wasPlaying    = true;
     S.needReconnect = true;
   }
@@ -1276,18 +1281,18 @@ audio.addEventListener('play', () => {
    볼륨
 ════════════════════════════════════════ */
 function handleVolume(val) {
-  volume = parseFloat(val); audio.volume = S.volume;
+  S.volume = parseFloat(val); audio.volume = S.volume;
   const c  = (S.current && S.current.color) || 'var(--red)';
   const sl = document.getElementById('volSlider');
   sl.style.background =
-    `linear-gradient(to right,${c} ${volume*100}%,var(--bg3) ${volume*100}%)`;
+    `linear-gradient(to right,${c} ${S.volume*100}%,var(--bg3) ${S.volume*100}%)`;
 }
 
 /* ════════════════════════════════════════
    MediaSession
 ════════════════════════════════════════ */
 function updateMediaSession() {
-  if (!('mediaSession' in navigator) || !current) return;
+  if (!('mediaSession' in navigator) || !S.current) return;
   navigator.mediaSession.metadata = new MediaMetadata({
     title:  S.current.name,
     artist: `${S.current.freq} · ${S.current.genre}`,
@@ -1547,7 +1552,7 @@ updateFavList();
     const latest = CHANGELOG[0];
     const summary = latest.changes.slice(0, 2).join(', ');
     setTimeout(() => {
-      showToast(\`🆕 \${APP_VERSION} 업데이트: \${summary}\`);
+      showToast(`🆕 ${APP_VERSION} 업데이트: ${summary}`);
     }, 1500);
   }
   localStorage.setItem('radio_seen_version', APP_VERSION);

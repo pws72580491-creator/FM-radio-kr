@@ -305,7 +305,6 @@ input[type=range]::-webkit-slider-thumb {
   animation: spin .8s linear infinite;
   flex-shrink: 0;
 }
-.loading .spinner { display: block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══ 탭 ══ */
@@ -491,7 +490,99 @@ input[type=range]::-webkit-slider-thumb {
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ══ 스크롤바 ══ */
+/* ══ 버전 배지 ══ */
+.version-badge {
+  font-size: 9px; font-family: var(--mono);
+  color: var(--muted); letter-spacing: 1px;
+  cursor: pointer; padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: all .2s; white-space: nowrap;
+  flex-shrink: 0;
+}
+.version-badge:hover { color: var(--text); border-color: var(--muted); }
+
+/* ══ 변경 내역 모달 ══ */
+#changelogModal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 400;
+  align-items: flex-end; justify-content: center;
+  padding-bottom: var(--sab);
+}
+#changelogModal.show { display: flex; }
+.changelog-sheet {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px 24px 0 0;
+  width: 100%; max-width: 520px;
+  max-height: 75vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.changelog-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.changelog-header h2 {
+  font-size: 14px; font-weight: 700;
+  font-family: var(--mono); letter-spacing: 1px;
+  color: var(--text);
+}
+.changelog-close {
+  width: 28px; height: 28px;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--muted);
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.changelog-body {
+  overflow-y: auto; padding: 16px 20px 24px;
+  flex: 1;
+}
+.cl-version {
+  margin-bottom: 20px;
+}
+.cl-ver-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.cl-ver-num {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: var(--red); letter-spacing: 1px;
+}
+.cl-ver-date {
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+}
+.cl-section-label {
+  font-size: 9px; letter-spacing: 2px;
+  font-family: var(--mono); font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px; border-radius: 6px;
+  margin: 6px 0 4px;
+  display: inline-block;
+}
+.cl-section-label.new  { background: rgba(0,200,100,0.12); color: #00c864; }
+.cl-section-label.fix  { background: rgba(233,69,96,0.12);  color: var(--red); }
+.cl-section-label.chg  { background: rgba(245,166,35,0.12); color: var(--amber); }
+.cl-section-label.del  { background: rgba(112,112,160,0.12);color: var(--muted); }
+.cl-items { list-style: none; padding: 0; margin: 0 0 6px; }
+.cl-items li {
+  font-size: 12px; color: var(--text); line-height: 1.7;
+  padding: 2px 0 2px 14px; position: relative;
+}
+.cl-items li::before {
+  content: '·'; position: absolute; left: 4px; color: var(--muted);
+}
+.cl-divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
@@ -506,6 +597,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="logo">
       <div class="logo-icon">FM</div>
       <div class="logo-text">KOREA <span>FM</span></div>
+      <button class="version-badge" onclick="toggleChangelog()" aria-label="변경 내역">v1.4.0</button>
     </div>
     <div class="header-actions">
       <button id="syncBtn" onclick="toggleSync()" aria-label="함께 듣기">
@@ -587,7 +679,142 @@ input[type=range]::-webkit-slider-thumb {
 
 </div><!-- /.app -->
 
-<!-- 닉네임 모달 -->
+<!-- 변경 내역 모달 -->
+<div id="changelogModal">
+  <div class="changelog-sheet">
+    <div class="changelog-header">
+      <h2>📋 변경 내역</h2>
+      <button class="changelog-close" onclick="toggleChangelog()">✕</button>
+    </div>
+    <div class="changelog-body">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.4.0</span>
+          <span class="cl-ver-date">전체 점검 & 버그 수정</span>
+        </div>
+        <span class="cl-section-label fix">버그 수정</span>
+        <ul class="cl-items">
+          <li>수동 정지 후 화면 복귀·블루투스 재연결 시 자동 재개되는 버그 수정</li>
+          <li>잠금화면 ⏸ 후 동일 오작동 수정</li>
+          <li>iOS 네이티브 HLS 재생 실패 시 재시도 없던 문제 수정</li>
+          <li>재생 실패 시 중복 재연결 방지 로직 추가</li>
+        </ul>
+        <span class="cl-section-label chg">코드 정리</span>
+        <ul class="cl-items">
+          <li>사용되지 않던 CSS 클래스 제거</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.3.0</span>
+          <span class="cl-ver-date">블루투스 자동 재연결</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>블루투스 재연결 시 라이브 자동 재연결 (Android·iOS)</li>
+          <li>devicechange 이벤트 감지 (Android Chrome)</li>
+          <li>AudioContext statechange 감지 (iOS Safari)</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.2.2</span>
+          <span class="cl-ver-date">전화 인터럽트 처리 개선</span>
+        </div>
+        <span class="cl-section-label fix">버그 수정</span>
+        <ul class="cl-items">
+          <li>통화 후 방송 종료되는 버그 수정 (_wasPlaying 플래그 분리)</li>
+          <li>정지 후 재생 시 버퍼 재생 제거 → 항상 라이브 시점 재연결</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.2.1</span>
+          <span class="cl-ver-date">앱 강제 종료 후 자동 재개</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>통화 중 Android가 앱을 종료해도 복귀 시 자동 재생</li>
+          <li>재생 상태를 localStorage에 저장·복원</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.2.0</span>
+          <span class="cl-ver-date">전화 인터럽트 처리</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>전화 종료 후 라이브 시점 자동 재연결</li>
+          <li>버퍼에 쌓인 과거 방송 재생 차단</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.1.2</span>
+          <span class="cl-ver-date">극동방송 백그라운드 재생</span>
+        </div>
+        <span class="cl-section-label fix">버그 수정</span>
+        <ul class="cl-items">
+          <li>서울극동방송 백그라운드 전환 시 끊김 수정</li>
+          <li>동적 스트림 URL 캐시로 재연결 속도 개선</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.1.1</span>
+          <span class="cl-ver-date">함께 듣기</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>Firebase 기반 실시간 채널 공유</li>
+          <li>닉네임 표시, 채널 변경 시 토스트 알림</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.1.0</span>
+          <span class="cl-ver-date">스와이프 전환</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>전체채널 ↔ 즐겨찾기 스와이프 전환</li>
+        </ul>
+      </div>
+      <hr class="cl-divider">
+
+      <div class="cl-version">
+        <div class="cl-ver-tag">
+          <span class="cl-ver-num">v1.0.0</span>
+          <span class="cl-ver-date">최초 출시</span>
+        </div>
+        <span class="cl-section-label new">신규</span>
+        <ul class="cl-items">
+          <li>15개 채널 HLS 스트리밍</li>
+          <li>즐겨찾기, 다크/라이트 테마</li>
+          <li>MediaSession, PWA 설치 지원</li>
+          <li>자동 재연결 (지수 백오프, 최대 5회)</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="nickModalBg">
   <div class="modal">
     <h3>🔗 함께 듣기</h3>
@@ -890,16 +1117,40 @@ function playStation(s, forceRefresh = false) {
     function onFail(retry) {
       if (thisCall !== callId) return;
       loading = false; playing = false;
+      _wasPlaying = false;   // 재시도 중 중복 재연결 방지
       updateNowPlaying(); renderStations();
       if (retry) scheduleRetry();
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      hls = new window.Hls({ maxBufferLength: 15, maxMaxBufferLength: 30 });
+      hls = new window.Hls({
+        // 라이브 엣지 고정 설정
+        liveSyncDurationCount:      1,   // 라이브 엣지에서 1세그먼트 이내 유지
+        liveMaxLatencyDurationCount: 2,  // 2세그먼트 이상 지연 시 자동 점프
+        maxBufferLength:             8,  // 버퍼 최소화 (기본 30s → 8s)
+        maxMaxBufferLength:          12,
+        liveBackBufferLength:        0,  // 과거 버퍼 유지 안 함
+      });
       hls.loadSource(url); hls.attachMedia(audio);
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = volume;
+        // 라이브 엣지로 즉시 이동
+        if (audio.seekable && audio.seekable.length > 0) {
+          audio.currentTime = audio.seekable.end(audio.seekable.length - 1);
+        }
         audio.play().then(onOK).catch(() => onFail(false));
+      });
+      // 라이브 지연 누적 시 자동 복귀
+      hls.on(window.Hls.Events.FRAG_CHANGED, () => {
+        if (!playing) return;
+        if (audio.seekable && audio.seekable.length > 0) {
+          const liveEdge = audio.seekable.end(audio.seekable.length - 1);
+          const lag = liveEdge - audio.currentTime;
+          if (lag > 8) {
+            // 8초 이상 뒤처지면 라이브 엣지로 점프
+            audio.currentTime = liveEdge - 1;
+          }
+        }
       });
       hls.on(window.Hls.Events.ERROR, (_, d) => {
         if (d.fatal) {
@@ -912,7 +1163,14 @@ function playStation(s, forceRefresh = false) {
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
       audio.src = url; audio.volume = volume;
-      audio.play().then(onOK).catch(() => onFail(false));
+      // iOS 네이티브: 재생 가능해지면 라이브 엣지로 이동
+      audio.addEventListener('canplay', function seekLive() {
+        if (audio.seekable && audio.seekable.length > 0) {
+          audio.currentTime = audio.seekable.end(audio.seekable.length - 1);
+        }
+        audio.removeEventListener('canplay', seekLive);
+      });
+      audio.play().then(onOK).catch(() => onFail(true));
     } else {
       showError('이 브라우저는 HLS를 지원하지 않습니다.');
       loading = false; updateNowPlaying(); renderStations();
@@ -923,13 +1181,13 @@ function playStation(s, forceRefresh = false) {
 function togglePlay() {
   if (!current) return;
   if (playing) {
+    playing = false;    // ← 먼저 false로 설정해야 pause 이벤트 핸들러가 오작동하지 않음
     clearRetryTimer();
     if (hls) hls.stopLoad();
-    audio.pause(); playing = false;
+    audio.pause();
     localStorage.setItem('radio_playing', '0');
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
-    // 버퍼 재개 대신 항상 라이브 시점으로 새 연결
     playStation(current);
   }
 }
@@ -1068,9 +1326,10 @@ function updateMediaSession() {
 
   // 잠금화면/알림 ⏸ → 정지 + 상태 저장
   navigator.mediaSession.setActionHandler('pause', () => {
+    playing = false;    // ← 먼저 false로 설정
     clearRetryTimer();
     if (hls) hls.stopLoad();
-    audio.pause(); playing = false;
+    audio.pause();
     localStorage.setItem('radio_playing', '0');
     updateNowPlaying(); renderStations(); updateMediaSession();
   });
@@ -1085,6 +1344,18 @@ function updateMediaSession() {
   });
   navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
 }
+
+/* ════════════════════════════════════════
+   변경 내역 모달
+════════════════════════════════════════ */
+function toggleChangelog() {
+  const el = document.getElementById('changelogModal');
+  el.classList.toggle('show');
+}
+// 배경 클릭 시 닫기
+document.getElementById('changelogModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
 
 /* ════════════════════════════════════════
    테마

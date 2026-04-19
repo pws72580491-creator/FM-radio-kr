@@ -8,9 +8,9 @@ const CACHE_NAME   = 'kr-radio-v5';
 const CACHE_STATIC = 'kr-radio-static-v5';
 
 const PRECACHE = [
-  './',
-  './index.html',
-  './manifest.json',
+  '/',
+  '/index.html',
+  '/manifest.json',
 ];
 
 /* 설치 */
@@ -42,7 +42,8 @@ function isStream(url) {
          url.includes('gstatic.com/firebasejs') || url.includes('googleapis.com/firebase');
 }
 function isAppShell(url) {
-  return url.endsWith('/') || url.includes('index.html') || url.includes('manifest.json');
+  const path = new URL(url).pathname;
+  return path === '/' || path === '/index.html' || path === '/manifest.json';
 }
 function isStaticAsset(url) {
   return url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com') ||
@@ -70,7 +71,7 @@ self.addEventListener('fetch', e => {
           return res;
         })
         .catch(() => caches.match(e.request)
-          .then(cached => cached || caches.match('./index.html'))
+          .then(cached => cached || caches.match('/index.html'))
         )
     );
     return;
@@ -101,7 +102,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
         }
         return res;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => caches.match('/index.html'));
     })
   );
 });

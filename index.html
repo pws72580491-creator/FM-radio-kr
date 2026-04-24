@@ -1,4 +1,65 @@
 <!DOCTYPE html>
+<!--
+  ╔══════════════════════════════════════════════════════╗
+  ║           KOREA FM 라디오 — 버전 히스토리              ║
+  ╠══════════════════════════════════════════════════════╣
+  ║ v1.0.0  최초 배포 (2025-01-01)                       ║
+  ║                                                      ║
+  ║ v1.1.0  버그 수정 1차 (2025-04-18)                   ║
+  ║  · audio.error 오탐 방지 (playing 조건 추가)           ║
+  ║  · 직접 일시정지 시 _wasPlaying 오염 수정              ║
+  ║  · Firebase 자기 자신 채널 변경 무시                   ║
+  ║  · AM 주파수 뱃지 파싱 오류 수정 (AM 1305→1305)       ║
+  ║  · 극동방송 URL 파싱 실패 시 콘솔 경고 추가            ║
+  ║                                                      ║
+  ║ v1.2.0  버그 수정 2차 (2025-04-18)                   ║
+  ║  · _userPaused 플래그 도입 (pause 오탐 방지)           ║
+  ║  · MediaSession pause 핸들러 플래그 초기화 누락 수정   ║
+  ║  · playStation() 진입 시 인터럽트 플래그 초기화        ║
+  ║  · toggleFav querySelector → data-id 방식 교체        ║
+  ║  · resolveStreamUrl .catch() 누락 추가                ║
+  ║                                                      ║
+  ║ v1.3.0  버그 수정 3차 (2025-04-18)                   ║
+  ║  · 채널 전환 시 audio.pause() 전 _userPaused 세팅     ║
+  ║  · renderStations() 중복 ID → 클래스 선택자 교체       ║
+  ║  · togglePlay() 로딩 중 중복 호출 방어                 ║
+  ║  · confirmSync() Firebase 리스너 이중 등록 방지        ║
+  ║  · playStation() 진입 시 retryCount 초기화             ║
+  ║                                                      ║
+  ║ v1.4.0  버그 수정 4차 (2025-04-19)                   ║
+  ║  · let TDZ 크래시: 인터럽트 플래그 선언 위치 수정      ║
+  ║  · play 리스너 무한루프 방지: _userPaused 세팅 추가    ║
+  ║  · innerHTML XSS 방어: esc() 함수 적용                ║
+  ║                                                      ║
+  ║ v1.5.0  버그 수정 5차 (2025-04-19)                   ║
+  ║  · MediaSession pause 핸들러 재귀 호출 제거            ║
+  ║  · HLS/native play() 실패 시 에러 메시지 및 재시도     ║
+  ║                                                      ║
+  ║ v1.6.0  기능 개선 (2025-04-19)                       ║
+  ║  · AppState 객체 도입 — 전역 상태 변수 통합 관리       ║
+  ║  · 업데이트 토스트 — 앱 실행 시 새 버전 자동 안내      ║
+  ║  · Sentry 에러 모니터링 연동 준비 (DSN 설정 필요)      ║
+  ║  · sw.js 개선 — Network First·SWR 전략 적용           ║
+  ║                                                      ║
+  ║ v1.6.1  긴급 수정 (2025-04-19)                       ║
+  ║                                                      ║
+  ║ v1.6.2  버그 수정 (2025-04-19)                       ║
+  ║  · handleVolume NaN 방어 및 볼륨 범위 0~1 강제         ║
+  ║                                                      ║
+  ║ v1.6.3  개선 (2025-04-19)                            ║
+  ║  · handleVolume volSlider DOM 존재 방어 추가           ║
+  ║                                                      ║
+  ║ v1.6.4  개선 (2025-04-19)                            ║
+  ║  · 잠금화면 정지 상태에서 ▶·⏮·⏭ 버튼 무반응 수정    ║
+  ║  · updateMediaSession() 항상 핸들러 등록              ║
+  ║  · onFail·catch 경로 updateMediaSession() 추가        ║
+  ║  · 로딩 중 playbackState=playing 으로 컨트롤 유지      ║
+  ║  · Sentry 미설정 스크립트로 채널 목록 미표시 수정      ║
+  ║  · scheduleRetry retryCount 미치환 (끊김 반복 원인)    ║
+  ║  · callId 미치환 (채널 전환 경쟁 방지 실패 원인)       ║
+  ║  · retryPlay/togglePlay current 잔존 참조 수정         ║
+  ╚══════════════════════════════════════════════════════╝
+-->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -6,12 +67,14 @@
 <title>KOREA FM 라디오</title>
 
 <!-- PWA -->
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#0d0d1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FM 라디오">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<meta name="msapplication-TileColor" content="#0d0d1a">
+<meta name="msapplication-TileImage" content="./icons/icon-144.png">
 
 <!-- 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,263 +84,554 @@
 <!-- FOUC 방지 -->
 <script>
 (function(){
-  if(localStorage.getItem('radio_theme')==='light')
-    document.documentElement.setAttribute('data-theme','light');
+  var t = localStorage.getItem('radio_theme');
+  if (t === 'light') document.documentElement.setAttribute('data-theme','light');
 })();
 </script>
 
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* ══ 리셋 & 변수 ══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root{
-  --bg:#0d0d1a;--bg2:#131327;--bg3:#1a1a35;--panel:#1e1e3a;
-  --border:rgba(255,255,255,0.07);
-  --red:#e94560;--red-glow:rgba(233,69,96,0.35);--amber:#f5a623;
-  --text:#e8e8f0;--muted:#7070a0;--np-end:#21213f;
-  --hdr-bg:rgba(13,13,26,0.92);--tab-bdr:rgba(255,255,255,0.15);
-  --err-bg:#2a1010;--err-bdr:#5a2020;--err-txt:#ee8888;
-  --mono:'Orbitron',monospace;--kr:'Noto Sans KR',sans-serif;
-  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
-}
-[data-theme="light"]{
-  --bg:#f0f0f5;--bg2:#e4e4ee;--bg3:#d8d8e8;--panel:#fff;
-  --border:rgba(0,0,0,0.08);--red-glow:rgba(233,69,96,0.2);
-  --text:#1a1a2e;--muted:#7070a0;--np-end:#eaeaf8;
-  --hdr-bg:rgba(240,240,245,0.92);--tab-bdr:rgba(0,0,0,0.12);
-  --err-bg:#fff0f0;--err-bdr:#f0c0c0;--err-txt:#c0392b;
-}
-[data-theme="light"] .station-card:hover{background:#fff}
-[data-theme="light"] input[type=range]{background:var(--bg3)}
-
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--kr);overflow-x:hidden}
-
-/* 레이아웃 */
-.app{
-  display:flex;flex-direction:column;min-height:100dvh;
-  max-width:520px;margin:0 auto;
-  padding-top:var(--sat);
-  padding-bottom:calc(var(--sab) + 80px);
+:root {
+  --bg:        #0d0d1a;
+  --bg2:       #131327;
+  --bg3:       #1a1a35;
+  --panel:     #1e1e3a;
+  --border:    rgba(255,255,255,0.07);
+  --red:       #e94560;
+  --red-glow:  rgba(233,69,96,0.35);
+  --amber:     #f5a623;
+  --text:      #e8e8f0;
+  --muted:     #7070a0;
+  --np-end:    #21213f;
+  --hdr-bg:    rgba(13,13,26,0.92);
+  --tab-bdr:   rgba(255,255,255,0.15);
+  --err-bg:    #2a1010;
+  --err-bdr:   #5a2020;
+  --err-txt:   #ee8888;
+  --mono:      'Orbitron', monospace;
+  --kr:        'Noto Sans KR', sans-serif;
+  --sat:       env(safe-area-inset-top,    0px);
+  --sab:       env(safe-area-inset-bottom, 0px);
 }
 
-/* 헤더 */
-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 18px 13px;border-bottom:1px solid var(--border);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  position:sticky;top:0;z-index:100;background:var(--hdr-bg);
+[data-theme="light"] {
+  --bg:       #f0f0f5;
+  --bg2:      #e4e4ee;
+  --bg3:      #d8d8e8;
+  --panel:    #ffffff;
+  --border:   rgba(0,0,0,0.08);
+  --red-glow: rgba(233,69,96,0.2);
+  --text:     #1a1a2e;
+  --muted:    #7070a0;
+  --np-end:   #eaeaf8;
+  --hdr-bg:   rgba(240,240,245,0.92);
+  --tab-bdr:  rgba(0,0,0,0.12);
+  --err-bg:   #fff0f0;
+  --err-bdr:  #f0c0c0;
+  --err-txt:  #c0392b;
 }
-.logo{display:flex;align-items:center;gap:10px}
-.logo-icon{
-  width:34px;height:34px;background:var(--red);border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:11px;font-weight:900;
-  box-shadow:0 0 16px var(--red-glow);flex-shrink:0;
+[data-theme="light"] .station-card:hover { background: #fff; }
+[data-theme="light"] input[type=range]   { background: var(--bg3); }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--kr);
+  overflow-x: hidden;
 }
-.logo-text{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:2px}
-.logo-text span{color:var(--red)}
-.header-actions{display:flex;align-items:center;gap:8px}
+
+/* ══ 레이아웃 ══ */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: var(--sat);
+  padding-bottom: calc(var(--sab) + 80px);
+}
+
+/* ══ 헤더 ══ */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 13px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--hdr-bg);
+}
+
+.logo { display: flex; align-items: center; gap: 10px; }
+
+.logo-icon {
+  width: 34px; height: 34px;
+  background: var(--red);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 900;
+  box-shadow: 0 0 16px var(--red-glow);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-family: var(--mono);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px;
+}
+.logo-text span { color: var(--red); }
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
 
 /* 함께 듣기 버튼 */
-#syncBtn{
-  display:flex;align-items:center;gap:5px;padding:5px 11px;
-  border-radius:20px;border:1px solid var(--border);background:var(--panel);
-  color:var(--muted);font-size:11px;font-family:var(--kr);
-  cursor:pointer;transition:all .2s;white-space:nowrap;
+#syncBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--kr);
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
 }
-#syncBtn.on{background:rgba(0,200,100,0.12);border-color:rgba(0,200,100,0.4);color:#00c864}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
-#syncBtn.on .sync-dot{box-shadow:0 0 6px #00c864;animation:blink 1.4s ease-in-out infinite}
+#syncBtn.on {
+  background: rgba(0,200,100,0.12);
+  border-color: rgba(0,200,100,0.4);
+  color: #00c864;
+}
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+#syncBtn.on .sync-dot {
+  box-shadow: 0 0 6px #00c864;
+  animation: blink 1.4s ease-in-out infinite;
+}
 
-/* 테마·설치 버튼 */
-#themeBtn{
-  width:34px;height:34px;border-radius:50%;border:1px solid var(--border);
-  background:var(--panel);cursor:pointer;font-size:16px;
-  display:flex;align-items:center;justify-content:center;
-  transition:transform .2s;flex-shrink:0;
+/* 테마 버튼 */
+#themeBtn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s;
+  flex-shrink: 0;
 }
-#themeBtn:hover{transform:rotate(20deg)}
-#installBtn{
-  display:none;align-items:center;gap:6px;background:var(--panel);
-  border:1px solid var(--border);color:var(--amber);
-  font-family:var(--kr);font-size:12px;padding:6px 12px;
-  border-radius:20px;cursor:pointer;transition:background .2s,color .2s,border-color .2s;
-}
-#installBtn:hover{background:var(--red);color:#fff;border-color:var(--red)}
+#themeBtn:hover { transform: rotate(20deg); }
 
-/* Now Playing */
-.now-playing{
-  margin:16px;
-  background:linear-gradient(135deg,var(--panel) 0%,var(--np-end) 100%);
-  border:1px solid var(--border);border-radius:20px;
-  padding:20px;position:relative;overflow:hidden;
+/* 설치 버튼 */
+#installBtn {
+  display: none;
+  align-items: center; gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--amber);
+  font-family: var(--kr);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .2s, color .2s, border-color .2s;
 }
-.now-playing::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 80% 20%,var(--red-glow) 0%,transparent 60%);
-  pointer-events:none;
+#installBtn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ══ Now Playing ══ */
+.now-playing {
+  margin: 16px;
+  background: linear-gradient(135deg, var(--panel) 0%, var(--np-end) 100%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
-.np-label{font-size:10px;letter-spacing:3px;color:var(--red);font-family:var(--mono);font-weight:700;text-transform:uppercase;margin-bottom:10px}
-.np-station{font-family:var(--mono);font-size:22px;font-weight:900;letter-spacing:1px;line-height:1.1;margin-bottom:4px;min-height:28px}
-.np-freq{font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:16px;min-height:18px}
+.now-playing::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 80% 20%, var(--red-glow) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.np-label {
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--red);
+  font-family: var(--mono); font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.np-station {
+  font-family: var(--mono);
+  font-size: 22px; font-weight: 900;
+  letter-spacing: 1px; line-height: 1.1;
+  margin-bottom: 4px; min-height: 28px;
+}
+
+.np-freq {
+  font-family: var(--mono);
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 16px; min-height: 18px;
+}
 
 /* 파형 */
-.waveform{display:flex;align-items:flex-end;gap:3px;height:36px;margin-bottom:18px}
-.wave-bar{width:4px;background:var(--red);border-radius:2px;opacity:0.3;transition:opacity .3s}
-.playing .wave-bar{opacity:1}
-.paused  .wave-bar{animation-play-state:paused}
-.wave-bar:nth-child(1) {animation:wave 1.0s ease-in-out infinite}
-.wave-bar:nth-child(2) {animation:wave 1.3s ease-in-out infinite 0.10s}
-.wave-bar:nth-child(3) {animation:wave 0.8s ease-in-out infinite 0.20s}
-.wave-bar:nth-child(4) {animation:wave 1.1s ease-in-out infinite 0.05s}
-.wave-bar:nth-child(5) {animation:wave 0.9s ease-in-out infinite 0.30s}
-.wave-bar:nth-child(6) {animation:wave 1.4s ease-in-out infinite 0.15s}
-.wave-bar:nth-child(7) {animation:wave 1.0s ease-in-out infinite 0.25s}
-.wave-bar:nth-child(8) {animation:wave 0.7s ease-in-out infinite 0.10s}
-.wave-bar:nth-child(9) {animation:wave 1.2s ease-in-out infinite 0.35s}
-.wave-bar:nth-child(10){animation:wave 0.9s ease-in-out infinite 0.05s}
-.wave-bar:nth-child(11){animation:wave 1.1s ease-in-out infinite 0.20s}
-.wave-bar:nth-child(12){animation:wave 0.8s ease-in-out infinite 0.40s}
-@keyframes wave{0%,100%{height:6px}50%{height:32px}}
+.waveform {
+  display: flex; align-items: flex-end;
+  gap: 3px; height: 36px;
+  margin-bottom: 18px;
+}
+.wave-bar {
+  width: 4px; background: var(--red);
+  border-radius: 2px; opacity: 0.3;
+  transition: opacity .3s;
+}
+.playing .wave-bar { opacity: 1; }
+.paused  .wave-bar { animation-play-state: paused; }
+
+.wave-bar:nth-child(1)  { animation: wave 1.0s ease-in-out infinite; }
+.wave-bar:nth-child(2)  { animation: wave 1.3s ease-in-out infinite 0.1s; }
+.wave-bar:nth-child(3)  { animation: wave 0.8s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(4)  { animation: wave 1.1s ease-in-out infinite 0.05s; }
+.wave-bar:nth-child(5)  { animation: wave 0.9s ease-in-out infinite 0.3s; }
+.wave-bar:nth-child(6)  { animation: wave 1.4s ease-in-out infinite 0.15s; }
+.wave-bar:nth-child(7)  { animation: wave 1.0s ease-in-out infinite 0.25s; }
+.wave-bar:nth-child(8)  { animation: wave 0.7s ease-in-out infinite 0.1s; }
+.wave-bar:nth-child(9)  { animation: wave 1.2s ease-in-out infinite 0.35s; }
+.wave-bar:nth-child(10) { animation: wave 0.9s ease-in-out infinite 0.05s; }
+.wave-bar:nth-child(11) { animation: wave 1.1s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(12) { animation: wave 0.8s ease-in-out infinite 0.4s; }
+
+@keyframes wave { 0%,100%{height:6px} 50%{height:32px} }
 
 /* 컨트롤 */
-.controls{display:flex;align-items:center;gap:14px}
-.btn-play{
-  width:52px;height:52px;border-radius:50%;background:var(--red);border:none;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;box-shadow:0 0 24px var(--red-glow);transition:transform .15s;
-}
-.btn-play:active{transform:scale(0.93)}
-.btn-play svg{fill:white;width:22px;height:22px}
-.volume-wrap{flex:1;display:flex;align-items:center;gap:10px}
-.vol-icon{color:var(--muted);font-size:16px;flex-shrink:0}
-input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--bg3);border-radius:2px;outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--red);cursor:pointer;box-shadow:0 0 8px var(--red-glow)}
-.np-status{font-size:11px;color:var(--muted);margin-top:12px;min-height:14px;font-family:var(--mono);letter-spacing:0.5px}
-.np-status.live{color:var(--red)}
-.spinner{display:none;width:18px;height:18px;border:2px solid rgba(233,69,96,0.3);border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
-.loading .spinner{display:block}
-@keyframes spin{to{transform:rotate(360deg)}}
+.controls { display: flex; align-items: center; gap: 14px; }
 
-/* 탭 */
-.tabs{display:flex;gap:8px;padding:10px 16px 4px}
-.tab-btn{
-  flex:1;padding:8px 0;border-radius:10px;
-  border:1px solid var(--border);background:var(--bg2);
-  color:var(--muted);font-size:12px;font-family:var(--kr);font-weight:500;
-  cursor:pointer;transition:all .2s;
+.btn-play {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--red); border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 24px var(--red-glow);
+  transition: transform .15s;
 }
-.tab-btn.active{background:var(--panel);border-color:var(--tab-bdr);color:var(--text)}
+.btn-play:active { transform: scale(0.93); }
+.btn-play svg { fill: white; width: 22px; height: 22px; }
 
-/* 에러박스 */
-.error-box{
-  margin:6px 16px;padding:10px 14px;
-  background:var(--err-bg);border:1px solid var(--err-bdr);
-  border-radius:10px;font-size:11px;color:var(--err-txt);
-  align-items:center;justify-content:space-between;gap:10px;
-}
-.error-retry-btn{
-  flex-shrink:0;padding:4px 12px;border-radius:20px;
-  border:1px solid var(--err-txt);background:transparent;color:var(--err-txt);
-  font-size:11px;cursor:pointer;transition:all .15s;
-}
-.error-retry-btn:hover{background:var(--err-txt);color:var(--panel)}
+.volume-wrap { flex: 1; display: flex; align-items: center; gap: 10px; }
+.vol-icon { color: var(--muted); font-size: 16px; flex-shrink: 0; }
 
-/* 채널 목록 */
-.section-label{padding:6px 20px 4px;font-size:10px;letter-spacing:3px;color:var(--muted);font-family:var(--mono);text-transform:uppercase}
-.swipe-viewport{overflow:hidden;width:100%}
-.swipe-track{display:flex;width:200%;transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);will-change:transform}
-.swipe-panel{width:50%;flex-shrink:0;min-width:0}
-.station-list{display:flex;flex-direction:column;gap:1px;padding:0 12px}
-.station-card{
-  display:flex;align-items:center;gap:14px;padding:13px 14px;
-  border-radius:14px;cursor:pointer;transition:background .15s;
-  border:1px solid transparent;position:relative;
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%; height: 4px;
+  background: var(--bg3); border-radius: 2px; outline: none;
 }
-.station-card:hover{background:var(--panel)}
-.station-card.active{background:var(--panel);border-color:var(--border)}
-.station-card.active::before{
-  content:'';position:absolute;left:0;top:20%;bottom:20%;
-  width:3px;background:var(--red);border-radius:0 2px 2px 0;
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%; background: var(--red);
+  cursor: pointer; box-shadow: 0 0 8px var(--red-glow);
 }
-.st-badge{
-  width:44px;height:44px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:9px;font-weight:700;
-  flex-shrink:0;text-align:center;line-height:1.2;
-}
-.st-info{flex:1;min-width:0}
-.st-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-desc{font-size:11px;color:var(--muted);margin-top:1px;font-family:var(--mono);letter-spacing:0.5px}
-.st-freq{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--muted);flex-shrink:0}
-.station-card.active .st-freq{color:var(--red)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);animation:blink 1.4s ease-in-out infinite;flex-shrink:0;opacity:0}
-.station-card.active .live-dot{opacity:1}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-.s-fav-btn{
-  width:26px;height:26px;border-radius:50%;border:none;
-  background:transparent;font-size:14px;cursor:pointer;color:var(--muted);
-  display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;
-}
-.s-fav-btn:hover{color:var(--amber);transform:scale(1.15)}
-.s-fav-btn.on{color:var(--amber)}
-.fav-empty{display:none;text-align:center;padding:48px 20px;color:var(--muted)}
 
-/* 닉네임 모달 */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;align-items:center;justify-content:center}
-.modal-bg.show{display:flex}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:min(340px,90vw);display:flex;flex-direction:column;gap:14px}
-.modal h3{font-size:15px;font-weight:600;color:var(--text)}
-.modal p{font-size:12px;color:var(--muted);line-height:1.6}
-.modal input{width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--kr);font-size:14px;outline:none}
-.modal input:focus{border-color:#00c864}
-.modal-btns{display:flex;gap:8px}
-.modal-btns button{flex:1;padding:10px;border-radius:10px;border:none;font-family:var(--kr);font-size:13px;cursor:pointer;transition:opacity .15s}
-.modal-btns button:hover{opacity:.85}
-.btn-cancel{background:var(--bg3);color:var(--muted)}
-.btn-confirm{background:#00c864;color:#fff;font-weight:600}
-
-/* 토스트 */
-#toast{
-  position:fixed;bottom:calc(var(--sab) + 90px);left:50%;
-  transform:translateX(-50%) translateY(20px);
-  background:var(--panel);border:1px solid rgba(0,200,100,0.35);
-  color:var(--text);font-size:12px;font-family:var(--kr);
-  padding:9px 18px;border-radius:20px;white-space:nowrap;
-  pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;
-  z-index:200;box-shadow:0 4px 20px rgba(0,0,0,0.3);
+.np-status {
+  font-size: 11px; color: var(--muted);
+  margin-top: 12px; min-height: 14px;
+  font-family: var(--mono); letter-spacing: 0.5px;
 }
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.np-status.live  { color: var(--red); }
+.np-status.error { color: var(--amber); }
 
-/* 스크롤바 */
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
-
-/* 버전 뱃지 */
-#versionBadge{
-  position:fixed;bottom:calc(var(--sab) + 6px);right:12px;
-  font-family:var(--mono);font-size:9px;color:var(--muted);
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:8px;padding:3px 7px;cursor:pointer;z-index:150;
-  transition:color .2s,border-color .2s;letter-spacing:1px;
+.spinner {
+  display: none;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(233,69,96,0.3);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  flex-shrink: 0;
 }
-#versionBadge:hover{color:var(--red);border-color:var(--red-glow)}
+.loading .spinner { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* 변경이력 시트 */
-.changelog-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:400;align-items:flex-end;justify-content:center}
-.changelog-bg.show{display:flex}
-.changelog-sheet{background:var(--panel);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px calc(var(--sab) + 20px);width:min(520px,100%);max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
-.changelog-header{display:flex;align-items:center;justify-content:space-between}
-.changelog-title{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--red)}
-.changelog-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.changelog-entry{display:flex;flex-direction:column;gap:6px}
-.changelog-ver{display:flex;align-items:center;gap:8px}
-.changelog-ver-badge{font-family:var(--mono);font-size:11px;font-weight:700;background:var(--red);color:#fff;padding:2px 8px;border-radius:6px}
-.changelog-ver-badge.old{background:var(--bg3);color:var(--muted)}
-.changelog-date{font-size:10px;color:var(--muted);font-family:var(--mono)}
-.changelog-list{display:flex;flex-direction:column;gap:3px;padding-left:4px}
-.changelog-item{font-size:11px;color:var(--text);line-height:1.6;display:flex;gap:6px}
-.changelog-item::before{content:'·';color:var(--red);flex-shrink:0}
+/* ══ 탭 ══ */
+.tabs { display: flex; gap: 8px; padding: 10px 16px 4px; }
+.tab-btn {
+  flex: 1; padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
+  font-size: 12px; font-family: var(--kr); font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.tab-btn.active {
+  background: var(--panel);
+  border-color: var(--tab-bdr);
+  color: var(--text);
+}
+
+/* ══ 에러 박스 ══ */
+.error-box {
+  margin: 6px 16px;
+  padding: 10px 14px;
+  background: var(--err-bg);
+  border: 1px solid var(--err-bdr);
+  border-radius: 10px;
+  font-size: 11px; color: var(--err-txt);
+  align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.error-retry-btn {
+  flex-shrink: 0; padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--err-txt);
+  background: transparent; color: var(--err-txt);
+  font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.error-retry-btn:hover { background: var(--err-txt); color: var(--panel); }
+
+/* ══ 채널 목록 ══ */
+.section-label {
+  padding: 6px 20px 4px;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--muted);
+  font-family: var(--mono); text-transform: uppercase;
+}
+
+.swipe-viewport { overflow: hidden; width: 100%; }
+.swipe-track {
+  display: flex; width: 200%;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  will-change: transform;
+}
+.swipe-panel { width: 50%; flex-shrink: 0; min-width: 0; }
+
+.station-list {
+  display: flex; flex-direction: column;
+  gap: 1px; padding: 0 12px;
+}
+
+.station-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .15s;
+  border: 1px solid transparent;
+  position: relative;
+}
+.station-card:hover { background: var(--panel); }
+.station-card.active {
+  background: var(--panel);
+  border-color: var(--border);
+}
+.station-card.active::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; background: var(--red);
+  border-radius: 0 2px 2px 0;
+}
+
+.st-badge {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  flex-shrink: 0; text-align: center; line-height: 1.2;
+}
+
+.st-info { flex: 1; min-width: 0; }
+.st-name {
+  font-size: 14px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.st-desc {
+  font-size: 11px; color: var(--muted); margin-top: 1px;
+  font-family: var(--mono); letter-spacing: 0.5px;
+}
+
+.st-freq {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--muted); flex-shrink: 0;
+}
+.station-card.active .st-freq { color: var(--red); }
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red); box-shadow: 0 0 6px var(--red);
+  animation: blink 1.4s ease-in-out infinite;
+  flex-shrink: 0; opacity: 0;
+}
+.station-card.active .live-dot { opacity: 1; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.s-fav-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%; border: none;
+  background: transparent; font-size: 14px;
+  cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.s-fav-btn:hover { color: var(--amber); transform: scale(1.15); }
+.s-fav-btn.on    { color: var(--amber); }
+
+.fav-empty {
+  display: none;
+  text-align: center; padding: 48px 20px;
+  color: var(--muted);
+}
+
+/* ══ 닉네임 모달 ══ */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+  align-items: center; justify-content: center;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: min(340px,90vw);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal h3  { font-size: 15px; font-weight: 600; color: var(--text); }
+.modal p   { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.modal input {
+  width: 100%; padding: 10px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text); font-family: var(--kr); font-size: 14px;
+  outline: none;
+}
+.modal input:focus { border-color: #00c864; }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns button {
+  flex: 1; padding: 10px; border-radius: 10px;
+  border: none; font-family: var(--kr); font-size: 13px;
+  cursor: pointer; transition: opacity .15s;
+}
+.modal-btns button:hover { opacity: .85; }
+.btn-cancel  { background: var(--bg3); color: var(--muted); }
+.btn-confirm { background: #00c864; color: #fff; font-weight: 600; }
+
+/* ══ 토스트 ══ */
+#toast {
+  position: fixed;
+  bottom: calc(var(--sab) + 90px);
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--panel);
+  border: 1px solid rgba(0,200,100,0.35);
+  color: var(--text); font-size: 12px; font-family: var(--kr);
+  padding: 9px 18px; border-radius: 20px;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .3s, transform .3s;
+  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══ 스크롤바 ══ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+/* ══ 버전 모달 ══ */
+#versionBadge {
+  position: fixed;
+  bottom: calc(var(--sab) + 6px);
+  right: 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 7px;
+  cursor: pointer;
+  z-index: 150;
+  transition: color .2s, border-color .2s;
+  letter-spacing: 1px;
+}
+#versionBadge:hover { color: var(--red); border-color: var(--red-glow); }
+
+.changelog-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 400;
+  align-items: flex-end;
+  justify-content: center;
+}
+.changelog-bg.show { display: flex; }
+.changelog-sheet {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(var(--sab) + 20px);
+  width: min(520px, 100%);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.changelog-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.changelog-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.changelog-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--muted); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.changelog-entry { display: flex; flex-direction: column; gap: 6px; }
+.changelog-ver {
+  display: flex; align-items: center; gap: 8px;
+}
+.changelog-ver-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  background: var(--red); color: #fff;
+  padding: 2px 8px; border-radius: 6px;
+}
+.changelog-ver-badge.old {
+  background: var(--bg3); color: var(--muted);
+}
+.changelog-date {
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+}
+.changelog-list {
+  display: flex; flex-direction: column; gap: 3px;
+  padding-left: 4px;
+}
+.changelog-item {
+  font-size: 11px; color: var(--text); line-height: 1.6;
+  display: flex; gap: 6px;
+}
+.changelog-item::before { content: '·'; color: var(--red); flex-shrink: 0; }
+
 </style>
 </head>
 <body>
@@ -304,6 +658,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="np-label">▶ NOW PLAYING</div>
     <div class="np-station" id="npStation">채널을 선택하세요</div>
     <div class="np-freq"    id="npFreq">—</div>
+
     <div class="waveform paused" id="waveform">
       <div class="wave-bar"></div><div class="wave-bar"></div>
       <div class="wave-bar"></div><div class="wave-bar"></div>
@@ -312,6 +667,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <div class="wave-bar"></div><div class="wave-bar"></div>
       <div class="wave-bar"></div><div class="wave-bar"></div>
     </div>
+
     <div class="controls">
       <button class="btn-play" id="btnPlay" aria-label="재생/일시정지">
         <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -322,13 +678,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
       <div class="spinner" id="spinner"></div>
     </div>
+
     <div class="np-status" id="npStatus">재생 중인 채널이 없습니다</div>
   </div>
 
   <!-- 탭 -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="all">전체 채널</button>
-    <button class="tab-btn" data-tab="fav">⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span></button>
+    <button class="tab-btn" data-tab="fav">
+      ⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span>
+    </button>
   </div>
 
   <!-- 에러박스 -->
@@ -343,16 +702,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <!-- 스와이프 패널 -->
   <div class="swipe-viewport" id="swipeViewport">
     <div class="swipe-track" id="swipeTrack">
+
+      <!-- 패널 0: 전체 채널 -->
       <div class="swipe-panel">
         <div class="station-list" id="list-all"></div>
       </div>
+
+      <!-- 패널 1: 즐겨찾기 -->
       <div class="swipe-panel">
         <div class="station-list" id="list-fav"></div>
         <div class="fav-empty" id="fav-empty">
           <div style="font-size:32px;margin-bottom:10px">⭐</div>
-          <div style="font-size:13px;line-height:1.7">즐겨찾기한 채널이 없습니다.<br>채널의 ☆ 버튼을 눌러 추가하세요.</div>
+          <div style="font-size:13px;line-height:1.7">
+            즐겨찾기한 채널이 없습니다.<br>채널의 ☆ 버튼을 눌러 추가하세요.
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 
@@ -375,11 +741,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <div id="toast"></div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.0.0</div>
+<div id="versionBadge" onclick="openChangelog()">v1.6.4</div>
 
-<!-- 변경이력 시트 -->
+<!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
-  <div class="changelog-sheet">
+  <div class="changelog-sheet" id="changelogSheet">
     <div class="changelog-header">
       <div class="changelog-title">CHANGELOG</div>
       <button class="changelog-close" onclick="closeChangelog()">✕</button>
@@ -388,7 +754,29 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   </div>
 </div>
 
+
+<!-- 오디오 -->
 <audio id="audioEl" style="display:none"></audio>
+
+<!-- Sentry 에러 모니터링
+     실제 사용: 아래 SENTRY_DSN을 발급받은 DSN으로 교체 후
+     주석을 해제하세요. https://sentry.io
+<script
+  src="https://js.sentry-cdn.com/YOUR_SENTRY_DSN_HERE.min.js"
+  crossorigin="anonymous"
+  onerror="window.Sentry=null"
+></script>
+<script>
+if (window.Sentry) {
+  Sentry.init({
+    dsn: 'YOUR_SENTRY_DSN_HERE',
+    release: 'kr-radio@1.6.0',
+    environment: location.hostname === 'localhost' ? 'development' : 'production',
+    tracesSampleRate: 0.2,
+  });
+}
+</script>
+-->
 
 <!-- 외부 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
@@ -398,45 +786,81 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 <script>
 'use strict';
 
-/* ════════════════════════════════
-   버전 / 변경이력
-════════════════════════════════ */
-const APP_VERSION = 'v2.0.0';
+/* ════════════════════════════════════════
+   버전 정보
+════════════════════════════════════════ */
+const APP_VERSION = 'v1.6.4';
 const CHANGELOG = [
-  { version:'v2.0.0', date:'2025-04-19', changes:[
-    'GitHub Pages 전용 재빌드',
-    '백틱 이스케이프 파싱 오류 수정 (채널 미표시 버그)',
-    'renderStations() 미정의 변수 current → S.current 수정',
-    'onOK/onFail 내부 callId → S.callId 수정 (재연결 반복 버그)',
-    'updateMediaSession() current → S.current 수정',
-    'handleVolume() 볼륨 변수 S.volume으로 통일',
-    'pause 리스너 S.loading 체크 추가 (오탐 방지)',
-    'Sentry 제거 — 외부 의존성 최소화',
-    'SW v5 — 구버전 캐시 자동 삭제',
+  { version: 'v1.6.4', date: '2025-04-19', changes: [
+    '잠금화면 정지 상태에서 ▶·⏮·⏭ 버튼 무반응 수정',
+    'updateMediaSession() — 재생 여부 무관하게 항상 핸들러 등록',
+    'onFail·.catch() 경로에 updateMediaSession() 호출 추가',
+    'playbackState — 로딩 중에도 playing으로 표시해 OS 컨트롤 유지',
   ]},
-  { version:'v1.6.0', date:'2025-04-19', changes:[
-    'AppState 객체 도입 — 전역 상태 통합',
-    '블루투스 devicechange 자동 재연결',
-    'AudioContext statechange iOS Safari 대응',
-    '함께 듣기 Firebase 실시간 동기화',
-    '스와이프 제스처 (플릭 포함)',
-    '버전 뱃지·변경이력 시트',
+  { version: 'v1.6.3', date: '2025-04-19', changes: [
+    'handleVolume — volSlider DOM 존재 방어 추가 (if sl)',
   ]},
-  { version:'v1.0.0', date:'2025-01-01', changes:['최초 배포'] },
+  { version: 'v1.6.2', date: '2025-04-19', changes: [
+    'handleVolume — NaN 입력 방어 및 볼륨 0~1 범위 강제',
+  ]},
+  { version: 'v1.6.1', date: '2025-04-19', changes: [
+    '긴급: Sentry 미설정 스크립트 로드로 인한 채널 목록 렌더링 중단 수정',
+    'scheduleRetry retryCount 미치환 수정 (끊김 반복 원인)',
+    'callId 미치환 수정 (채널 전환 경쟁 방지 실패 원인)',
+    'retryPlay/togglePlay current 잔존 참조 수정',
+  ]},
+  { version: 'v1.6.0', date: '2025-04-19', changes: [
+    'AppState 객체 도입 — 전역 상태 변수 통합 관리',
+    '업데이트 토스트 — 앱 실행 시 새 버전 자동 안내',
+    'Sentry 에러 모니터링 연동 (DSN 설정 필요)',
+    'sw.js 개선 — Network First·Stale-while-revalidate 전략 적용',
+  ]},
+  { version: 'v1.5.0', date: '2025-04-19', changes: [
+    'MediaSession pause 핸들러 내 updateMediaSession() 재귀 호출 제거',
+    'HLS/native play() 실패 시 에러 메시지 표시 및 재시도 처리 추가',
+  ]},
+  { version: 'v1.4.0', date: '2025-04-19', changes: [
+    'let TDZ 크래시 — 인터럽트 플래그 선언을 상태 블록 상단으로 이동',
+    'play 리스너 audio.pause() 전 _userPaused 누락으로 무한루프 수정',
+    'innerHTML XSS 방어 — esc() 이스케이프 함수 적용',
+  ]},
+  { version: 'v1.3.0', date: '2025-04-18', changes: [
+    '채널 전환 시 audio.pause() 전 _userPaused 세팅',
+    'renderStations() 중복 ID → 클래스 선택자 교체',
+    'togglePlay() 로딩 중 중복 호출 방어',
+    'confirmSync() Firebase 리스너 이중 등록 방지',
+    'playStation() 진입 시 retryCount 초기화',
+  ]},
+  { version: 'v1.2.0', date: '2025-04-18', changes: [
+    '_userPaused 플래그 도입으로 pause 이벤트 오탐 방지',
+    'MediaSession pause 핸들러 플래그 초기화 누락 수정',
+    'playStation() 진입 시 인터럽트 플래그 초기화',
+    'toggleFav querySelector → data-id 속성 방식 교체',
+    'resolveStreamUrl .catch() 누락 추가',
+  ]},
+  { version: 'v1.1.0', date: '2025-04-18', changes: [
+    'audio.error 오탐 방지 (playing 조건 추가)',
+    '직접 일시정지 시 _wasPlaying 오염 수정',
+    'Firebase 자기 자신 채널 변경 무시',
+    'AM 주파수 뱃지 파싱 오류 수정 (AM 1305 → 1305)',
+    '극동방송 URL 파싱 실패 시 콘솔 경고 추가',
+  ]},
+  { version: 'v1.0.0', date: '2025-01-01', changes: ['최초 배포'] },
 ];
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    유틸
-════════════════════════════════ */
-function esc(s){
+════════════════════════════════════════ */
+function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    채널 데이터
-════════════════════════════════ */
+════════════════════════════════════════ */
 const P = 'https://radio.bsod.kr/stream/';
 const STATIONS = [
   { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
@@ -459,30 +883,33 @@ const STATIONS = [
   { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
 
-/* ════════════════════════════════
-   앱 상태
-════════════════════════════════ */
+/* ════════════════════════════════════════
+   앱 상태 (AppState 객체로 통합 관리)
+════════════════════════════════════════ */
 const audio = document.getElementById('audioEl');
 
-const S = {
-  current:       null,
-  playing:       false,
-  loading:       false,
-  volume:        0.8,
-  hls:           null,
-  retryTimer:    null,
-  retryCount:    0,
-  callId:        0,
-  activeTab:     'all',
+const AppState = {
+  current:       null,    // 현재 선택된 방송국
+  playing:       false,   // 실제 재생 중 여부
+  loading:       false,   // 스트림 연결 중 여부
+  volume:        0.8,     // 볼륨 (0~1)
+  hls:           null,    // HLS 인스턴스
+  retryTimer:    null,    // 재시도 타이머
+  retryCount:    0,       // 현재 재시도 횟수
+  callId:        0,       // 채널 전환 경쟁 방지용 ID
+  activeTab:     'all',   // 현재 탭 ('all' | 'fav')
   favorites:     new Set(JSON.parse(localStorage.getItem('radio_favs') || '[]')),
-  wasPlaying:    false,
-  needReconnect: false,
-  userPaused:    false,
+  wasPlaying:    false,   // 인터럽트 전 재생 중이었는지
+  needReconnect: false,   // 시스템 자동 재개 차단용
+  userPaused:    false,   // 사용자/MediaSession 직접 정지 여부
 };
 
-/* ════════════════════════════════
+// 하위 호환 참조 (AppState 프로퍼티를 직접 사용)
+const S = AppState;
+
+/* ════════════════════════════════════════
    탭 전환
-════════════════════════════════ */
+════════════════════════════════════════ */
 function switchTab(tab) {
   if (S.activeTab === tab) return;
   S.activeTab = tab;
@@ -491,45 +918,52 @@ function switchTab(tab) {
   );
   document.getElementById('ch-label').textContent =
     tab === 'all' ? '전체 채널' : '⭐ 즐겨찾기';
-  const track = document.getElementById('swipeTrack');
-  track.style.transform = tab === 'all' ? 'translateX(0%)' : 'translateX(-50%)';
+  document.getElementById('swipeTrack').style.transform =
+    tab === 'all' ? 'translateX(0)' : 'translateX(-50%)';
   if (tab === 'fav') updateFavList();
   updateEmptyState();
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    즐겨찾기
-════════════════════════════════ */
+════════════════════════════════════════ */
 function saveFav() {
   localStorage.setItem('radio_favs', JSON.stringify([...S.favorites]));
 }
+
 function toggleFav(id, e) {
   e.stopPropagation();
   S.favorites.has(id) ? S.favorites.delete(id) : S.favorites.add(id);
   saveFav(); updateFavCount();
-  // 해당 카드 버튼만 갱신
-  document.querySelectorAll(`[data-id="${id}"] .s-fav-btn`).forEach(btn => {
-    const on = S.favorites.has(id);
+  ['list-all','list-fav'].forEach(lid => {
+    const card = document.getElementById(lid).querySelector('[data-id="'+id+'"]');
+    if (!card) return;
+    const btn = card.querySelector('.s-fav-btn');
+    const on  = S.favorites.has(id);
     btn.textContent = on ? '★' : '☆';
     btn.classList.toggle('on', on);
     btn.setAttribute('aria-label', on ? '즐겨찾기 해제' : '즐겨찾기 추가');
   });
-  if (S.activeTab === 'fav') { updateFavList(); updateEmptyState(); }
-}
-function updateFavCount() {
-  document.getElementById('fav-count').textContent =
-    S.favorites.size ? `(${S.favorites.size})` : '';
-}
-function updateEmptyState() {
-  const el = document.getElementById('fav-empty');
-  el.style.display =
-    (S.activeTab === 'fav' && STATIONS.filter(s => S.favorites.has(s.id)).length === 0)
-      ? 'block' : 'none';
+  updateFavList(); updateEmptyState();
 }
 
-/* ════════════════════════════════
+function updateFavCount() {
+  const n = S.favorites.size;
+  document.getElementById('fav-count').textContent = n > 0 ? n : '';
+}
+
+function updateEmptyState() {
+  const el = document.getElementById('fav-empty');
+  if (S.activeTab === 'fav') {
+    el.style.display = STATIONS.filter(s => S.favorites.has(s.id)).length === 0 ? 'block' : 'none';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+/* ════════════════════════════════════════
    카드 생성
-════════════════════════════════ */
+════════════════════════════════════════ */
 function createCard(s) {
   const isActive = S.current && S.current.id === s.id;
   const isFav    = S.favorites.has(s.id);
@@ -542,18 +976,21 @@ function createCard(s) {
     card.style.boxShadow   = `0 0 16px ${s.color}33`;
   }
   const parts = s.name.split(' ');
-  const freq  = s.freq.replace(' MHz','').replace(' KHz','').replace('AM ','').trim();
+  const freq  = s.freq.replace(' MHz','').replace(' KHz','').replace('AM ','').replace(' ','');
   card.innerHTML = `
     <div class="st-badge" style="background:${s.color}22;color:${s.color};border:1px solid ${s.color}44">
-      ${esc(parts[0])}<br><span style="font-size:8px">${esc(parts.slice(1).join(' '))}</span>
+      ${parts[0]}<br><span style="font-size:8px">${parts.slice(1).join('')}</span>
     </div>
     <div class="st-info">
       <div class="st-name">${esc(s.name)}</div>
       <div class="st-desc">${esc(s.freq)} · ${esc(s.genre)}</div>
     </div>
-    <button class="s-fav-btn${isFav?' on':''}" aria-label="${isFav?'즐겨찾기 해제':'즐겨찾기 추가'}">${isFav?'★':'☆'}</button>
-    <div class="st-freq" style="${isActive?`color:${s.color}`:''}>${freq}</div>
-    <div class="live-dot" style="opacity:${isActive?1:0}"></div>
+    <button class="s-fav-btn${isFav?' on':''}"
+      aria-label="${isFav?'즐겨찾기 해제':'즐겨찾기 추가'}">${isFav?'★':'☆'}</button>
+    <div class="st-freq" id="stfreq-${s.id}" style="${isActive?`color:${s.color}`:''}">
+      ${freq}
+    </div>
+    <div class="live-dot" id="dot-${s.id}" style="opacity:${isActive?1:0}"></div>
   `;
   card.querySelector('.s-fav-btn').addEventListener('click', e => toggleFav(s.id, e));
   card.addEventListener('click', () => {
@@ -563,25 +1000,28 @@ function createCard(s) {
   return card;
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    목록 렌더
-════════════════════════════════ */
+════════════════════════════════════════ */
 function renderAllList() {
   const frag = document.createDocumentFragment();
   STATIONS.forEach(s => frag.appendChild(createCard(s)));
   const list = document.getElementById('list-all');
   list.innerHTML = ''; list.appendChild(frag);
 }
+
 function updateFavList() {
   const frag = document.createDocumentFragment();
   STATIONS.filter(s => S.favorites.has(s.id)).forEach(s => frag.appendChild(createCard(s)));
   const list = document.getElementById('list-fav');
   list.innerHTML = ''; list.appendChild(frag);
 }
+
+// active 상태만 in-place 갱신
 function renderStations() {
   ['list-all','list-fav'].forEach(lid => {
     document.getElementById(lid).querySelectorAll('.station-card').forEach(card => {
-      const id = parseInt(card.dataset.id);
+      const id = parseInt(card.id.replace('card-',''));
       const s  = STATIONS.find(x => x.id === id);
       if (!s) return;
       const on = !!(S.current && S.current.id === id);
@@ -596,46 +1036,60 @@ function renderStations() {
   });
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    Now Playing UI
-════════════════════════════════ */
+════════════════════════════════════════ */
 function updateNowPlaying() {
   if (!S.current) return;
   document.getElementById('npStation').textContent = S.current.name;
   document.getElementById('npFreq').textContent    = `${S.current.freq} · ${S.current.genre}`;
+
   const wf = document.getElementById('waveform');
   if (S.playing) {
     wf.classList.add('playing'); wf.classList.remove('paused');
-    wf.querySelectorAll('.wave-bar').forEach(b => b.style.background = S.current.color);
+    [...wf.querySelectorAll('.wave-bar')].forEach(b => b.style.background = S.current.color);
     document.getElementById('iconPlay').innerHTML =
       '<rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/>';
   } else {
     wf.classList.remove('playing'); wf.classList.add('paused');
     document.getElementById('iconPlay').innerHTML = '<path d="M8 5v14l11-7z"/>';
   }
-  const st = document.getElementById('npStatus');
-  const sp = document.getElementById('spinner');
+
+  const st  = document.getElementById('npStatus');
+  const sp  = document.getElementById('spinner');
   if (S.loading) {
-    st.textContent = '접속 중...'; st.className = 'np-status'; sp.style.display = 'block';
+    st.textContent = '접속 중...'; st.className = 'np-status';
+    sp.style.display = 'block';
   } else if (S.playing) {
-    st.textContent = '● LIVE';    st.className = 'np-status live'; sp.style.display = 'none';
+    st.textContent = '● LIVE'; st.className = 'np-status live';
+    sp.style.display = 'none';
   } else {
-    st.textContent = '일시 정지'; st.className = 'np-status'; sp.style.display = 'none';
+    st.textContent = '일시 정지'; st.className = 'np-status';
+    sp.style.display = 'none';
   }
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    에러 / 재시도
-════════════════════════════════ */
+════════════════════════════════════════ */
 function showError(msg) {
   const box = document.getElementById('errorBox');
   if (!msg) { box.style.display = 'none'; return; }
   box.style.display = 'flex';
   box.querySelector('.err-msg').textContent = '⚠️ ' + msg;
+  // Sentry 에러 전송
+  if (window.Sentry && S.current) {
+    Sentry.captureMessage(msg, {
+      level: 'warning',
+      tags: { station: S.current.name, freq: S.current.freq },
+    });
+  }
 }
+
 function clearRetryTimer() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 }
+
 function scheduleRetry() {
   if (S.retryCount >= 5) { showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.'); return; }
   S.retryCount++;
@@ -643,41 +1097,44 @@ function scheduleRetry() {
   showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
   S.retryTimer = setTimeout(() => { if (S.current) playStation(S.current); }, delay);
 }
+
 function retryPlay() {
   if (!S.current) return;
   clearRetryTimer(); S.retryCount = 0;
   playStation(S.current, true);
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    스트림 URL 해석
-════════════════════════════════ */
+   streamApi 방송(극동방송): 캐시 재사용
+   forceRefresh=true 일 때만 새로 받아옴
+════════════════════════════════════════ */
 async function resolveStreamUrl(s, forceRefresh) {
   if (!s.streamApi) return s.stream;
   if (!forceRefresh && s._resolvedUrl) return s._resolvedUrl;
   try {
-    const res  = await fetch(s.streamApi, { cache:'no-store' });
+    const res  = await fetch(s.streamApi, { cache: 'no-store' });
     const html = await res.text();
     const m    = html.match(/https:\/\/[^"'\s]+\.m3u8/);
     if (m) { s._resolvedUrl = m[0]; return m[0]; }
-    console.warn('streamApi: m3u8 미발견, 기본 URL 사용');
+    console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
   } catch(e) { console.warn('streamApi 실패:', e); }
   return s.stream;
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    재생 엔진
-════════════════════════════════ */
+════════════════════════════════════════ */
 function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
-  S.needReconnect = false; S.wasPlaying = false;
+  S.needReconnect = false; S.wasPlaying = false;   // 채널 변경 시 인터럽트 플래그 초기화
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
   updateNowPlaying(); renderStations();
   if (S.hls) { S.hls.destroy(); S.hls = null; }
-  S.userPaused = true; audio.pause();
-  S.userPaused = true; audio.src = '';
+  S.userPaused = true;
+  audio.pause(); audio.src = '';
 
   // Firebase 동기화
   if (syncMode && fbReady) {
@@ -690,23 +1147,24 @@ function playStation(s, forceRefresh = false) {
     function onOK() {
       if (thisCall !== S.callId) return;
       S.playing = true; S.loading = false; S.retryCount = 0;
-      localStorage.setItem('radio_playing', '1');
+      localStorage.setItem('radio_playing', '1');  // 재생 중 상태 저장
       updateNowPlaying(); renderStations(); updateMediaSession();
     }
     function onFail(retry) {
       if (thisCall !== S.callId) return;
       S.loading = false; S.playing = false;
-      updateNowPlaying(); renderStations();
+      updateNowPlaying(); renderStations(); updateMediaSession();
       if (retry) scheduleRetry();
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      S.hls = new window.Hls({ maxBufferLength:15, maxMaxBufferLength:30 });
+      S.hls = new window.Hls({ maxBufferLength: 15, maxMaxBufferLength: 30 });
       S.hls.loadSource(url); S.hls.attachMedia(audio);
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
-          showError('자동재생 차단됨. 재생 버튼을 눌러주세요.'); onFail(false);
+          showError('자동재생이 차단됐습니다. 재생 버튼을 눌러주세요.');
+          onFail(false);
         });
       });
       S.hls.on(window.Hls.Events.ERROR, (_, d) => {
@@ -728,7 +1186,7 @@ function playStation(s, forceRefresh = false) {
   }).catch(() => {
     if (thisCall !== S.callId) return;
     S.loading = false; S.playing = false;
-    updateNowPlaying(); renderStations();
+    updateNowPlaying(); renderStations(); updateMediaSession();
     showError('스트림 주소를 가져오지 못했습니다.');
   });
 }
@@ -743,117 +1201,149 @@ function togglePlay() {
     localStorage.setItem('radio_playing', '0');
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
+    // 버퍼 재개 대신 항상 라이브 시점으로 새 연결
     playStation(S.current);
   }
 }
 
-/* ════════════════════════════════
-   오디오 이벤트 (전화/인터럽트)
-════════════════════════════════ */
+/* ════════════════════════════════════════
+   오디오 이벤트 (전화/인터럽트 처리)
+════════════════════════════════════════ */
 audio.addEventListener('ended', () => { if (S.current && S.playing) scheduleRetry(); });
 audio.addEventListener('error', () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
 
-// 외부 인터럽트(전화) 감지: playing=true인데 강제 pause → 상태 저장
+// ── 외부 인터럽트 처리 ──────────────────────────────
+// pause 이벤트로 상태 저장 → 화면 복귀 or 시스템 재개 시 재연결
 audio.addEventListener('pause', () => {
-  if (S.userPaused) { S.userPaused = false; return; }
-  if (S.loading) return;
-  if (S.playing && S.current) {
+  if (S.userPaused) { S.userPaused = false; return; } // 직접 정지는 무시
+  if (S.playing && S.current && !S.loading) {
     S.wasPlaying    = true;
     S.needReconnect = true;
   }
 });
 
-// 화면 복귀 시 LIVE 재연결
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && S.wasPlaying && S.current) {
-    S.wasPlaying = false; S.needReconnect = false;
+    S.wasPlaying    = false;
+    S.needReconnect = false;
     playStation(S.current);
   }
 });
 
-// pageshow: 일부 브라우저 대비
-window.addEventListener('pageshow', () => {
-  if (S.wasPlaying && S.current) {
-    S.wasPlaying = false; S.needReconnect = false;
-    playStation(S.current);
-  }
-});
-
-// OS 자동 재개 차단 (Android 일부) → 버퍼 재생 방지
 audio.addEventListener('play', () => {
+  // 시스템 자동 재개 차단 (Android 일부)
   if (S.needReconnect && S.current) {
-    S.needReconnect = false; S.wasPlaying = false;
-    S.userPaused = true; audio.pause();
+    S.needReconnect = false;
+    S.wasPlaying    = false;
+    S.userPaused    = true;   // pause 리스너 오탐 방지
+    audio.pause();
     playStation(S.current);
   }
 });
 
-/* ════════════════════════════════
-   블루투스 자동 재연결
-════════════════════════════════ */
+// ── 블루투스 자동 재연결 ────────────────────────────
+// devicechange: 블루투스 기기 연결/해제 시 OS가 발생시키는 이벤트
+// 블루투스 재연결 감지 → _wasPlaying=true면 라이브 재연결
 (function initBluetoothReconnect() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.addEventListener) return;
+
+  // AudioContext: 오디오 출력 장치 전환 시 'interrupted' → 'running' 변화 감지
   let audioCtx = null;
   function getAudioCtx() {
     if (audioCtx && audioCtx.state !== 'closed') return audioCtx;
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {}
     return audioCtx;
   }
+
+  // 장치 변경 이벤트 (블루투스 연결/해제 모두 발생)
   navigator.mediaDevices.addEventListener('devicechange', async () => {
     if (!S.current) return;
+
+    // 오디오 출력 장치 목록 확인
     let hasAudioOut = true;
     try {
-      const devs = await navigator.mediaDevices.enumerateDevices();
-      hasAudioOut = devs.some(d => d.kind === 'audiooutput');
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      hasAudioOut = devices.some(d => d.kind === 'audiooutput');
     } catch(e) {}
+
     if (S.wasPlaying && hasAudioOut) {
+      // 블루투스 재연결 감지 → 짧은 딜레이 후 라이브 재연결
+      // (장치 전환 완료까지 300ms 대기)
       setTimeout(() => {
         if (S.wasPlaying && S.current) {
-          S.wasPlaying = false; S.needReconnect = false;
+          S.wasPlaying    = false;
+          S.needReconnect = false;
           playStation(S.current);
         }
       }, 300);
     }
   });
+
+  // AudioContext statechange: 'interrupted' → 'running' 복귀 감지 (iOS Safari)
   audio.addEventListener('play', () => {
     const ctx = getAudioCtx();
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-  });
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+  }, { once: false });
+
+  // iOS: AudioContext가 interrupted → running으로 복귀 시 재연결
   function watchAudioCtxState() {
     const ctx = getAudioCtx();
     if (!ctx) return;
     ctx.addEventListener('statechange', () => {
       if (ctx.state === 'running' && S.wasPlaying && S.current) {
-        S.wasPlaying = false; S.needReconnect = false;
+        S.wasPlaying    = false;
+        S.needReconnect = false;
         playStation(S.current);
       }
     });
   }
-  document.addEventListener('click',      () => { getAudioCtx(); watchAudioCtxState(); }, { once:true, passive:true });
-  document.addEventListener('touchstart', () => { getAudioCtx(); watchAudioCtxState(); }, { once:true, passive:true });
+  // 첫 번째 사용자 제스처 후 AudioContext 활성화
+  document.addEventListener('click', () => { getAudioCtx(); watchAudioCtxState(); },
+    { once: true, passive: true });
+  document.addEventListener('touchstart', () => { getAudioCtx(); watchAudioCtxState(); },
+    { once: true, passive: true });
 })();
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    볼륨
-════════════════════════════════ */
+════════════════════════════════════════ */
 function handleVolume(val) {
-  S.volume = parseFloat(val); audio.volume = S.volume;
+  const parsed = parseFloat(val);
+  if (isNaN(parsed)) return;                          // NaN 방어
+  S.volume = Math.min(1, Math.max(0, parsed));        // 0~1 범위 강제
+  audio.volume = S.volume;
   const c  = (S.current && S.current.color) || 'var(--red)';
   const sl = document.getElementById('volSlider');
-  sl.style.background = `linear-gradient(to right,${c} ${S.volume*100}%,var(--bg3) ${S.volume*100}%)`;
+  if (sl) {                                           // DOM 방어
+    sl.style.background =
+      `linear-gradient(to right,${c} ${S.volume*100}%,var(--bg3) ${S.volume*100}%)`;
+  }
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    MediaSession
-════════════════════════════════ */
+════════════════════════════════════════ */
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || !S.current) return;
+
+  // 재생 여부와 무관하게 항상 메타데이터 + 핸들러 등록
   navigator.mediaSession.metadata = new MediaMetadata({
     title:  S.current.name,
     artist: `${S.current.freq} · ${S.current.genre}`,
     album:  'KOREA FM 라디오'
   });
-  navigator.mediaSession.setActionHandler('play',  () => playStation(S.current));
+
+  // 잠금화면 ▶ → 항상 라이브 재연결 (정지 상태에서도 작동)
+  navigator.mediaSession.setActionHandler('play', () => {
+    playStation(S.current);
+  });
+
+  // 잠금화면 ⏸ → 정지 + 상태 저장
   navigator.mediaSession.setActionHandler('pause', () => {
     clearRetryTimer();
     if (S.hls) S.hls.stopLoad();
@@ -863,6 +1353,8 @@ function updateMediaSession() {
     updateNowPlaying(); renderStations();
     navigator.mediaSession.playbackState = 'paused';
   });
+
+  // 잠금화면 ⏮⏭ → 정지 상태에서도 채널 변경 가능
   navigator.mediaSession.setActionHandler('previoustrack', () => {
     const i = STATIONS.findIndex(s => s.id === S.current.id);
     playStation(STATIONS[(i - 1 + STATIONS.length) % STATIONS.length], true);
@@ -871,18 +1363,20 @@ function updateMediaSession() {
     const i = STATIONS.findIndex(s => s.id === S.current.id);
     playStation(STATIONS[(i + 1) % STATIONS.length], true);
   });
-  navigator.mediaSession.playbackState = S.playing ? 'playing' : 'paused';
+
+  // playbackState: 로딩 중이면 playing으로 표시해 OS가 컨트롤을 숨기지 않게 함
+  navigator.mediaSession.playbackState = S.playing || S.loading ? 'playing' : 'paused';
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    테마
-════════════════════════════════ */
+════════════════════════════════════════ */
 function toggleTheme() {
   const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
   applyTheme(next); localStorage.setItem('radio_theme', next);
 }
-function applyTheme(t) {
-  if (t === 'light') {
+function applyTheme(theme) {
+  if (theme === 'light') {
     document.documentElement.dataset.theme = 'light';
     document.getElementById('themeBtn').textContent = '☀️';
   } else {
@@ -892,13 +1386,13 @@ function applyTheme(t) {
 }
 applyTheme(localStorage.getItem('radio_theme') || 'dark');
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    PWA
-════════════════════════════════ */
+════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(r => console.log('[SW]', r.scope))
+    navigator.serviceWorker.register('./sw.js')
+      .then(r  => console.log('[SW]', r.scope))
       .catch(e => console.warn('[SW] 실패:', e));
   });
 }
@@ -917,9 +1411,9 @@ function installApp() {
   deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    Firebase 함께 듣기
-════════════════════════════════ */
+════════════════════════════════════════ */
 const FB_CONFIG = {
   apiKey:            'AIzaSyBma41vUE5uNmz_klRxK2B-jtKvcHQRbxI',
   authDomain:        'my-kr-radio.firebaseapp.com',
@@ -929,15 +1423,23 @@ const FB_CONFIG = {
   messagingSenderId: '995302347935',
   appId:             '1:995302347935:web:c8348fe1bbaabc9c96beaa'
 };
-let fbDb = null, fbReady = false, fbListener = null;
-let syncMode = false, myNick = localStorage.getItem('radio_nick') || '';
-let _fbIgnore = false;
+
+let fbDb       = null;
+let fbReady    = false;
+let fbListener = null;
+let syncMode   = false;
+let myNick     = localStorage.getItem('radio_nick') || '';
+let _fbIgnore  = false;
 
 function initFirebase() {
   if (fbReady) return;
-  try { firebase.initializeApp(FB_CONFIG); fbDb = firebase.database(); fbReady = true; }
-  catch(e) { console.warn('Firebase 초기화 실패:', e); }
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    fbDb = firebase.database();
+    fbReady = true;
+  } catch(e) { console.warn('Firebase 초기화 실패:', e); }
 }
+
 function startSync() {
   if (!fbReady) return;
   fbListener = fbDb.ref('shared/station').on('value', snap => {
@@ -946,15 +1448,20 @@ function startSync() {
     if (_fbIgnore) { _fbIgnore = false; return; }
     const s = STATIONS.find(x => x.id === data.id);
     if (!s || (S.current && S.current.id === s.id)) return;
-    if (data.nick === myNick) return;
+    if (data.nick === myNick) return; // 자기 자신이 변경한 경우 무시
     _fbIgnore = true;
     playStation(s, true);
     showToast(`📻 ${data.nick || '누군가'}님이 ${s.name}으로 변경했습니다`);
   });
 }
+
 function stopSync() {
-  if (fbDb && fbListener) { fbDb.ref('shared/station').off('value', fbListener); fbListener = null; }
+  if (fbDb && fbListener) {
+    fbDb.ref('shared/station').off('value', fbListener);
+    fbListener = null;
+  }
 }
+
 function toggleSync() {
   if (syncMode) {
     syncMode = false; stopSync();
@@ -968,26 +1475,32 @@ function toggleSync() {
     }
   }
 }
-function closeNickModal() { document.getElementById('nickModalBg').classList.remove('show'); }
+
+function closeNickModal() {
+  document.getElementById('nickModalBg').classList.remove('show');
+}
+
 function confirmSync() {
-  stopSync();
+  stopSync(); // 기존 리스너 먼저 정리
   const inp = document.getElementById('nickInput').value.trim();
   if (inp) { myNick = inp; localStorage.setItem('radio_nick', myNick); }
   if (!myNick) myNick = '익명';
-  closeNickModal(); initFirebase();
+  closeNickModal();
+  initFirebase();
   if (!fbReady) { showToast('⚠️ Firebase 연결에 실패했습니다'); return; }
   syncMode = true;
   document.getElementById('syncBtn').classList.add('on');
   startSync();
   showToast(`🔗 함께 듣기 시작 (${myNick})`);
 }
+
 document.getElementById('nickInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmSync();
 });
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    토스트
-════════════════════════════════ */
+════════════════════════════════════════ */
 let _toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -996,9 +1509,10 @@ function showToast(msg) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-/* ════════════════════════════════
-   변경이력
-════════════════════════════════ */
+
+/* ════════════════════════════════════════
+   변경 이력
+════════════════════════════════════════ */
 function openChangelog() {
   const body = document.getElementById('changelogBody');
   body.innerHTML = '';
@@ -1007,11 +1521,11 @@ function openChangelog() {
     div.className = 'changelog-entry';
     div.innerHTML = `
       <div class="changelog-ver">
-        <span class="changelog-ver-badge${i > 0 ? ' old' : ''}">${esc(entry.version)}</span>
-        <span class="changelog-date">${esc(entry.date)}</span>
+        <span class="changelog-ver-badge${i > 0 ? ' old' : ''}">${entry.version}</span>
+        <span class="changelog-date">${entry.date}</span>
       </div>
       <div class="changelog-list">
-        ${entry.changes.map(c => `<div class="changelog-item">${esc(c)}</div>`).join('')}
+        ${entry.changes.map(c => `<div class="changelog-item">${c}</div>`).join('')}
       </div>`;
     body.appendChild(div);
   });
@@ -1022,9 +1536,9 @@ function closeChangelog(e) {
   document.getElementById('changelogBg').classList.remove('show');
 }
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    스와이프 제스처
-════════════════════════════════ */
+════════════════════════════════════════ */
 (function() {
   const vp    = document.getElementById('swipeViewport');
   const track = document.getElementById('swipeTrack');
@@ -1035,7 +1549,7 @@ function closeChangelog(e) {
     st = Date.now(); dragging = false;
     base = S.activeTab === 'all' ? 0 : -50;
     track.style.transition = 'none';
-  }, { passive:true });
+  }, { passive: true });
 
   vp.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - sx;
@@ -1044,7 +1558,7 @@ function closeChangelog(e) {
     dragging = true;
     const next = Math.max(-50, Math.min(0, base + (dx / vp.clientWidth) * 100));
     track.style.transform = `translateX(${next}%)`;
-  }, { passive:true });
+  }, { passive: true });
 
   vp.addEventListener('touchend', e => {
     if (!dragging) return;
@@ -1054,14 +1568,16 @@ function closeChangelog(e) {
     const far  = Math.abs(dx) > vp.clientWidth * 0.35;
     if (fast || far) switchTab(dx < 0 ? 'fav' : 'all');
     else track.style.transform = `translateX(${base}%)`;
-  }, { passive:true });
+  }, { passive: true });
 })();
 
-/* ════════════════════════════════
+/* ════════════════════════════════════════
    초기화
-════════════════════════════════ */
+════════════════════════════════════════ */
 document.getElementById('btnPlay').addEventListener('click', togglePlay);
-document.getElementById('volSlider').addEventListener('input', function() { handleVolume(this.value); });
+document.getElementById('volSlider').addEventListener('input', function() {
+  handleVolume(this.value);
+});
 document.querySelectorAll('.tab-btn').forEach(b =>
   b.addEventListener('click', () => switchTab(b.dataset.tab))
 );
@@ -1071,22 +1587,29 @@ updateFavCount();
 renderAllList();
 updateFavList();
 
-// 업데이트 토스트
-(function() {
-  const last = localStorage.getItem('radio_seen_version');
-  if (last && last !== APP_VERSION) {
-    setTimeout(() => showToast('🆕 ' + APP_VERSION + ' 업데이트! 변경이력을 확인하세요.'), 1500);
+// 업데이트 토스트: 마지막으로 본 버전과 현재 버전 비교
+(function checkUpdate() {
+  const lastSeen = localStorage.getItem('radio_seen_version');
+  if (lastSeen && lastSeen !== APP_VERSION) {
+    const latest = CHANGELOG[0];
+    const summary = latest.changes.slice(0, 2).join(', ');
+    setTimeout(() => {
+      showToast(`🆕 ${APP_VERSION} 업데이트: ${summary}`);
+    }, 1500);
   }
   localStorage.setItem('radio_seen_version', APP_VERSION);
 })();
 
-// 마지막 채널 복원
 const _lastId = parseInt(localStorage.getItem('radio_last'));
 if (_lastId) {
   S.current = STATIONS.find(s => s.id === _lastId) || null;
   if (S.current) {
     updateNowPlaying(); renderStations();
-    if (localStorage.getItem('radio_playing') === '1') playStation(S.current);
+    // 앱 강제 종료 전 재생 중이었으면 자동 재개
+    // (통화 중 Android가 앱을 죽인 경우 포함)
+    if (localStorage.getItem('radio_playing') === '1') {
+      playStation(S.current);
+    }
   }
 }
 </script>

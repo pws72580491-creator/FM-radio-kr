@@ -50,6 +50,11 @@
   ║  · handleVolume volSlider DOM 존재 방어 추가           ║
   ║                                                      ║
   ║ v1.6.4  개선 (2025-04-19)                            ║
+  ║                                                      ║
+  ║ v1.6.5  개선 (2025-04-19)                            ║
+  ║  · HLS 에러 타입별 분기 처리                           ║
+  ║  · 일시적 네트워크 오류 startLoad() 재시도             ║
+  ║  · 미디어 오류 recoverMediaError() 2회 후 재연결       ║
   ║  · 잠금화면 정지 상태에서 ▶·⏮·⏭ 버튼 무반응 수정    ║
   ║  · updateMediaSession() 항상 핸들러 등록              ║
   ║  · onFail·catch 경로 updateMediaSession() 추가        ║
@@ -741,7 +746,7 @@ input[type=range]::-webkit-slider-thumb {
 <div id="toast"></div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.6.4</div>
+<div id="versionBadge" onclick="openChangelog()">v1.6.5</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -789,8 +794,14 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.6.4';
+const APP_VERSION = 'v1.6.5';
 const CHANGELOG = [
+  { version: 'v1.6.5', date: '2025-04-19', changes: [
+    'HLS 에러 핸들러 개선 — 에러 타입별 분기 처리',
+    '일시적 네트워크 오류 → startLoad() 재시도 (불필요한 재연결 방지)',
+    '미디어 디코딩 오류 → recoverMediaError() 최대 2회 후 재연결',
+    '기타 치명 오류 → destroy() + 재연결',
+  ]},
   { version: 'v1.6.4', date: '2025-04-19', changes: [
     '잠금화면 정지 상태에서 ▶·⏮·⏭ 버튼 무반응 수정',
     'updateMediaSession() — 재생 여부 무관하게 항상 핸들러 등록',
@@ -1167,13 +1178,26 @@ function playStation(s, forceRefresh = false) {
           onFail(false);
         });
       });
+      let mediaErrorCount = 0;
       S.hls.on(window.Hls.Events.ERROR, (_, d) => {
+        if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+          if (d.fatal) {
+            S.hls.destroy(); S.hls = null; onFail(true);
+          } else {
+            S.hls.startLoad(); // 일시적 네트워크 오류 → 재시도
+          }
+          return;
+        }
+        if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+          if (mediaErrorCount < 2) {
+            mediaErrorCount++; S.hls.recoverMediaError(); // 디코딩 오류 → 자체 복구
+          } else {
+            S.hls.destroy(); S.hls = null; onFail(true); // 반복되면 재연결
+          }
+          return;
+        }
         if (d.fatal) {
-          S.hls.destroy(); S.hls = null;
-          if (audio.canPlayType('application/vnd.apple.mpegurl')) {
-            audio.src = url; audio.volume = S.volume;
-            audio.play().then(onOK).catch(() => onFail(true));
-          } else onFail(true);
+          S.hls.destroy(); S.hls = null; onFail(true); // 기타 치명 오류 → 재연결
         }
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {

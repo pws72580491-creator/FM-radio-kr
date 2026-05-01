@@ -56,6 +56,15 @@
   ║ v1.7.0  기능 추가 (2025-04-19)                       ║
   ║                                                      ║
   ║ v1.7.1  버그 수정 (2025-04-19)                       ║
+  ║                                                      ║
+  ║ v1.7.2  개선 (2025-04-19)                            ║
+  ║  · 통화 종료 후 자동 재연결 안정화                     ║
+  ║  · Android 12+ AudioContext 차단 환경 대응            ║
+  ║  · visibilitychange·online·AudioContext 3중 감지      ║
+  ║                                                      ║
+  ║ v1.7.2  기능 추가 (2025-04-19)                       ║
+  ║  · 통화 종료 후 방송 자동 재연결                       ║
+  ║  · AudioContext 2초 주기 감시로 통화 종료 감지         ║
   ║  · 즐겨찾기 파싱 실패 시 안전한 폴백 처리             ║
   ║  · 즐겨찾기 저장 실패 시 토스트 알림                  ║
   ║  · WiFi ↔ 데이터 전환 시 방송 자동 재연결             ║
@@ -755,7 +764,7 @@ input[type=range]::-webkit-slider-thumb {
 <div id="toast"></div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.7.1</div>
+<div id="versionBadge" onclick="openChangelog()">v1.7.2</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -803,8 +812,19 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.7.1';
+const APP_VERSION = 'v1.7.2';
 const CHANGELOG = [
+  { version: 'v1.7.2', date: '2025-04-19', changes: [
+    '통화 종료 후 방송 자동 재연결 추가',
+    'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
+    '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.7.2', date: '2025-04-19', changes: [
+    '통화 종료 후 자동 재연결 안정화',
+    'Android 12+ AudioContext 차단 환경 대응',
+    'visibilitychange·online·AudioContext 3중 감지로 통화 종료 확실하게 포착',
+    '기존 visibilitychange 핸들러를 initCallReconnect로 통합',
+  ]},
   { version: 'v1.7.1', date: '2025-04-19', changes: [
     '즐겨찾기 초기화 방지 — localStorage 파싱 실패 시 안전한 폴백',
     '즐겨찾기 저장 실패 시 사용자 알림 토스트 표시',
@@ -1279,13 +1299,7 @@ audio.addEventListener('pause', () => {
   }
 });
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && S.wasPlaying && S.current) {
-    S.wasPlaying    = false;
-    S.needReconnect = false;
-    playStation(S.current);
-  }
-});
+// visibilitychange → initCallReconnect() 내부에서 통합 처리
 
 audio.addEventListener('play', () => {
   // 시스템 자동 재개 차단 (Android 일부)
@@ -1298,7 +1312,74 @@ audio.addEventListener('play', () => {
   }
 });
 
-// ── 블루투스 자동 재연결 ────────────────────────────
+// ── 통화 종료 자동 재연결 ────────────────────────────
+// Android는 전화 수신/종료를 JS에서 직접 감지 불가
+// visibilitychange + audio 상태 조합으로 감지
+(function initCallReconnect() {
+  let watchTimer  = null;
+  let callSuspect = false; // 통화 중으로 의심되는 상태
+
+  function tryReconnect() {
+    if (S.wasPlaying && S.current) {
+      S.wasPlaying    = false;
+      S.needReconnect = false;
+      setTimeout(() => playStation(S.current), 800);
+    }
+    callSuspect = false;
+    stopWatch();
+  }
+
+  function startWatch() {
+    if (watchTimer) return;
+    callSuspect = true;
+    watchTimer = setInterval(() => {
+      if (!S.wasPlaying || !S.current) { stopWatch(); return; }
+
+      // audio.paused + 네트워크 연결 있으면 통화 종료로 판단
+      if (audio.paused && navigator.onLine) {
+        // AudioContext 상태 확인 (가능한 경우)
+        try {
+          const testCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const state   = testCtx.state;
+          testCtx.close();
+          if (state === 'running') { tryReconnect(); return; }
+        } catch(e) { /* AudioContext 생성 불가 환경 */ }
+      }
+    }, 2000);
+  }
+
+  function stopWatch() {
+    if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+    callSuspect = false;
+  }
+
+  // pause 이벤트 → 0.5초 후 통화 의심 상태면 감시 시작
+  audio.addEventListener('pause', () => {
+    setTimeout(() => {
+      if (S.wasPlaying && S.current) startWatch();
+    }, 500);
+  });
+
+  // 재생 시작 → 감시 중단
+  audio.addEventListener('play', () => stopWatch());
+
+  // 화면 복귀 시 통화 종료로 판단 → 즉시 재연결
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (S.wasPlaying && S.current) {
+      tryReconnect();
+    }
+  });
+
+  // 네트워크 복구 시에도 재연결 트리거
+  window.addEventListener('online', () => {
+    if (callSuspect && S.wasPlaying && S.current) {
+      tryReconnect();
+    }
+  });
+})();
+
+
 // devicechange: 블루투스 기기 연결/해제 시 OS가 발생시키는 이벤트
 // 블루투스 재연결 감지 → _wasPlaying=true면 라이브 재연결
 (function initBluetoothReconnect() {

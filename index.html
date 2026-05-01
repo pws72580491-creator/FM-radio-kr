@@ -58,6 +58,11 @@
   ║ v1.7.1  버그 수정 (2025-04-19)                       ║
   ║                                                      ║
   ║ v1.7.2  개선 (2025-04-19)                            ║
+  ║                                                      ║
+  ║ v1.7.3  긴급 수정 (2025-04-19)                       ║
+  ║  · 통화 후 재연결 10~20초 후 정지 버그 수정            ║
+  ║  · watchTimer 재연결 후 중복 실행 방지                 ║
+  ║  · reconnecting 플래그로 중복 재연결 차단              ║
   ║  · 통화 종료 후 자동 재연결 안정화                     ║
   ║  · Android 12+ AudioContext 차단 환경 대응            ║
   ║  · visibilitychange·online·AudioContext 3중 감지      ║
@@ -764,7 +769,7 @@ input[type=range]::-webkit-slider-thumb {
 <div id="toast"></div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.7.2</div>
+<div id="versionBadge" onclick="openChangelog()">v1.7.3</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -812,12 +817,22 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.7.2';
+const APP_VERSION = 'v1.7.3';
 const CHANGELOG = [
+  { version: 'v1.7.3', date: '2025-04-19', changes: [
+    '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
+    'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
+    'reconnecting 플래그 추가로 중복 재연결 완전 차단',
+  ]},
   { version: 'v1.7.2', date: '2025-04-19', changes: [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.7.3', date: '2025-04-19', changes: [
+    '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
+    'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
+    'reconnecting 플래그 추가로 중복 재연결 완전 차단',
   ]},
   { version: 'v1.7.2', date: '2025-04-19', changes: [
     '통화 종료 후 자동 재연결 안정화',
@@ -1313,37 +1328,40 @@ audio.addEventListener('play', () => {
 });
 
 // ── 통화 종료 자동 재연결 ────────────────────────────
-// Android는 전화 수신/종료를 JS에서 직접 감지 불가
-// visibilitychange + audio 상태 조합으로 감지
 (function initCallReconnect() {
   let watchTimer  = null;
-  let callSuspect = false; // 통화 중으로 의심되는 상태
+  let callSuspect = false;
+  let reconnecting = false; // 재연결 진행 중 플래그 (중복 방지)
 
   function tryReconnect() {
-    if (S.wasPlaying && S.current) {
-      S.wasPlaying    = false;
-      S.needReconnect = false;
-      setTimeout(() => playStation(S.current), 800);
-    }
-    callSuspect = false;
+    if (reconnecting) return; // 이미 재연결 중이면 무시
+    if (!S.wasPlaying || !S.current) return;
+    reconnecting = true;
+    S.wasPlaying    = false;
+    S.needReconnect = false;
+    callSuspect     = false;
     stopWatch();
+    setTimeout(() => {
+      playStation(S.current);
+      // 재연결 완료 후 플래그 해제 (충분한 여유 시간)
+      setTimeout(() => { reconnecting = false; }, 5000);
+    }, 800);
   }
 
   function startWatch() {
-    if (watchTimer) return;
+    if (watchTimer || reconnecting) return;
     callSuspect = true;
     watchTimer = setInterval(() => {
-      if (!S.wasPlaying || !S.current) { stopWatch(); return; }
-
-      // audio.paused + 네트워크 연결 있으면 통화 종료로 판단
+      if (!S.wasPlaying || !S.current || reconnecting) {
+        stopWatch(); return;
+      }
       if (audio.paused && navigator.onLine) {
-        // AudioContext 상태 확인 (가능한 경우)
         try {
           const testCtx = new (window.AudioContext || window.webkitAudioContext)();
           const state   = testCtx.state;
           testCtx.close();
           if (state === 'running') { tryReconnect(); return; }
-        } catch(e) { /* AudioContext 생성 불가 환경 */ }
+        } catch(e) {}
       }
     }, 2000);
   }
@@ -1353,29 +1371,25 @@ audio.addEventListener('play', () => {
     callSuspect = false;
   }
 
-  // pause 이벤트 → 0.5초 후 통화 의심 상태면 감시 시작
+  // pause → 0.5초 후 재연결 중이 아니면 감시 시작
   audio.addEventListener('pause', () => {
     setTimeout(() => {
-      if (S.wasPlaying && S.current) startWatch();
+      if (S.wasPlaying && S.current && !reconnecting) startWatch();
     }, 500);
   });
 
-  // 재생 시작 → 감시 중단
+  // 재생 시작 → 감시 즉시 중단
   audio.addEventListener('play', () => stopWatch());
 
-  // 화면 복귀 시 통화 종료로 판단 → 즉시 재연결
+  // 화면 복귀 → 즉시 재연결
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (S.wasPlaying && S.current) {
-      tryReconnect();
-    }
+    if (S.wasPlaying && S.current) tryReconnect();
   });
 
-  // 네트워크 복구 시에도 재연결 트리거
+  // 네트워크 복구 → 재연결
   window.addEventListener('online', () => {
-    if (callSuspect && S.wasPlaying && S.current) {
-      tryReconnect();
-    }
+    if (callSuspect && S.wasPlaying && S.current) tryReconnect();
   });
 })();
 

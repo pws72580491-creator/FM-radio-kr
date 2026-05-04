@@ -62,6 +62,11 @@
   ║ v1.7.3  긴급 수정 (2025-04-19)                       ║
   ║                                                      ║
   ║ v1.7.4  긴급 수정 (2025-05-04)                       ║
+  ║                                                      ║
+  ║ v1.8.0  기능 추가 (2025-05-04)                       ║
+  ║  · 즐겨찾기 잠금 — 해제 실수 방지                     ║
+  ║  · 방송 추가 — 커스텀 채널 추가/삭제                  ║
+  ║  · 커스텀 채널 localStorage 영구 저장                 ║
   ║  · 통화 후 재연결 안 되는 버그 수정                    ║
   ║  · WiFi↔데이터 전환 후 방송 종료 버그 수정             ║
   ║  · online 핸들러 중복 충돌 제거                        ║
@@ -589,6 +594,99 @@ input[type=range]::-webkit-slider-thumb {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+/* ══ 즐겨찾기 잠금 버튼 ══ */
+#favLockBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 4px 10px; border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .5px;
+}
+#favLockBtn.locked {
+  border-color: var(--red); color: var(--red);
+  background: var(--red-glow);
+}
+#favLockBtn .lock-icon { font-size: 13px; }
+
+/* ══ 방송 추가 버튼 ══ */
+#addStationBtn {
+  position: fixed;
+  bottom: calc(var(--sab) + 36px);
+  left: 16px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 22px; line-height: 1;
+  border: none; cursor: pointer;
+  box-shadow: 0 4px 16px var(--red-glow);
+  z-index: 150;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, box-shadow .2s;
+}
+#addStationBtn:active { transform: scale(.92); }
+
+/* ══ 방송 추가 시트 ══ */
+.add-station-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.add-station-bg.show { display: flex; }
+.add-station-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(var(--sab) + 24px);
+  width: min(520px,100%); display: flex; flex-direction: column; gap: 14px;
+}
+.add-station-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.add-station-field { display: flex; flex-direction: column; gap: 5px; }
+.add-station-field label {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.add-station-field input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s;
+}
+.add-station-field input:focus { border-color: var(--red); }
+.add-station-actions { display: flex; gap: 10px; margin-top: 4px; }
+.add-station-actions button {
+  flex: 1; padding: 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-add-confirm {
+  background: var(--red); color: #fff; border: none;
+}
+.btn-add-cancel {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.custom-station-badge {
+  font-size: 8px; background: var(--red); color: #fff;
+  padding: 1px 5px; border-radius: 4px;
+  font-family: var(--mono); letter-spacing: .5px;
+  vertical-align: middle; margin-left: 4px;
+}
+/* 사용자 추가 방송국 삭제 버튼 */
+.st-delete-btn {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(231,76,60,.15); color: var(--red);
+  border: none; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.station-card:hover .st-delete-btn,
+.station-card:focus-within .st-delete-btn { opacity: 1; }
+
 /* ══ 버전 모달 ══ */
 #versionBadge {
   position: fixed;
@@ -716,10 +814,13 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 
   <!-- 탭 -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="all">전체 채널</button>
-    <button class="tab-btn" data-tab="fav">
+  <div class="tabs" style="display:flex;align-items:center;gap:8px">
+    <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
+    <button class="tab-btn" data-tab="fav" style="flex:1">
       ⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span>
+    </button>
+    <button id="favLockBtn" onclick="toggleFavLock()" title="즐겨찾기 잠금">
+      <span class="lock-icon">🔓</span>
     </button>
   </div>
 
@@ -773,8 +874,45 @@ input[type=range]::-webkit-slider-thumb {
 <!-- 토스트 -->
 <div id="toast"></div>
 
+<!-- 방송 추가 버튼 -->
+<button id="addStationBtn" onclick="openAddStation()" title="방송 추가">＋</button>
+
+<!-- 방송 추가 시트 -->
+<div class="add-station-bg" id="addStationBg" onclick="closeAddStation(event)">
+  <div class="add-station-sheet">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="add-station-title">📻 방송 추가</div>
+      <button class="changelog-close" onclick="closeAddStation()">✕</button>
+    </div>
+    <div class="add-station-field">
+      <label>방송국 이름 *</label>
+      <input id="asi-name" type="text" placeholder="예: OO FM" maxlength="30">
+    </div>
+    <div class="add-station-field">
+      <label>주파수</label>
+      <input id="asi-freq" type="text" placeholder="예: 100.0 MHz">
+    </div>
+    <div class="add-station-field">
+      <label>장르</label>
+      <input id="asi-genre" type="text" placeholder="예: 음악, 뉴스, 교양">
+    </div>
+    <div class="add-station-field">
+      <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
+      <input id="asi-url" type="url" placeholder="https://...m3u8">
+    </div>
+    <div class="add-station-field">
+      <label>색상 (선택)</label>
+      <input id="asi-color" type="color" value="#e74c3c" style="height:36px;padding:2px 6px;cursor:pointer">
+    </div>
+    <div class="add-station-actions">
+      <button class="btn-add-cancel" onclick="closeAddStation()">취소</button>
+      <button class="btn-add-confirm" onclick="confirmAddStation()">추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.7.4</div>
+<div id="versionBadge" onclick="openChangelog()">v1.8.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -822,8 +960,13 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.7.4';
+const APP_VERSION = 'v1.8.0';
 const CHANGELOG = [
+  { version: 'v1.8.0', date: '2025-05-04', changes: [
+    '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
+    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
+    '추가된 채널은 localStorage에 저장되어 앱 재시작 후에도 유지',
+  ]},
   { version: 'v1.7.4', date: '2025-05-04', changes: [
     '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
     'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
@@ -839,6 +982,11 @@ const CHANGELOG = [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.8.0', date: '2025-05-04', changes: [
+    '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
+    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
+    '추가된 채널은 localStorage에 저장되어 앱 재시작 후에도 유지',
   ]},
   { version: 'v1.7.4', date: '2025-05-04', changes: [
     '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
@@ -1029,6 +1177,11 @@ function saveFav() {
 
 function toggleFav(id, e) {
   e.stopPropagation();
+  // 잠금 상태에서 해제 시도 차단
+  if (favLocked && S.favorites.has(id)) {
+    showToast('🔒 즐겨찾기가 잠겨있습니다. 잠금 해제 후 변경하세요.');
+    return;
+  }
   S.favorites.has(id) ? S.favorites.delete(id) : S.favorites.add(id);
   saveFav(); updateFavCount();
   ['list-all','list-fav'].forEach(lid => {
@@ -1089,6 +1242,16 @@ function createCard(s) {
     <div class="live-dot" id="dot-${s.id}" style="opacity:${isActive?1:0}"></div>
   `;
   card.querySelector('.s-fav-btn').addEventListener('click', e => toggleFav(s.id, e));
+  // 커스텀 채널 삭제 버튼
+  if (s.custom) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'st-delete-btn';
+    delBtn.innerHTML = '✕';
+    delBtn.title = '채널 삭제';
+    delBtn.addEventListener('click', e => deleteCustomStation(s.id, e));
+    card.style.position = 'relative';
+    card.appendChild(delBtn);
+  }
   card.addEventListener('click', () => {
     if (S.current && S.current.id === s.id && !S.loading) togglePlay();
     else playStation(s, true);
@@ -1694,6 +1857,119 @@ function showToast(msg) {
 }
 
 
+
+/* ════════════════════════════════════════
+   즐겨찾기 잠금
+════════════════════════════════════════ */
+let favLocked = localStorage.getItem('radio_fav_locked') === '1';
+
+function applyFavLock() {
+  const btn = document.getElementById('favLockBtn');
+  if (!btn) return;
+  if (favLocked) {
+    btn.classList.add('locked');
+    btn.innerHTML = '<span class="lock-icon">🔒</span>';
+    btn.title = '즐겨찾기 잠금 해제';
+  } else {
+    btn.classList.remove('locked');
+    btn.innerHTML = '<span class="lock-icon">🔓</span>';
+    btn.title = '즐겨찾기 잠금';
+  }
+}
+
+function toggleFavLock() {
+  favLocked = !favLocked;
+  localStorage.setItem('radio_fav_locked', favLocked ? '1' : '0');
+  applyFavLock();
+  showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
+}
+
+/* ════════════════════════════════════════
+   방송 추가 (사용자 커스텀 채널)
+════════════════════════════════════════ */
+// 사용자 추가 채널 불러오기
+function loadCustomStations() {
+  try {
+    const saved = localStorage.getItem('radio_custom_stations');
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+}
+
+function saveCustomStations(list) {
+  try {
+    localStorage.setItem('radio_custom_stations', JSON.stringify(list));
+  } catch(e) {
+    showToast('⚠️ 저장 공간이 부족합니다.');
+  }
+}
+
+// 앱 시작 시 커스텀 채널을 STATIONS에 병합
+function mergeCustomStations() {
+  const custom = loadCustomStations();
+  custom.forEach(s => {
+    if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+  });
+}
+
+function openAddStation() {
+  // 입력 초기화
+  ['asi-name','asi-freq','asi-genre','asi-url'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('asi-color').value = '#e74c3c';
+  document.getElementById('addStationBg').classList.add('show');
+}
+
+function closeAddStation(e) {
+  if (e && e.target !== document.getElementById('addStationBg')) return;
+  document.getElementById('addStationBg').classList.remove('show');
+}
+
+function confirmAddStation() {
+  const name  = document.getElementById('asi-name').value.trim();
+  const freq  = document.getElementById('asi-freq').value.trim() || '—';
+  const genre = document.getElementById('asi-genre').value.trim() || '기타';
+  const url   = document.getElementById('asi-url').value.trim();
+  const color = document.getElementById('asi-color').value;
+
+  if (!name) { showToast('⚠️ 방송국 이름을 입력해주세요.'); return; }
+  if (!url)  { showToast('⚠️ 스트림 URL을 입력해주세요.');  return; }
+  if (!url.startsWith('http')) { showToast('⚠️ URL은 http로 시작해야 합니다.'); return; }
+
+  const custom = loadCustomStations();
+  // ID: 1000번대 (기본 채널과 충돌 방지)
+  const newId  = 1000 + Date.now() % 100000;
+  const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
+
+  custom.push(newStation);
+  saveCustomStations(custom);
+  STATIONS.push(newStation);
+
+  renderAllList();
+  updateFavCount();
+  closeAddStation();
+  showToast(`✅ "${name}" 채널이 추가됐습니다.`);
+}
+
+function deleteCustomStation(id, e) {
+  e.stopPropagation();
+  const s = STATIONS.find(x => x.id === id);
+  if (!s || !s.custom) return;
+  if (S.current && S.current.id === id) {
+    showToast('⚠️ 재생 중인 채널은 삭제할 수 없습니다.');
+    return;
+  }
+  const custom = loadCustomStations().filter(x => x.id !== id);
+  saveCustomStations(custom);
+  const idx = STATIONS.findIndex(x => x.id === id);
+  if (idx > -1) STATIONS.splice(idx, 1);
+  S.favorites.delete(id); saveFav();
+  renderAllList(); updateFavCount();
+  showToast(`🗑️ 채널이 삭제됐습니다.`);
+}
+
 /* ════════════════════════════════════════
    변경 이력
 ════════════════════════════════════════ */
@@ -1766,6 +2042,8 @@ document.querySelectorAll('.tab-btn').forEach(b =>
   b.addEventListener('click', () => switchTab(b.dataset.tab))
 );
 
+mergeCustomStations();
+applyFavLock();
 handleVolume(S.volume);
 updateFavCount();
 renderAllList();

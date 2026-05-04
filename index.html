@@ -60,6 +60,11 @@
   ║ v1.7.2  개선 (2025-04-19)                            ║
   ║                                                      ║
   ║ v1.7.3  긴급 수정 (2025-04-19)                       ║
+  ║                                                      ║
+  ║ v1.7.4  긴급 수정 (2025-05-04)                       ║
+  ║  · 통화 후 재연결 안 되는 버그 수정                    ║
+  ║  · WiFi↔데이터 전환 후 방송 종료 버그 수정             ║
+  ║  · online 핸들러 중복 충돌 제거                        ║
   ║  · 통화 후 재연결 10~20초 후 정지 버그 수정            ║
   ║  · watchTimer 재연결 후 중복 실행 방지                 ║
   ║  · reconnecting 플래그로 중복 재연결 차단              ║
@@ -769,7 +774,7 @@ input[type=range]::-webkit-slider-thumb {
 <div id="toast"></div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.7.3</div>
+<div id="versionBadge" onclick="openChangelog()">v1.7.4</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -817,8 +822,14 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.7.3';
+const APP_VERSION = 'v1.7.4';
 const CHANGELOG = [
+  { version: 'v1.7.4', date: '2025-05-04', changes: [
+    '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
+    'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
+    'offline 감지 시 HLS 스트림 즉시 정리 및 상태 동기화',
+    'online 핸들러 callSuspect 조건 제거 — 네트워크 복구 시 항상 재연결',
+  ]},
   { version: 'v1.7.3', date: '2025-04-19', changes: [
     '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
     'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
@@ -828,6 +839,12 @@ const CHANGELOG = [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.7.4', date: '2025-05-04', changes: [
+    '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
+    'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
+    'offline 감지 시 HLS 스트림 즉시 정리 및 상태 동기화',
+    'online 핸들러 callSuspect 조건 제거 — 네트워크 복구 시 항상 재연결',
   ]},
   { version: 'v1.7.3', date: '2025-04-19', changes: [
     '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
@@ -1206,7 +1223,8 @@ async function resolveStreamUrl(s, forceRefresh) {
 ════════════════════════════════════════ */
 function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
-  S.needReconnect = false; S.wasPlaying = false;   // 채널 변경 시 인터럽트 플래그 초기화
+  S.needReconnect = false;   // 채널 변경 시 needReconnect 초기화
+  // S.wasPlaying은 건드리지 않음 — tryReconnect가 관리
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
@@ -1334,16 +1352,15 @@ audio.addEventListener('play', () => {
   let reconnecting = false; // 재연결 진행 중 플래그 (중복 방지)
 
   function tryReconnect() {
-    if (reconnecting) return; // 이미 재연결 중이면 무시
-    if (!S.wasPlaying || !S.current) return;
-    reconnecting = true;
+    if (reconnecting || !S.current || !S.wasPlaying) return;
+    reconnecting    = true;
     S.wasPlaying    = false;
     S.needReconnect = false;
     callSuspect     = false;
     stopWatch();
+    showError(null); // 에러 메시지 초기화
     setTimeout(() => {
       playStation(S.current);
-      // 재연결 완료 후 플래그 해제 (충분한 여유 시간)
       setTimeout(() => { reconnecting = false; }, 5000);
     }, 800);
   }
@@ -1387,9 +1404,9 @@ audio.addEventListener('play', () => {
     if (S.wasPlaying && S.current) tryReconnect();
   });
 
-  // 네트워크 복구 → 재연결
+  // 네트워크 복구 → 재연결 (통화 종료 + WiFi↔데이터 전환 모두 처리)
   window.addEventListener('online', () => {
-    if (callSuspect && S.wasPlaying && S.current) tryReconnect();
+    if (S.wasPlaying && S.current) tryReconnect();
   });
 })();
 
@@ -1463,25 +1480,16 @@ audio.addEventListener('play', () => {
 
 /* ════════════════════════════════════════
    네트워크 전환 감지 (WiFi ↔ 데이터)
+   → initCallReconnect 내부에서 통합 처리
 ════════════════════════════════════════ */
-window.addEventListener('online', () => {
-  if (!S.current) return;
-  // 네트워크 복구 시 재생 중이었거나 재시도 중이면 즉시 라이브 재연결
-  if (S.playing || S.retryTimer || S.wasPlaying) {
-    clearRetryTimer();
-    S.retryCount  = 0;
-    S.wasPlaying  = false;
-    S.needReconnect = false;
-    // 네트워크 전환 완료까지 짧게 대기 후 재연결
-    setTimeout(() => playStation(S.current), 800);
-  }
-});
-
 window.addEventListener('offline', () => {
   if (!S.current || !S.playing) return;
-  // 네트워크 끊김 감지 → wasPlaying 세팅 (online 복귀 시 재연결 트리거)
-  clearRetryTimer();
+  // 끊김 감지 → wasPlaying 세팅 + 재시도 타이머 정리
   S.wasPlaying = true;
+  S.playing    = false;
+  clearRetryTimer();
+  if (S.hls) S.hls.stopLoad();
+  updateNowPlaying(); renderStations();
   showError('네트워크가 끊겼습니다. 연결을 확인 중...');
 });
 

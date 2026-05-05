@@ -58,6 +58,46 @@
   ║ v1.7.1  버그 수정 (2025-04-19)                       ║
   ║                                                      ║
   ║ v1.7.2  개선 (2025-04-19)                            ║
+  ║                                                      ║
+  ║ v1.7.3  긴급 수정 (2025-04-19)                       ║
+  ║                                                      ║
+  ║ v1.7.4  긴급 수정 (2025-05-04)                       ║
+  ║                                                      ║
+  ║ v1.8.0  기능 추가 (2025-05-04)                       ║
+  ║                                                      ║
+  ║ v1.8.1  버그 수정 (2025-05-05)                       ║
+  ║  · 알림창 일시정지 상태 ▶ 버튼 미표시 수정            ║
+  ║                                                      ║
+  ║ v1.8.2  긴급 수정 (2025-05-05)                       ║
+  ║                                                      ║
+  ║ v1.8.3  기능 추가 (2025-05-05)                       ║
+  ║                                                      ║
+  ║ v1.8.4  긴급 수정 (2025-05-05)                       ║
+  ║                                                      ║
+  ║ v1.8.5  기능 추가 (2025-05-06)                       ║
+  ║                                                      ║
+  ║ v1.9.0  기능 추가 (2025-05-06)                       ║
+  ║  · UUID 기반 사용자 식별 (IndexedDB 저장)              ║
+  ║  · Firebase 즐겨찾기·잠금·커스텀채널 자동 백업         ║
+  ║  · 인터넷 기록 삭제 후 Firebase→IndexedDB 자동 복원    ║
+  ║  · IndexedDB 이중 저장으로 즐겨찾기·잠금 보호          ║
+  ║  · 인터넷 기록 삭제 시 자동 복원                       ║
+  ║  · liveSyncDuration 3초 → 끊김 유발 수정              ║
+  ║  · FRAG_CHANGED 강제 점프 제거                         ║
+  ║  · hls.js 자체 라이브 동기화로 안정화                  ║
+  ║  · HLS liveSyncPosition 라이브 시점 즉시 점프          ║
+  ║  · 버퍼 지연 10초 초과 시 자동 라이브 복귀             ║
+  ║  · 통화 수신 시 알림창 재생중/실제 정지 불일치 수정    ║
+  ║  · pause 이벤트 S.playing 동기화 누락 수정            ║
+  ║  · 즐겨찾기 잠금 — 해제 실수 방지                     ║
+  ║  · 방송 추가 — 커스텀 채널 추가/삭제                  ║
+  ║  · 커스텀 채널 localStorage 영구 저장                 ║
+  ║  · 통화 후 재연결 안 되는 버그 수정                    ║
+  ║  · WiFi↔데이터 전환 후 방송 종료 버그 수정             ║
+  ║  · online 핸들러 중복 충돌 제거                        ║
+  ║  · 통화 후 재연결 10~20초 후 정지 버그 수정            ║
+  ║  · watchTimer 재연결 후 중복 실행 방지                 ║
+  ║  · reconnecting 플래그로 중복 재연결 차단              ║
   ║  · 통화 종료 후 자동 재연결 안정화                     ║
   ║  · Android 12+ AudioContext 차단 환경 대응            ║
   ║  · visibilitychange·online·AudioContext 3중 감지      ║
@@ -579,6 +619,99 @@ input[type=range]::-webkit-slider-thumb {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+/* ══ 즐겨찾기 잠금 버튼 ══ */
+#favLockBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 4px 10px; border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .5px;
+}
+#favLockBtn.locked {
+  border-color: var(--red); color: var(--red);
+  background: var(--red-glow);
+}
+#favLockBtn .lock-icon { font-size: 13px; }
+
+/* ══ 방송 추가 버튼 ══ */
+#addStationBtn {
+  position: fixed;
+  bottom: calc(var(--sab) + 36px);
+  left: 16px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 22px; line-height: 1;
+  border: none; cursor: pointer;
+  box-shadow: 0 4px 16px var(--red-glow);
+  z-index: 150;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, box-shadow .2s;
+}
+#addStationBtn:active { transform: scale(.92); }
+
+/* ══ 방송 추가 시트 ══ */
+.add-station-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.add-station-bg.show { display: flex; }
+.add-station-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(var(--sab) + 24px);
+  width: min(520px,100%); display: flex; flex-direction: column; gap: 14px;
+}
+.add-station-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.add-station-field { display: flex; flex-direction: column; gap: 5px; }
+.add-station-field label {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.add-station-field input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s;
+}
+.add-station-field input:focus { border-color: var(--red); }
+.add-station-actions { display: flex; gap: 10px; margin-top: 4px; }
+.add-station-actions button {
+  flex: 1; padding: 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-add-confirm {
+  background: var(--red); color: #fff; border: none;
+}
+.btn-add-cancel {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.custom-station-badge {
+  font-size: 8px; background: var(--red); color: #fff;
+  padding: 1px 5px; border-radius: 4px;
+  font-family: var(--mono); letter-spacing: .5px;
+  vertical-align: middle; margin-left: 4px;
+}
+/* 사용자 추가 방송국 삭제 버튼 */
+.st-delete-btn {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(231,76,60,.15); color: var(--red);
+  border: none; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.station-card:hover .st-delete-btn,
+.station-card:focus-within .st-delete-btn { opacity: 1; }
+
 /* ══ 버전 모달 ══ */
 #versionBadge {
   position: fixed;
@@ -706,10 +839,13 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 
   <!-- 탭 -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="all">전체 채널</button>
-    <button class="tab-btn" data-tab="fav">
+  <div class="tabs" style="display:flex;align-items:center;gap:8px">
+    <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
+    <button class="tab-btn" data-tab="fav" style="flex:1">
       ⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span>
+    </button>
+    <button id="favLockBtn" onclick="toggleFavLock()" title="즐겨찾기 잠금">
+      <span class="lock-icon">🔓</span>
     </button>
   </div>
 
@@ -763,8 +899,45 @@ input[type=range]::-webkit-slider-thumb {
 <!-- 토스트 -->
 <div id="toast"></div>
 
+<!-- 방송 추가 버튼 -->
+<button id="addStationBtn" onclick="openAddStation()" title="방송 추가">＋</button>
+
+<!-- 방송 추가 시트 -->
+<div class="add-station-bg" id="addStationBg" onclick="closeAddStation(event)">
+  <div class="add-station-sheet">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="add-station-title">📻 방송 추가</div>
+      <button class="changelog-close" onclick="closeAddStation()">✕</button>
+    </div>
+    <div class="add-station-field">
+      <label>방송국 이름 *</label>
+      <input id="asi-name" type="text" placeholder="예: OO FM" maxlength="30">
+    </div>
+    <div class="add-station-field">
+      <label>주파수</label>
+      <input id="asi-freq" type="text" placeholder="예: 100.0 MHz">
+    </div>
+    <div class="add-station-field">
+      <label>장르</label>
+      <input id="asi-genre" type="text" placeholder="예: 음악, 뉴스, 교양">
+    </div>
+    <div class="add-station-field">
+      <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
+      <input id="asi-url" type="url" placeholder="https://...m3u8">
+    </div>
+    <div class="add-station-field">
+      <label>색상 (선택)</label>
+      <input id="asi-color" type="color" value="#e74c3c" style="height:36px;padding:2px 6px;cursor:pointer">
+    </div>
+    <div class="add-station-actions">
+      <button class="btn-add-cancel" onclick="closeAddStation()">취소</button>
+      <button class="btn-add-confirm" onclick="confirmAddStation()">추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.7.2</div>
+<div id="versionBadge" onclick="openChangelog()">v1.9.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -812,12 +985,106 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.7.2';
+const APP_VERSION = 'v1.9.0';
 const CHANGELOG = [
+  { version: 'v1.9.0', date: '2025-05-06', changes: [
+    'UUID 기반 사용자 식별 — IndexedDB에 저장 (인터넷 기록 삭제 후에도 유지)',
+    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업',
+    '인터넷 기록 삭제 후 재실행 시 Firebase → IndexedDB 순으로 자동 복원',
+    '즐겨찾기 변경·잠금 변경·커스텀채널 추가/삭제 시 Firebase 즉시 동기화',
+  ]},
+  { version: 'v1.8.5', date: '2025-05-06', changes: [
+    '인터넷 기록 삭제 시 즐겨찾기 초기화 방지',
+    'IndexedDB 이중 저장 — 즐겨찾기·잠금·커스텀채널 보호',
+    '앱 시작 시 localStorage 비어있으면 IndexedDB에서 자동 복원',
+  ]},
+  { version: 'v1.8.4', date: '2025-05-05', changes: [
+    '긴급: liveSyncDuration 3초 설정으로 인한 끊김 수정',
+    'FRAG_CHANGED currentTime 강제 점프 제거 (주기적 끊김 원인)',
+    'MANIFEST_PARSED currentTime 즉시 점프 제거 (초기 끊김 원인)',
+    'hls.js 자체 라이브 동기화에 위임 — 버퍼 30초로 안정화',
+  ]},
+  { version: 'v1.8.3', date: '2025-05-05', changes: [
+    'HLS liveSyncPosition 적용 — 항상 라이브 시점으로 재생',
+    'MANIFEST_PARSED 시 라이브 위치 즉시 점프',
+    '재생 중 버퍼 지연 10초 초과 시 자동으로 라이브 위치 복귀',
+    'liveSyncDuration 3초, liveMaxLatencyDuration 10초 설정',
+  ]},
+  { version: 'v1.8.2', date: '2025-05-05', changes: [
+    '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
+    'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
+  ]},
+  { version: 'v1.8.1', date: '2025-05-05', changes: [
+    '알림창 일시정지 상태에서 ▶ 버튼 미표시 수정',
+    'updateMediaSession — playbackState 설정 전 핸들러 명시적 재등록',
+  ]},
+  { version: 'v1.8.0', date: '2025-05-04', changes: [
+    '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
+    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
+    '추가된 채널은 localStorage에 저장되어 앱 재시작 후에도 유지',
+  ]},
+  { version: 'v1.7.4', date: '2025-05-04', changes: [
+    '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
+    'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
+    'offline 감지 시 HLS 스트림 즉시 정리 및 상태 동기화',
+    'online 핸들러 callSuspect 조건 제거 — 네트워크 복구 시 항상 재연결',
+  ]},
+  { version: 'v1.7.3', date: '2025-04-19', changes: [
+    '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
+    'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
+    'reconnecting 플래그 추가로 중복 재연결 완전 차단',
+  ]},
   { version: 'v1.7.2', date: '2025-04-19', changes: [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.9.0', date: '2025-05-06', changes: [
+    'UUID 기반 사용자 식별 — IndexedDB에 저장 (인터넷 기록 삭제 후에도 유지)',
+    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업',
+    '인터넷 기록 삭제 후 재실행 시 Firebase → IndexedDB 순으로 자동 복원',
+    '즐겨찾기 변경·잠금 변경·커스텀채널 추가/삭제 시 Firebase 즉시 동기화',
+  ]},
+  { version: 'v1.8.5', date: '2025-05-06', changes: [
+    '인터넷 기록 삭제 시 즐겨찾기 초기화 방지',
+    'IndexedDB 이중 저장 — 즐겨찾기·잠금·커스텀채널 보호',
+    '앱 시작 시 localStorage 비어있으면 IndexedDB에서 자동 복원',
+  ]},
+  { version: 'v1.8.4', date: '2025-05-05', changes: [
+    '긴급: liveSyncDuration 3초 설정으로 인한 끊김 수정',
+    'FRAG_CHANGED currentTime 강제 점프 제거 (주기적 끊김 원인)',
+    'MANIFEST_PARSED currentTime 즉시 점프 제거 (초기 끊김 원인)',
+    'hls.js 자체 라이브 동기화에 위임 — 버퍼 30초로 안정화',
+  ]},
+  { version: 'v1.8.3', date: '2025-05-05', changes: [
+    'HLS liveSyncPosition 적용 — 항상 라이브 시점으로 재생',
+    'MANIFEST_PARSED 시 라이브 위치 즉시 점프',
+    '재생 중 버퍼 지연 10초 초과 시 자동으로 라이브 위치 복귀',
+    'liveSyncDuration 3초, liveMaxLatencyDuration 10초 설정',
+  ]},
+  { version: 'v1.8.2', date: '2025-05-05', changes: [
+    '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
+    'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
+  ]},
+  { version: 'v1.8.1', date: '2025-05-05', changes: [
+    '알림창 일시정지 상태에서 ▶ 버튼 미표시 수정',
+    'updateMediaSession — playbackState 설정 전 핸들러 명시적 재등록',
+  ]},
+  { version: 'v1.8.0', date: '2025-05-04', changes: [
+    '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
+    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
+    '추가된 채널은 localStorage에 저장되어 앱 재시작 후에도 유지',
+  ]},
+  { version: 'v1.7.4', date: '2025-05-04', changes: [
+    '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
+    'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
+    'offline 감지 시 HLS 스트림 즉시 정리 및 상태 동기화',
+    'online 핸들러 callSuspect 조건 제거 — 네트워크 복구 시 항상 재연결',
+  ]},
+  { version: 'v1.7.3', date: '2025-04-19', changes: [
+    '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
+    'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
+    'reconnecting 플래그 추가로 중복 재연결 완전 차단',
   ]},
   { version: 'v1.7.2', date: '2025-04-19', changes: [
     '통화 종료 후 자동 재연결 안정화',
@@ -987,16 +1254,21 @@ function switchTab(tab) {
    즐겨찾기
 ════════════════════════════════════════ */
 function saveFav() {
-  try {
-    localStorage.setItem('radio_favs', JSON.stringify([...S.favorites]));
-  } catch(e) {
-    console.warn('즐겨찾기 저장 실패:', e);
+  const data = JSON.stringify([...S.favorites]);
+  try { localStorage.setItem('radio_favs', data); } catch(e) {
     showToast('⚠️ 즐겨찾기 저장에 실패했습니다.');
   }
+  idbSet('radio_favs', data); // IndexedDB 백업
+  fbSaveUserData();            // Firebase 백업
 }
 
 function toggleFav(id, e) {
   e.stopPropagation();
+  // 잠금 상태에서 해제 시도 차단
+  if (favLocked && S.favorites.has(id)) {
+    showToast('🔒 즐겨찾기가 잠겨있습니다. 잠금 해제 후 변경하세요.');
+    return;
+  }
   S.favorites.has(id) ? S.favorites.delete(id) : S.favorites.add(id);
   saveFav(); updateFavCount();
   ['list-all','list-fav'].forEach(lid => {
@@ -1057,6 +1329,16 @@ function createCard(s) {
     <div class="live-dot" id="dot-${s.id}" style="opacity:${isActive?1:0}"></div>
   `;
   card.querySelector('.s-fav-btn').addEventListener('click', e => toggleFav(s.id, e));
+  // 커스텀 채널 삭제 버튼
+  if (s.custom) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'st-delete-btn';
+    delBtn.innerHTML = '✕';
+    delBtn.title = '채널 삭제';
+    delBtn.addEventListener('click', e => deleteCustomStation(s.id, e));
+    card.style.position = 'relative';
+    card.appendChild(delBtn);
+  }
   card.addEventListener('click', () => {
     if (S.current && S.current.id === s.id && !S.loading) togglePlay();
     else playStation(s, true);
@@ -1191,7 +1473,8 @@ async function resolveStreamUrl(s, forceRefresh) {
 ════════════════════════════════════════ */
 function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
-  S.needReconnect = false; S.wasPlaying = false;   // 채널 변경 시 인터럽트 플래그 초기화
+  S.needReconnect = false;   // 채널 변경 시 needReconnect 초기화
+  // S.wasPlaying은 건드리지 않음 — tryReconnect가 관리
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
@@ -1222,7 +1505,13 @@ function playStation(s, forceRefresh = false) {
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      S.hls = new window.Hls({ maxBufferLength: 15, maxMaxBufferLength: 30 });
+      S.hls = new window.Hls({
+        maxBufferLength:        30,   // 버퍼 여유 충분히 확보
+        maxMaxBufferLength:     60,
+        liveSyncDurationCount:   3,   // 세그먼트 3개 분량 여유 (약 6~12초)
+        liveMaxLatencyDurationCount: 6, // 세그먼트 6개 초과 시 hls.js가 자동 조정
+        enableWorker:           true,
+      });
       S.hls.loadSource(url); S.hls.attachMedia(audio);
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
@@ -1294,8 +1583,14 @@ audio.addEventListener('error', () => { if (S.current && S.playing && !S.loading
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; } // 직접 정지는 무시
   if (S.playing && S.current && !S.loading) {
-    S.wasPlaying    = true;
+    S.wasPlaying = true;
     S.needReconnect = true;
+    S.playing = false;  // 실제 오디오 정지 → 상태 동기화
+    updateNowPlaying(); renderStations();
+    // 알림창도 정지 상태로 즉시 반영
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   }
 });
 
@@ -1313,37 +1608,39 @@ audio.addEventListener('play', () => {
 });
 
 // ── 통화 종료 자동 재연결 ────────────────────────────
-// Android는 전화 수신/종료를 JS에서 직접 감지 불가
-// visibilitychange + audio 상태 조합으로 감지
 (function initCallReconnect() {
   let watchTimer  = null;
-  let callSuspect = false; // 통화 중으로 의심되는 상태
+  let callSuspect = false;
+  let reconnecting = false; // 재연결 진행 중 플래그 (중복 방지)
 
   function tryReconnect() {
-    if (S.wasPlaying && S.current) {
-      S.wasPlaying    = false;
-      S.needReconnect = false;
-      setTimeout(() => playStation(S.current), 800);
-    }
-    callSuspect = false;
+    if (reconnecting || !S.current || !S.wasPlaying) return;
+    reconnecting    = true;
+    S.wasPlaying    = false;
+    S.needReconnect = false;
+    callSuspect     = false;
     stopWatch();
+    showError(null); // 에러 메시지 초기화
+    setTimeout(() => {
+      playStation(S.current);
+      setTimeout(() => { reconnecting = false; }, 5000);
+    }, 800);
   }
 
   function startWatch() {
-    if (watchTimer) return;
+    if (watchTimer || reconnecting) return;
     callSuspect = true;
     watchTimer = setInterval(() => {
-      if (!S.wasPlaying || !S.current) { stopWatch(); return; }
-
-      // audio.paused + 네트워크 연결 있으면 통화 종료로 판단
+      if (!S.wasPlaying || !S.current || reconnecting) {
+        stopWatch(); return;
+      }
       if (audio.paused && navigator.onLine) {
-        // AudioContext 상태 확인 (가능한 경우)
         try {
           const testCtx = new (window.AudioContext || window.webkitAudioContext)();
           const state   = testCtx.state;
           testCtx.close();
           if (state === 'running') { tryReconnect(); return; }
-        } catch(e) { /* AudioContext 생성 불가 환경 */ }
+        } catch(e) {}
       }
     }, 2000);
   }
@@ -1353,29 +1650,25 @@ audio.addEventListener('play', () => {
     callSuspect = false;
   }
 
-  // pause 이벤트 → 0.5초 후 통화 의심 상태면 감시 시작
+  // pause → 0.5초 후 재연결 중이 아니면 감시 시작
   audio.addEventListener('pause', () => {
     setTimeout(() => {
-      if (S.wasPlaying && S.current) startWatch();
+      if (S.wasPlaying && S.current && !reconnecting) startWatch();
     }, 500);
   });
 
-  // 재생 시작 → 감시 중단
+  // 재생 시작 → 감시 즉시 중단
   audio.addEventListener('play', () => stopWatch());
 
-  // 화면 복귀 시 통화 종료로 판단 → 즉시 재연결
+  // 화면 복귀 → 즉시 재연결
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (S.wasPlaying && S.current) {
-      tryReconnect();
-    }
+    if (S.wasPlaying && S.current) tryReconnect();
   });
 
-  // 네트워크 복구 시에도 재연결 트리거
+  // 네트워크 복구 → 재연결 (통화 종료 + WiFi↔데이터 전환 모두 처리)
   window.addEventListener('online', () => {
-    if (callSuspect && S.wasPlaying && S.current) {
-      tryReconnect();
-    }
+    if (S.wasPlaying && S.current) tryReconnect();
   });
 })();
 
@@ -1449,25 +1742,16 @@ audio.addEventListener('play', () => {
 
 /* ════════════════════════════════════════
    네트워크 전환 감지 (WiFi ↔ 데이터)
+   → initCallReconnect 내부에서 통합 처리
 ════════════════════════════════════════ */
-window.addEventListener('online', () => {
-  if (!S.current) return;
-  // 네트워크 복구 시 재생 중이었거나 재시도 중이면 즉시 라이브 재연결
-  if (S.playing || S.retryTimer || S.wasPlaying) {
-    clearRetryTimer();
-    S.retryCount  = 0;
-    S.wasPlaying  = false;
-    S.needReconnect = false;
-    // 네트워크 전환 완료까지 짧게 대기 후 재연결
-    setTimeout(() => playStation(S.current), 800);
-  }
-});
-
 window.addEventListener('offline', () => {
   if (!S.current || !S.playing) return;
-  // 네트워크 끊김 감지 → wasPlaying 세팅 (online 복귀 시 재연결 트리거)
-  clearRetryTimer();
+  // 끊김 감지 → wasPlaying 세팅 + 재시도 타이머 정리
   S.wasPlaying = true;
+  S.playing    = false;
+  clearRetryTimer();
+  if (S.hls) S.hls.stopLoad();
+  updateNowPlaying(); renderStations();
   showError('네트워크가 끊겼습니다. 연결을 확인 중...');
 });
 
@@ -1526,6 +1810,21 @@ function updateMediaSession() {
     playStation(STATIONS[(i + 1) % STATIONS.length], true);
   });
 
+  // playbackState 설정 전 핸들러 명시적 재등록
+  // Android 일부 버전에서 paused 상태의 ▶ 버튼 표시를 위해 필요
+  navigator.mediaSession.setActionHandler('play', () => {
+    playStation(S.current);
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    clearRetryTimer();
+    if (S.hls) S.hls.stopLoad();
+    S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
+    audio.pause(); S.playing = false;
+    localStorage.setItem('radio_playing', '0');
+    updateNowPlaying(); renderStations();
+    navigator.mediaSession.playbackState = 'paused';
+  });
+
   // playbackState: 로딩 중이면 playing으로 표시해 OS가 컨트롤을 숨기지 않게 함
   navigator.mediaSession.playbackState = S.playing || S.loading ? 'playing' : 'paused';
 }
@@ -1573,6 +1872,111 @@ function installApp() {
   deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
 }
 
+
+/* ════════════════════════════════════════
+   사용자 UUID — IndexedDB에만 저장
+   인터넷 기록 삭제 후에도 유지됨
+════════════════════════════════════════ */
+let _userUUID = null;
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+async function getUserUUID() {
+  if (_userUUID) return _userUUID;
+  // IndexedDB에서 UUID 불러오기
+  let uuid = await idbGet('user_uuid');
+  if (!uuid) {
+    uuid = generateUUID();
+    await idbSet('user_uuid', uuid);
+    console.info('[UUID] 새 UUID 생성:', uuid);
+  } else {
+    console.info('[UUID] IndexedDB에서 복원:', uuid);
+  }
+  _userUUID = uuid;
+  return uuid;
+}
+
+/* ════════════════════════════════════════
+   Firebase 사용자 데이터 동기화
+   즐겨찾기·잠금·커스텀채널 → Firebase에 저장
+   인터넷 기록 삭제 후 UUID로 복원 가능
+════════════════════════════════════════ */
+async function fbSaveUserData() {
+  if (!fbReady || !fbDb) return;
+  try {
+    const uuid = await getUserUUID();
+    await fbDb.ref(`users/${uuid}`).set({
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+  } catch(e) { console.warn('Firebase 사용자 데이터 저장 실패:', e); }
+}
+
+async function fbLoadUserData() {
+  if (!fbReady || !fbDb) return false;
+  try {
+    const uuid = await getUserUUID();
+    const snap = await fbDb.ref(`users/${uuid}`).once('value');
+    const data = snap.val();
+    if (!data) return false;
+
+    // 즐겨찾기 복원
+    if (Array.isArray(data.favorites) && data.favorites.length > 0) {
+      S.favorites = new Set(data.favorites);
+      saveFav();
+      updateFavCount();
+      renderAllList();
+      updateFavList();
+    }
+
+    // 잠금 상태 복원
+    if (typeof data.favLocked === 'boolean') {
+      favLocked = data.favLocked;
+      const lockVal = favLocked ? '1' : '0';
+      try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+      await idbSet('radio_fav_locked', lockVal);
+      applyFavLock();
+    }
+
+    // 커스텀 채널 복원
+    if (Array.isArray(data.customStations) && data.customStations.length > 0) {
+      const existing = JSON.parse(localStorage.getItem('radio_custom_stations') || '[]');
+      // 중복 없이 병합
+      const merged = [...existing];
+      data.customStations.forEach(s => {
+        if (!merged.find(x => x.id === s.id)) merged.push(s);
+      });
+      saveCustomStations(merged);
+      merged.forEach(s => {
+        if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+      });
+      renderAllList();
+    }
+
+    console.info('[Firebase] 사용자 데이터 복원 완료');
+    return true;
+  } catch(e) {
+    console.warn('Firebase 사용자 데이터 불러오기 실패:', e);
+    return false;
+  }
+}
+
+// Firebase 초기화 후 사용자 데이터 불러오기
+async function initUserData() {
+  // 1. Firebase에서 먼저 시도
+  const fbRestored = await fbLoadUserData();
+  // 2. Firebase 실패 시 IndexedDB에서 복원 (restoreFromIDB)
+  if (!fbRestored) await restoreFromIDB();
+  console.info('[초기화] 사용자 데이터 로드 완료');
+}
+
 /* ════════════════════════════════════════
    Firebase 함께 듣기
 ════════════════════════════════════════ */
@@ -1599,7 +2003,11 @@ function initFirebase() {
     firebase.initializeApp(FB_CONFIG);
     fbDb = firebase.database();
     fbReady = true;
-  } catch(e) { console.warn('Firebase 초기화 실패:', e); }
+    initUserData(); // Firebase 준비 완료 → 사용자 데이터 로드
+  } catch(e) {
+    console.warn('Firebase 초기화 실패:', e);
+    restoreFromIDB(); // Firebase 실패 시 IndexedDB 복원
+  }
 }
 
 function startSync() {
@@ -1671,6 +2079,225 @@ function showToast(msg) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
+
+
+
+/* ════════════════════════════════════════
+   IndexedDB 백업 — 즐겨찾기/잠금/커스텀채널 보호
+   localStorage 삭제 시에도 IndexedDB에서 복원
+════════════════════════════════════════ */
+const DB_NAME    = 'kr-radio-db';
+const DB_VERSION = 1;
+const DB_STORE   = 'settings';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore(DB_STORE, { keyPath: 'key' });
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function idbSet(key, value) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readwrite');
+      const st  = tx.objectStore(DB_STORE);
+      st.put({ key, value });
+      tx.oncomplete = () => resolve();
+      tx.onerror    = e => reject(e.target.error);
+    });
+  } catch(e) { console.warn('IndexedDB 저장 실패:', e); }
+}
+
+async function idbGet(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readonly');
+      const req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = e => resolve(e.target.result?.value ?? null);
+      req.onerror   = e => reject(e.target.error);
+    });
+  } catch(e) { return null; }
+}
+
+// localStorage + IndexedDB 동시 저장
+async function saveProtected(key, value) {
+  try { localStorage.setItem(key, value); } catch(e) {}
+  await idbSet(key, value);
+}
+
+// localStorage 우선, 없으면 IndexedDB에서 복원
+async function loadProtected(key) {
+  const local = localStorage.getItem(key);
+  if (local !== null) return local;
+  // localStorage가 비어있으면 IndexedDB에서 복원 시도
+  const idb = await idbGet(key);
+  if (idb !== null) {
+    try { localStorage.setItem(key, idb); } catch(e) {}
+    console.info(`[복원] ${key} → IndexedDB에서 복구됨`);
+  }
+  return idb;
+}
+
+// 앱 시작 시 즐겨찾기 + 잠금 + 커스텀채널 복원
+async function restoreFromIDB() {
+  // 즐겨찾기 복원
+  const favs = await loadProtected('radio_favs');
+  if (favs) {
+    try {
+      const parsed = JSON.parse(favs);
+      if (Array.isArray(parsed)) {
+        S.favorites = new Set(parsed);
+        updateFavCount();
+        renderAllList();
+        updateFavList();
+      }
+    } catch(e) {}
+  }
+
+  // 잠금 상태 복원
+  const locked = await loadProtected('radio_fav_locked');
+  if (locked !== null) {
+    favLocked = locked === '1';
+    applyFavLock();
+  }
+
+  // 커스텀 채널 복원
+  const custom = await loadProtected('radio_custom_stations');
+  if (custom) {
+    try {
+      const parsed = JSON.parse(custom);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(s => {
+          if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+        });
+        renderAllList();
+      }
+    } catch(e) {}
+  }
+}
+
+/* ════════════════════════════════════════
+   즐겨찾기 잠금
+════════════════════════════════════════ */
+let favLocked = localStorage.getItem('radio_fav_locked') === '1';
+
+function applyFavLock() {
+  const btn = document.getElementById('favLockBtn');
+  if (!btn) return;
+  if (favLocked) {
+    btn.classList.add('locked');
+    btn.innerHTML = '<span class="lock-icon">🔒</span>';
+    btn.title = '즐겨찾기 잠금 해제';
+  } else {
+    btn.classList.remove('locked');
+    btn.innerHTML = '<span class="lock-icon">🔓</span>';
+    btn.title = '즐겨찾기 잠금';
+  }
+}
+
+function toggleFavLock() {
+  favLocked = !favLocked;
+  const lockVal = favLocked ? '1' : '0';
+  try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+  idbSet('radio_fav_locked', lockVal); // IndexedDB 백업
+  fbSaveUserData();                    // Firebase 백업
+  applyFavLock();
+  showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
+}
+
+/* ════════════════════════════════════════
+   방송 추가 (사용자 커스텀 채널)
+════════════════════════════════════════ */
+// 사용자 추가 채널 불러오기
+function loadCustomStations() {
+  try {
+    const saved = localStorage.getItem('radio_custom_stations');
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+}
+
+function saveCustomStations(list) {
+  const data = JSON.stringify(list);
+  try { localStorage.setItem('radio_custom_stations', data); } catch(e) {
+    showToast('⚠️ 저장 공간이 부족합니다.');
+  }
+  idbSet('radio_custom_stations', data); // IndexedDB 백업
+  fbSaveUserData();                      // Firebase 백업
+}
+
+// 앱 시작 시 커스텀 채널을 STATIONS에 병합
+function mergeCustomStations() {
+  const custom = loadCustomStations();
+  custom.forEach(s => {
+    if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+  });
+}
+
+function openAddStation() {
+  // 입력 초기화
+  ['asi-name','asi-freq','asi-genre','asi-url'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('asi-color').value = '#e74c3c';
+  document.getElementById('addStationBg').classList.add('show');
+}
+
+function closeAddStation(e) {
+  if (e && e.target !== document.getElementById('addStationBg')) return;
+  document.getElementById('addStationBg').classList.remove('show');
+}
+
+function confirmAddStation() {
+  const name  = document.getElementById('asi-name').value.trim();
+  const freq  = document.getElementById('asi-freq').value.trim() || '—';
+  const genre = document.getElementById('asi-genre').value.trim() || '기타';
+  const url   = document.getElementById('asi-url').value.trim();
+  const color = document.getElementById('asi-color').value;
+
+  if (!name) { showToast('⚠️ 방송국 이름을 입력해주세요.'); return; }
+  if (!url)  { showToast('⚠️ 스트림 URL을 입력해주세요.');  return; }
+  if (!url.startsWith('http')) { showToast('⚠️ URL은 http로 시작해야 합니다.'); return; }
+
+  const custom = loadCustomStations();
+  // ID: 1000번대 (기본 채널과 충돌 방지)
+  const newId  = 1000 + Date.now() % 100000;
+  const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
+
+  custom.push(newStation);
+  saveCustomStations(custom);
+  STATIONS.push(newStation);
+
+  renderAllList();
+  updateFavCount();
+  closeAddStation();
+  showToast(`✅ "${name}" 채널이 추가됐습니다.`);
+}
+
+function deleteCustomStation(id, e) {
+  e.stopPropagation();
+  const s = STATIONS.find(x => x.id === id);
+  if (!s || !s.custom) return;
+  if (S.current && S.current.id === id) {
+    showToast('⚠️ 재생 중인 채널은 삭제할 수 없습니다.');
+    return;
+  }
+  const custom = loadCustomStations().filter(x => x.id !== id);
+  saveCustomStations(custom);
+  const idx = STATIONS.findIndex(x => x.id === id);
+  if (idx > -1) STATIONS.splice(idx, 1);
+  S.favorites.delete(id); saveFav();
+  renderAllList(); updateFavCount();
+  showToast(`🗑️ 채널이 삭제됐습니다.`);
+}
 
 /* ════════════════════════════════════════
    변경 이력
@@ -1744,7 +2371,10 @@ document.querySelectorAll('.tab-btn').forEach(b =>
   b.addEventListener('click', () => switchTab(b.dataset.tab))
 );
 
+mergeCustomStations();
+applyFavLock();
 handleVolume(S.volume);
+initFirebase(); // Firebase 초기화 → 사용자 데이터 복원
 updateFavCount();
 renderAllList();
 updateFavList();

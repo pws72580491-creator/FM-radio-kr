@@ -64,6 +64,13 @@
   ║ v1.7.4  긴급 수정 (2025-05-04)                       ║
   ║                                                      ║
   ║ v1.8.0  기능 추가 (2025-05-04)                       ║
+  ║                                                      ║
+  ║ v1.8.1  버그 수정 (2025-05-05)                       ║
+  ║  · 알림창 일시정지 상태 ▶ 버튼 미표시 수정            ║
+  ║                                                      ║
+  ║ v1.8.2  긴급 수정 (2025-05-05)                       ║
+  ║  · 통화 수신 시 알림창 재생중/실제 정지 불일치 수정    ║
+  ║  · pause 이벤트 S.playing 동기화 누락 수정            ║
   ║  · 즐겨찾기 잠금 — 해제 실수 방지                     ║
   ║  · 방송 추가 — 커스텀 채널 추가/삭제                  ║
   ║  · 커스텀 채널 localStorage 영구 저장                 ║
@@ -912,7 +919,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.8.0</div>
+<div id="versionBadge" onclick="openChangelog()">v1.8.2</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -960,8 +967,16 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.8.0';
+const APP_VERSION = 'v1.8.2';
 const CHANGELOG = [
+  { version: 'v1.8.2', date: '2025-05-05', changes: [
+    '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
+    'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
+  ]},
+  { version: 'v1.8.1', date: '2025-05-05', changes: [
+    '알림창 일시정지 상태에서 ▶ 버튼 미표시 수정',
+    'updateMediaSession — playbackState 설정 전 핸들러 명시적 재등록',
+  ]},
   { version: 'v1.8.0', date: '2025-05-04', changes: [
     '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
     '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
@@ -982,6 +997,14 @@ const CHANGELOG = [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.8.2', date: '2025-05-05', changes: [
+    '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
+    'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
+  ]},
+  { version: 'v1.8.1', date: '2025-05-05', changes: [
+    '알림창 일시정지 상태에서 ▶ 버튼 미표시 수정',
+    'updateMediaSession — playbackState 설정 전 핸들러 명시적 재등록',
   ]},
   { version: 'v1.8.0', date: '2025-05-04', changes: [
     '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
@@ -1490,8 +1513,14 @@ audio.addEventListener('error', () => { if (S.current && S.playing && !S.loading
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; } // 직접 정지는 무시
   if (S.playing && S.current && !S.loading) {
-    S.wasPlaying    = true;
+    S.wasPlaying = true;
     S.needReconnect = true;
+    S.playing = false;  // 실제 오디오 정지 → 상태 동기화
+    updateNowPlaying(); renderStations();
+    // 알림창도 정지 상태로 즉시 반영
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   }
 });
 
@@ -1709,6 +1738,21 @@ function updateMediaSession() {
   navigator.mediaSession.setActionHandler('nexttrack', () => {
     const i = STATIONS.findIndex(s => s.id === S.current.id);
     playStation(STATIONS[(i + 1) % STATIONS.length], true);
+  });
+
+  // playbackState 설정 전 핸들러 명시적 재등록
+  // Android 일부 버전에서 paused 상태의 ▶ 버튼 표시를 위해 필요
+  navigator.mediaSession.setActionHandler('play', () => {
+    playStation(S.current);
+  });
+  navigator.mediaSession.setActionHandler('pause', () => {
+    clearRetryTimer();
+    if (S.hls) S.hls.stopLoad();
+    S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
+    audio.pause(); S.playing = false;
+    localStorage.setItem('radio_playing', '0');
+    updateNowPlaying(); renderStations();
+    navigator.mediaSession.playbackState = 'paused';
   });
 
   // playbackState: 로딩 중이면 playing으로 표시해 OS가 컨트롤을 숨기지 않게 함

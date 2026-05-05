@@ -69,6 +69,10 @@
   ║  · 알림창 일시정지 상태 ▶ 버튼 미표시 수정            ║
   ║                                                      ║
   ║ v1.8.2  긴급 수정 (2025-05-05)                       ║
+  ║                                                      ║
+  ║ v1.8.3  기능 추가 (2025-05-05)                       ║
+  ║  · HLS liveSyncPosition 라이브 시점 즉시 점프          ║
+  ║  · 버퍼 지연 10초 초과 시 자동 라이브 복귀             ║
   ║  · 통화 수신 시 알림창 재생중/실제 정지 불일치 수정    ║
   ║  · pause 이벤트 S.playing 동기화 누락 수정            ║
   ║  · 즐겨찾기 잠금 — 해제 실수 방지                     ║
@@ -919,7 +923,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.8.2</div>
+<div id="versionBadge" onclick="openChangelog()">v1.8.3</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -967,8 +971,14 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.8.2';
+const APP_VERSION = 'v1.8.3';
 const CHANGELOG = [
+  { version: 'v1.8.3', date: '2025-05-05', changes: [
+    'HLS liveSyncPosition 적용 — 항상 라이브 시점으로 재생',
+    'MANIFEST_PARSED 시 라이브 위치 즉시 점프',
+    '재생 중 버퍼 지연 10초 초과 시 자동으로 라이브 위치 복귀',
+    'liveSyncDuration 3초, liveMaxLatencyDuration 10초 설정',
+  ]},
   { version: 'v1.8.2', date: '2025-05-05', changes: [
     '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
     'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
@@ -997,6 +1007,12 @@ const CHANGELOG = [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.8.3', date: '2025-05-05', changes: [
+    'HLS liveSyncPosition 적용 — 항상 라이브 시점으로 재생',
+    'MANIFEST_PARSED 시 라이브 위치 즉시 점프',
+    '재생 중 버퍼 지연 10초 초과 시 자동으로 라이브 위치 복귀',
+    'liveSyncDuration 3초, liveMaxLatencyDuration 10초 설정',
   ]},
   { version: 'v1.8.2', date: '2025-05-05', changes: [
     '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
@@ -1441,14 +1457,33 @@ function playStation(s, forceRefresh = false) {
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      S.hls = new window.Hls({ maxBufferLength: 15, maxMaxBufferLength: 30 });
+      S.hls = new window.Hls({
+        maxBufferLength:    15,
+        maxMaxBufferLength: 30,
+        liveSyncDuration:   3,   // 라이브 엣지 3초 이내 유지
+        liveMaxLatencyDuration: 10, // 10초 초과 시 자동 점프
+      });
       S.hls.loadSource(url); S.hls.attachMedia(audio);
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
+        // 라이브 위치로 즉시 점프 후 재생
+        if (S.hls.liveSyncPosition) {
+          audio.currentTime = S.hls.liveSyncPosition;
+        }
         audio.play().then(onOK).catch(() => {
           showError('자동재생이 차단됐습니다. 재생 버튼을 눌러주세요.');
           onFail(false);
         });
+      });
+
+      // 재생 중 버퍼 지연 감지 → 10초 이상이면 라이브 위치로 자동 점프
+      S.hls.on(window.Hls.Events.FRAG_CHANGED, () => {
+        if (!S.playing || !S.hls) return;
+        const livePos = S.hls.liveSyncPosition;
+        if (livePos && audio.currentTime < livePos - 10) {
+          console.info(`[HLS] 버퍼 지연 ${Math.round(livePos - audio.currentTime)}초 → 라이브로 점프`);
+          audio.currentTime = livePos;
+        }
       });
       let mediaErrorCount = 0;
       S.hls.on(window.Hls.Events.ERROR, (_, d) => {

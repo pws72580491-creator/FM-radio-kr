@@ -73,6 +73,15 @@
   ║ v1.8.3  기능 추가 (2025-05-05)                       ║
   ║                                                      ║
   ║ v1.8.4  긴급 수정 (2025-05-05)                       ║
+  ║                                                      ║
+  ║ v1.8.5  기능 추가 (2025-05-06)                       ║
+  ║                                                      ║
+  ║ v1.9.0  기능 추가 (2025-05-06)                       ║
+  ║  · UUID 기반 사용자 식별 (IndexedDB 저장)              ║
+  ║  · Firebase 즐겨찾기·잠금·커스텀채널 자동 백업         ║
+  ║  · 인터넷 기록 삭제 후 Firebase→IndexedDB 자동 복원    ║
+  ║  · IndexedDB 이중 저장으로 즐겨찾기·잠금 보호          ║
+  ║  · 인터넷 기록 삭제 시 자동 복원                       ║
   ║  · liveSyncDuration 3초 → 끊김 유발 수정              ║
   ║  · FRAG_CHANGED 강제 점프 제거                         ║
   ║  · hls.js 자체 라이브 동기화로 안정화                  ║
@@ -928,7 +937,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v1.8.4</div>
+<div id="versionBadge" onclick="openChangelog()">v1.9.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -976,8 +985,19 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v1.8.4';
+const APP_VERSION = 'v1.9.0';
 const CHANGELOG = [
+  { version: 'v1.9.0', date: '2025-05-06', changes: [
+    'UUID 기반 사용자 식별 — IndexedDB에 저장 (인터넷 기록 삭제 후에도 유지)',
+    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업',
+    '인터넷 기록 삭제 후 재실행 시 Firebase → IndexedDB 순으로 자동 복원',
+    '즐겨찾기 변경·잠금 변경·커스텀채널 추가/삭제 시 Firebase 즉시 동기화',
+  ]},
+  { version: 'v1.8.5', date: '2025-05-06', changes: [
+    '인터넷 기록 삭제 시 즐겨찾기 초기화 방지',
+    'IndexedDB 이중 저장 — 즐겨찾기·잠금·커스텀채널 보호',
+    '앱 시작 시 localStorage 비어있으면 IndexedDB에서 자동 복원',
+  ]},
   { version: 'v1.8.4', date: '2025-05-05', changes: [
     '긴급: liveSyncDuration 3초 설정으로 인한 끊김 수정',
     'FRAG_CHANGED currentTime 강제 점프 제거 (주기적 끊김 원인)',
@@ -1018,6 +1038,17 @@ const CHANGELOG = [
     '통화 종료 후 방송 자동 재연결 추가',
     'AudioContext 상태 2초 주기 감시로 통화 종료 감지',
     '통화 종료 확인 후 1초 대기 후 라이브 재연결',
+  ]},
+  { version: 'v1.9.0', date: '2025-05-06', changes: [
+    'UUID 기반 사용자 식별 — IndexedDB에 저장 (인터넷 기록 삭제 후에도 유지)',
+    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업',
+    '인터넷 기록 삭제 후 재실행 시 Firebase → IndexedDB 순으로 자동 복원',
+    '즐겨찾기 변경·잠금 변경·커스텀채널 추가/삭제 시 Firebase 즉시 동기화',
+  ]},
+  { version: 'v1.8.5', date: '2025-05-06', changes: [
+    '인터넷 기록 삭제 시 즐겨찾기 초기화 방지',
+    'IndexedDB 이중 저장 — 즐겨찾기·잠금·커스텀채널 보호',
+    '앱 시작 시 localStorage 비어있으면 IndexedDB에서 자동 복원',
   ]},
   { version: 'v1.8.4', date: '2025-05-05', changes: [
     '긴급: liveSyncDuration 3초 설정으로 인한 끊김 수정',
@@ -1223,12 +1254,12 @@ function switchTab(tab) {
    즐겨찾기
 ════════════════════════════════════════ */
 function saveFav() {
-  try {
-    localStorage.setItem('radio_favs', JSON.stringify([...S.favorites]));
-  } catch(e) {
-    console.warn('즐겨찾기 저장 실패:', e);
+  const data = JSON.stringify([...S.favorites]);
+  try { localStorage.setItem('radio_favs', data); } catch(e) {
     showToast('⚠️ 즐겨찾기 저장에 실패했습니다.');
   }
+  idbSet('radio_favs', data); // IndexedDB 백업
+  fbSaveUserData();            // Firebase 백업
 }
 
 function toggleFav(id, e) {
@@ -1841,6 +1872,111 @@ function installApp() {
   deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
 }
 
+
+/* ════════════════════════════════════════
+   사용자 UUID — IndexedDB에만 저장
+   인터넷 기록 삭제 후에도 유지됨
+════════════════════════════════════════ */
+let _userUUID = null;
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+async function getUserUUID() {
+  if (_userUUID) return _userUUID;
+  // IndexedDB에서 UUID 불러오기
+  let uuid = await idbGet('user_uuid');
+  if (!uuid) {
+    uuid = generateUUID();
+    await idbSet('user_uuid', uuid);
+    console.info('[UUID] 새 UUID 생성:', uuid);
+  } else {
+    console.info('[UUID] IndexedDB에서 복원:', uuid);
+  }
+  _userUUID = uuid;
+  return uuid;
+}
+
+/* ════════════════════════════════════════
+   Firebase 사용자 데이터 동기화
+   즐겨찾기·잠금·커스텀채널 → Firebase에 저장
+   인터넷 기록 삭제 후 UUID로 복원 가능
+════════════════════════════════════════ */
+async function fbSaveUserData() {
+  if (!fbReady || !fbDb) return;
+  try {
+    const uuid = await getUserUUID();
+    await fbDb.ref(`users/${uuid}`).set({
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+  } catch(e) { console.warn('Firebase 사용자 데이터 저장 실패:', e); }
+}
+
+async function fbLoadUserData() {
+  if (!fbReady || !fbDb) return false;
+  try {
+    const uuid = await getUserUUID();
+    const snap = await fbDb.ref(`users/${uuid}`).once('value');
+    const data = snap.val();
+    if (!data) return false;
+
+    // 즐겨찾기 복원
+    if (Array.isArray(data.favorites) && data.favorites.length > 0) {
+      S.favorites = new Set(data.favorites);
+      saveFav();
+      updateFavCount();
+      renderAllList();
+      updateFavList();
+    }
+
+    // 잠금 상태 복원
+    if (typeof data.favLocked === 'boolean') {
+      favLocked = data.favLocked;
+      const lockVal = favLocked ? '1' : '0';
+      try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+      await idbSet('radio_fav_locked', lockVal);
+      applyFavLock();
+    }
+
+    // 커스텀 채널 복원
+    if (Array.isArray(data.customStations) && data.customStations.length > 0) {
+      const existing = JSON.parse(localStorage.getItem('radio_custom_stations') || '[]');
+      // 중복 없이 병합
+      const merged = [...existing];
+      data.customStations.forEach(s => {
+        if (!merged.find(x => x.id === s.id)) merged.push(s);
+      });
+      saveCustomStations(merged);
+      merged.forEach(s => {
+        if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+      });
+      renderAllList();
+    }
+
+    console.info('[Firebase] 사용자 데이터 복원 완료');
+    return true;
+  } catch(e) {
+    console.warn('Firebase 사용자 데이터 불러오기 실패:', e);
+    return false;
+  }
+}
+
+// Firebase 초기화 후 사용자 데이터 불러오기
+async function initUserData() {
+  // 1. Firebase에서 먼저 시도
+  const fbRestored = await fbLoadUserData();
+  // 2. Firebase 실패 시 IndexedDB에서 복원 (restoreFromIDB)
+  if (!fbRestored) await restoreFromIDB();
+  console.info('[초기화] 사용자 데이터 로드 완료');
+}
+
 /* ════════════════════════════════════════
    Firebase 함께 듣기
 ════════════════════════════════════════ */
@@ -1867,7 +2003,11 @@ function initFirebase() {
     firebase.initializeApp(FB_CONFIG);
     fbDb = firebase.database();
     fbReady = true;
-  } catch(e) { console.warn('Firebase 초기화 실패:', e); }
+    initUserData(); // Firebase 준비 완료 → 사용자 데이터 로드
+  } catch(e) {
+    console.warn('Firebase 초기화 실패:', e);
+    restoreFromIDB(); // Firebase 실패 시 IndexedDB 복원
+  }
 }
 
 function startSync() {
@@ -1941,6 +2081,108 @@ function showToast(msg) {
 
 
 
+
+/* ════════════════════════════════════════
+   IndexedDB 백업 — 즐겨찾기/잠금/커스텀채널 보호
+   localStorage 삭제 시에도 IndexedDB에서 복원
+════════════════════════════════════════ */
+const DB_NAME    = 'kr-radio-db';
+const DB_VERSION = 1;
+const DB_STORE   = 'settings';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore(DB_STORE, { keyPath: 'key' });
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function idbSet(key, value) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readwrite');
+      const st  = tx.objectStore(DB_STORE);
+      st.put({ key, value });
+      tx.oncomplete = () => resolve();
+      tx.onerror    = e => reject(e.target.error);
+    });
+  } catch(e) { console.warn('IndexedDB 저장 실패:', e); }
+}
+
+async function idbGet(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readonly');
+      const req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = e => resolve(e.target.result?.value ?? null);
+      req.onerror   = e => reject(e.target.error);
+    });
+  } catch(e) { return null; }
+}
+
+// localStorage + IndexedDB 동시 저장
+async function saveProtected(key, value) {
+  try { localStorage.setItem(key, value); } catch(e) {}
+  await idbSet(key, value);
+}
+
+// localStorage 우선, 없으면 IndexedDB에서 복원
+async function loadProtected(key) {
+  const local = localStorage.getItem(key);
+  if (local !== null) return local;
+  // localStorage가 비어있으면 IndexedDB에서 복원 시도
+  const idb = await idbGet(key);
+  if (idb !== null) {
+    try { localStorage.setItem(key, idb); } catch(e) {}
+    console.info(`[복원] ${key} → IndexedDB에서 복구됨`);
+  }
+  return idb;
+}
+
+// 앱 시작 시 즐겨찾기 + 잠금 + 커스텀채널 복원
+async function restoreFromIDB() {
+  // 즐겨찾기 복원
+  const favs = await loadProtected('radio_favs');
+  if (favs) {
+    try {
+      const parsed = JSON.parse(favs);
+      if (Array.isArray(parsed)) {
+        S.favorites = new Set(parsed);
+        updateFavCount();
+        renderAllList();
+        updateFavList();
+      }
+    } catch(e) {}
+  }
+
+  // 잠금 상태 복원
+  const locked = await loadProtected('radio_fav_locked');
+  if (locked !== null) {
+    favLocked = locked === '1';
+    applyFavLock();
+  }
+
+  // 커스텀 채널 복원
+  const custom = await loadProtected('radio_custom_stations');
+  if (custom) {
+    try {
+      const parsed = JSON.parse(custom);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(s => {
+          if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+        });
+        renderAllList();
+      }
+    } catch(e) {}
+  }
+}
+
 /* ════════════════════════════════════════
    즐겨찾기 잠금
 ════════════════════════════════════════ */
@@ -1962,7 +2204,10 @@ function applyFavLock() {
 
 function toggleFavLock() {
   favLocked = !favLocked;
-  localStorage.setItem('radio_fav_locked', favLocked ? '1' : '0');
+  const lockVal = favLocked ? '1' : '0';
+  try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+  idbSet('radio_fav_locked', lockVal); // IndexedDB 백업
+  fbSaveUserData();                    // Firebase 백업
   applyFavLock();
   showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
 }
@@ -1981,11 +2226,12 @@ function loadCustomStations() {
 }
 
 function saveCustomStations(list) {
-  try {
-    localStorage.setItem('radio_custom_stations', JSON.stringify(list));
-  } catch(e) {
+  const data = JSON.stringify(list);
+  try { localStorage.setItem('radio_custom_stations', data); } catch(e) {
     showToast('⚠️ 저장 공간이 부족합니다.');
   }
+  idbSet('radio_custom_stations', data); // IndexedDB 백업
+  fbSaveUserData();                      // Firebase 백업
 }
 
 // 앱 시작 시 커스텀 채널을 STATIONS에 병합
@@ -2128,6 +2374,7 @@ document.querySelectorAll('.tab-btn').forEach(b =>
 mergeCustomStations();
 applyFavLock();
 handleVolume(S.volume);
+initFirebase(); // Firebase 초기화 → 사용자 데이터 복원
 updateFavCount();
 renderAllList();
 updateFavList();

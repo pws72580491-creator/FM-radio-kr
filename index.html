@@ -1269,8 +1269,16 @@ function switchTab(tab) {
   if (tab === 'fav') updateFavList();
   updateEmptyState();
 
-  // 탭 전환 시 항상 최상단으로 스크롤 (Now Playing 패널이 보이도록)
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // 탭 전환 시 최상단으로 스크롤 (Now Playing 패널이 보이도록)
+  // window, documentElement, body, .app 모두 시도 (브라우저/구조 차이 대응)
+  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) {}
+  try { document.documentElement.scrollTop = 0; } catch(e) {}
+  try { document.body.scrollTop = 0; } catch(e) {}
+  const appEl = document.querySelector('.app');
+  if (appEl) appEl.scrollTop = 0;
+  // Now Playing 패널을 화면 최상단으로 스크롤
+  const npEl = document.getElementById('nowPlaying');
+  if (npEl) npEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ════════════════════════════════════════
@@ -2434,39 +2442,40 @@ handleVolume(S.volume);
   localStorage.setItem('radio_seen_version', APP_VERSION);
 })();
 
-// Firebase/IndexedDB 복원 완료 후 렌더링 (async 순서 보장)
-(async function init() {
-  // 1. Firebase 초기화 + 사용자 데이터 복원 대기
-  await new Promise(resolve => {
-    try {
-      if (!fbReady) {
-        firebase.initializeApp(FB_CONFIG);
-        fbDb = firebase.database();
-        fbReady = true;
-      }
-      initUserData().then(resolve).catch(resolve);
-    } catch(e) {
-      console.warn('Firebase 초기화 실패:', e);
-      restoreFromIDB().then(resolve).catch(resolve);
-    }
-  });
+// ── 1. 즉시 렌더링 (Firebase 기다리지 않음 — 빠른 초기 화면)
+updateFavCount();
+renderAllList();
+updateFavList();
 
-  // 2. 복원 완료 후 UI 렌더링
-  updateFavCount();
-  renderAllList();
-  updateFavList();
-
-  // 3. 마지막 방송국 복원
-  const _lastId = parseInt(localStorage.getItem('radio_last'));
-  if (_lastId) {
-    S.current = STATIONS.find(s => s.id === _lastId) || null;
-    if (S.current) {
-      updateNowPlaying(); renderStations();
-      if (localStorage.getItem('radio_playing') === '1') {
-        playStation(S.current);
-      }
+// ── 2. 마지막 방송국 즉시 복원
+const _lastId = parseInt(localStorage.getItem('radio_last'));
+if (_lastId) {
+  S.current = STATIONS.find(s => s.id === _lastId) || null;
+  if (S.current) {
+    updateNowPlaying(); renderStations();
+    if (localStorage.getItem('radio_playing') === '1') {
+      playStation(S.current);
     }
   }
+}
+
+// ── 3. Firebase/IndexedDB 복원 — 백그라운드에서 진행, 완료 후 즐겨찾기만 갱신
+(async function initData() {
+  try {
+    if (!fbReady) {
+      firebase.initializeApp(FB_CONFIG);
+      fbDb = firebase.database();
+      fbReady = true;
+    }
+    await initUserData();
+  } catch(e) {
+    console.warn('Firebase 초기화 실패:', e);
+    await restoreFromIDB().catch(() => {});
+  }
+  // 복원 완료 후 즐겨찾기·잠금 UI만 갱신 (채널 목록은 이미 표시 중)
+  updateFavCount();
+  updateFavList();
+  applyFavLock();
 })();
 </script>
 </body>

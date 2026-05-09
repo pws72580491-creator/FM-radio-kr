@@ -110,6 +110,13 @@
   ║  · 서울극동방송 URL 수정                               ║
   ║                                                      ║
   ║ v2.0.7  수정 (2025-05-09)                            ║
+  ║                                                      ║
+  ║ v2.0.8  개선 (2025-05-09)                            ║
+  ║  · 새로고침 후 자동재생 — 첫 터치로 자동 재개          ║
+  ║                                                      ║
+  ║ v2.0.9  긴급 수정 (2025-05-09)                       ║
+  ║  · installApp 함수 구조 복구                           ║
+  ║  · 뒤로가기 백그라운드 재생 정상화                     ║
   ║  · 서울극동방송 streamFallback 추가                    ║
   ║  · radio.bsod.kr 실패 시 원본 URL 자동 폴백            ║
   ║  · 극동방송 스트림 URL Cloudflare Workers로 교체       ║
@@ -984,7 +991,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.0.7</div>
+<div id="versionBadge" onclick="openChangelog()">v2.0.9</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1032,8 +1039,16 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.0.7';
+const APP_VERSION = 'v2.0.9';
 const CHANGELOG = [
+  { version: 'v2.0.9', date: '2025-05-09', changes: [
+    '긴급: installApp 함수 구조 붕괴로 initBackHandler 미실행 수정',
+    '뒤로가기 백그라운드 재생 정상화 — 재생/로딩 중 뒤로가기 시 앱 종료 방지',
+  ]},
+  { version: 'v2.0.8', date: '2025-05-09', changes: [
+    '새로고침 후 자동재생 개선 — 브라우저 차단 시 첫 화면 터치로 자동 재개',
+    '자동재생 차단 에러 메시지 → 토스트 안내로 변경',
+  ]},
   { version: 'v2.0.7', date: '2025-05-09', changes: [
     '서울극동방송 streamFallback 추가 — radio.bsod.kr 실패 시 원본 URL로 자동 전환',
     'resolveStreamUrl radio.bsod.kr 유효성 확인 후 실패 시 폴백 처리',
@@ -1590,7 +1605,7 @@ function playStation(s, forceRefresh = false) {
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
-          showError('자동재생이 차단됐습니다. 재생 버튼을 눌러주세요.');
+          showToast('▶ 화면을 탭하면 재생됩니다');
           onFail(false);
         });
       });
@@ -1931,6 +1946,9 @@ window.addEventListener('appinstalled', () => {
 });
 function installApp() {
   if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+}
 
 /* ════════════════════════════════════════
    뒤로가기 — 백그라운드 재생 유지
@@ -1942,11 +1960,11 @@ function installApp() {
   let backPressedOnce = false;
   let backTimer       = null;
 
-  window.addEventListener('popstate', (e) => {
+  window.addEventListener('popstate', () => {
     // 항상 상태를 다시 push해서 뒤로가기를 계속 가로챔
     history.pushState({ page: 'radio' }, '', location.href);
 
-    if (S.playing) {
+    if (S.playing || S.loading) {
       // 재생 중 → 백그라운드로 전환 안내 (앱 종료 안 함)
       showToast('🎵 방송이 백그라운드에서 계속 재생됩니다');
       return;
@@ -1955,7 +1973,6 @@ function installApp() {
     // 정지 중 → 2초 내 두 번 누르면 종료
     if (backPressedOnce) {
       clearTimeout(backTimer);
-      // PWA 홈화면 앱이면 window.close(), 브라우저면 history.go(-2)
       try { window.close(); } catch(e) {}
       history.go(-2);
       return;
@@ -1966,9 +1983,6 @@ function installApp() {
     backTimer = setTimeout(() => { backPressedOnce = false; }, 2000);
   });
 })();
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-}
 
 
 /* ════════════════════════════════════════
@@ -2497,7 +2511,18 @@ if (_lastId) {
   if (S.current) {
     updateNowPlaying(); renderStations();
     if (localStorage.getItem('radio_playing') === '1') {
+      // 즉시 재생 시도
       playStation(S.current);
+      // 브라우저 자동재생 차단 시 — 첫 터치/클릭에서 자동 재개
+      const resumeOnGesture = () => {
+        if (!S.playing && !S.loading && S.current) {
+          playStation(S.current);
+        }
+        document.removeEventListener('touchstart', resumeOnGesture);
+        document.removeEventListener('click', resumeOnGesture);
+      };
+      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
+      document.addEventListener('click', resumeOnGesture, { once: true });
     }
   }
 }

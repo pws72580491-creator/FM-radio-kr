@@ -116,6 +116,12 @@
   ║                                                      ║
   ║ v2.0.9  긴급 수정 (2025-05-09)                       ║
   ║                                                      ║
+  ║ v2.2.0  개선 (2025-05-09)                            ║
+  ║  · 서울극동방송 streamFallback HTTPS 교체              ║
+  ║  · 창원극동방송 streamFallback 추가                    ║
+  ║  · resolveStreamUrl AbortController 타임아웃 방식      ║
+  ║  · HLS 설정 lowLatencyMode + 타임아웃 명시             ║
+  ║                                                      ║
   ║ v2.1.0  개선 (2025-05-09)                            ║
   ║  · 뒤로가기 항상 백그라운드 유지                       ║
   ║  · installApp 함수 구조 복구                           ║
@@ -994,7 +1000,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.1.0</div>
+<div id="versionBadge" onclick="openChangelog()">v2.2.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1042,8 +1048,14 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.1.0';
+const APP_VERSION = 'v2.2.0';
 const CHANGELOG = [
+  { version: 'v2.2.0', date: '2025-05-09', changes: [
+    '서울극동방송 streamFallback HTTPS로 교체 (Mixed Content 방지)',
+    '창원극동방송 streamFallback 추가 (mlive2.febc.net)',
+    'resolveStreamUrl — AbortController 3.5초 타임아웃 + res.url 리다이렉트 추적',
+    'HLS 설정 교체 — lowLatencyMode, 타임아웃 명시, 버퍼 최적화',
+  ]},
   { version: 'v2.1.0', date: '2025-05-09', changes: [
     '뒤로가기 — 재생/정지 관계없이 항상 백그라운드 유지',
     '정지 중 두 번 누르면 종료 로직 제거',
@@ -1261,9 +1273,10 @@ const STATIONS = [
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
     stream:'https://radio.bsod.kr/stream/?stn=febc&city=seoul',
-    streamFallback:'http://mlive2.febc.net:1935/live/seoulfm/playlist.m3u8' },
+    streamFallback:'https://mlive2.febc.net/live/seoulfm/playlist.m3u8' },
   { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
-    stream:'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=changwon' },
+    stream:'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=changwon',
+    streamFallback:'https://mlive2.febc.net/live/changwonfm/playlist.m3u8' },
   { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
   { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
@@ -1538,30 +1551,34 @@ function retryPlay() {
    streamApi 방송(극동방송): 캐시 재사용
    forceRefresh=true 일 때만 새로 받아옴
 ════════════════════════════════════════ */
-async function resolveStreamUrl(s, forceRefresh) {
-  if (!s.streamApi) {
-    // radio.bsod.kr URL 유효성 확인 후 실패 시 fallback 시도
-    if (s.stream.includes('radio.bsod.kr') && s.streamFallback) {
-      try {
-        const r = await fetch(s.stream, { method: 'HEAD', cache: 'no-store' });
-        if (!r.ok) throw new Error('bsod.kr 응답 오류');
-        return s.stream;
-      } catch(e) {
-        console.warn('radio.bsod.kr 실패, fallback 사용:', s.streamFallback);
-        return s.streamFallback;
-      }
-    }
-    return s.stream;
+async function resolveStreamUrl(station) {
+  if (!station) throw new Error('station missing');
+
+  // 일반 채널 — febc 아니면 바로 반환
+  if (!/febc/.test(station.stream)) {
+    return station.stream;
   }
-  if (!forceRefresh && s._resolvedUrl) return s._resolvedUrl;
+
+  // 극동방송 계열 — 3.5초 타임아웃 후 fallback
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3500);
+
   try {
-    const res  = await fetch(s.streamApi, { cache: 'no-store' });
-    const html = await res.text();
-    const m    = html.match(/https:\/\/[^"'\s]+\.m3u8/);
-    if (m) { s._resolvedUrl = m[0]; return m[0]; }
-    console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
-  } catch(e) { console.warn('streamApi 실패:', e); }
-  return s.stream;
+    const res = await fetch(station.stream, {
+      method: 'GET',
+      cache:  'no-store',
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('proxy fail');
+    // 리다이렉트 최종 URL 사용
+    return res.url || station.stream;
+  } catch (e) {
+    clearTimeout(timer);
+    console.warn('[FEBC fallback]', e);
+    if (station.streamFallback) return station.streamFallback;
+    return station.stream;
+  }
 }
 
 /* ════════════════════════════════════════
@@ -1602,11 +1619,16 @@ function playStation(s, forceRefresh = false) {
 
     if (window.Hls && window.Hls.isSupported()) {
       S.hls = new window.Hls({
-        maxBufferLength:        30,   // 버퍼 여유 충분히 확보
-        maxMaxBufferLength:     60,
-        liveSyncDurationCount:   3,   // 세그먼트 3개 분량 여유 (약 6~12초)
-        liveMaxLatencyDurationCount: 6, // 세그먼트 6개 초과 시 hls.js가 자동 조정
-        enableWorker:           true,
+        lowLatencyMode:              true,
+        backBufferLength:            20,
+        maxBufferLength:             12,
+        maxMaxBufferLength:          20,
+        liveSyncDurationCount:        3,
+        liveMaxLatencyDurationCount:  5,
+        enableWorker:                true,
+        fragLoadingTimeOut:          8000,
+        manifestLoadingTimeOut:      5000,
+        levelLoadingTimeOut:         5000,
       });
       S.hls.loadSource(url); S.hls.attachMedia(audio);
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {

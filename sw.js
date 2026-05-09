@@ -1,16 +1,17 @@
 /* ════════════════════════════════════════
-   KOREA FM 라디오 — Service Worker v5
+   KOREA FM 라디오 — Service Worker v6
    · index.html       → Network First (항상 최신)
    · 앱 셸(JS·CSS·폰트) → Stale-while-revalidate
    · 스트림·Firebase   → 항상 네트워크 (캐싱 금지)
+   · febc(극동방송) URL → 항상 네트워크 (명시적 제외)
 ════════════════════════════════════════ */
-const CACHE_NAME   = 'kr-radio-v5';
-const CACHE_STATIC = 'kr-radio-static-v5';
+const CACHE_NAME   = 'kr-radio-v6';
+const CACHE_STATIC = 'kr-radio-static-v6';
 
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
 ];
 
 /* 설치 */
@@ -38,12 +39,12 @@ self.addEventListener('activate', e => {
 /* 요청 분류 */
 function isStream(url) {
   return url.includes('/stream') || url.includes('.m3u8') ||
-         url.includes('.ts')     || url.includes('firebasedatabase') ||
+         url.includes('.ts')     || url.includes('febc')  ||
+         url.includes('firebasedatabase') ||
          url.includes('gstatic.com/firebasejs') || url.includes('googleapis.com/firebase');
 }
 function isAppShell(url) {
-  const path = new URL(url).pathname;
-  return path === '/' || path === '/index.html' || path === '/manifest.json';
+  return url.endsWith('/') || url.includes('index.html') || url.includes('manifest.json');
 }
 function isStaticAsset(url) {
   return url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com') ||
@@ -71,7 +72,7 @@ self.addEventListener('fetch', e => {
           return res;
         })
         .catch(() => caches.match(e.request)
-          .then(cached => cached || caches.match('/index.html'))
+          .then(cached => cached || caches.match('./index.html'))
         )
     );
     return;
@@ -102,7 +103,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
         }
         return res;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('./index.html'));
     })
   );
 });

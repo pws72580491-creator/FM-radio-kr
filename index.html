@@ -114,6 +114,11 @@
   ║ v2.0.8  개선 (2025-05-09)                            ║
   ║  · 새로고침 후 자동재생 — 첫 터치로 자동 재개          ║
   ║                                                      ║
+  ║ v2.1.0  기능 개선 (2025-05-09)                       ║
+  ║  · 서울·창원 극동방송 streamFallbacks 다단계 폴백 추가 ║
+  ║  · resolveStreamUrl 전면 개선 — 병렬 핑 + 순서 우선순위║
+  ║  · HTTPS 우선, HTTP는 최후 수단 (Mixed Content 경고)   ║
+  ║                                                      ║
   ║ v2.0.9  긴급 수정 (2025-05-09)                       ║
   ║  · installApp 함수 구조 복구                           ║
   ║  · 뒤로가기 백그라운드 재생 정상화                     ║
@@ -1039,8 +1044,17 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.0.9';
+const APP_VERSION = 'v2.1.0';
 const CHANGELOG = [
+  { version: 'v2.1.0', date: '2025-05-09', changes: [
+    '서울·창원 극동방송 다단계 폴백(streamFallbacks) 추가 — 어떤 상황에서도 재생 보장',
+    'resolveStreamUrl 전면 개선 — HTTPS URL 병렬 핑, 순서 우선순위 유지',
+    'HTTPS 환경에서 HTTPS URL 우선 확인, 전부 실패 시 HTTP 최후 수단 시도',
+    '폴백 URL 순서: bsod.kr 주(主) → bsod.kr 보조 → 직접 스트림',
+    'AbortController 5초 타임아웃으로 느린 서버 즉시 건너뜀',
+    '성공한 URL 캐싱(_resolvedUrl) — 불필요한 재확인 방지',
+    '기존 streamFallback(단수) 하위 호환 유지',
+  ]},
   { version: 'v2.0.9', date: '2025-05-09', changes: [
     '긴급: installApp 함수 구조 붕괴로 initBackHandler 미실행 수정',
     '뒤로가기 백그라운드 재생 정상화 — 재생/로딩 중 뒤로가기 시 앱 종료 방지',
@@ -1254,9 +1268,16 @@ const STATIONS = [
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
     stream:'https://radio.bsod.kr/stream/?stn=febc&city=seoul',
-    streamFallback:'http://mlive2.febc.net:1935/live/seoulfm/playlist.m3u8' },
+    streamFallbacks:[
+      'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=seoul',
+      'http://mlive2.febc.net:1935/live/seoulfm/playlist.m3u8',
+    ]},
   { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
-    stream:'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=changwon' },
+    stream:'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=changwon',
+    streamFallbacks:[
+      'https://radio.bsod.kr/stream/?stn=febc&city=changwon',
+      'http://mlive2.febc.net:1935/live/changwonfm/playlist.m3u8',
+    ]},
   { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
   { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
@@ -1533,19 +1554,49 @@ function retryPlay() {
 ════════════════════════════════════════ */
 async function resolveStreamUrl(s, forceRefresh) {
   if (!s.streamApi) {
-    // radio.bsod.kr URL 유효성 확인 후 실패 시 fallback 시도
-    if (s.stream.includes('radio.bsod.kr') && s.streamFallback) {
-      try {
-        const r = await fetch(s.stream, { method: 'HEAD', cache: 'no-store' });
-        if (!r.ok) throw new Error('bsod.kr 응답 오류');
-        return s.stream;
-      } catch(e) {
-        console.warn('radio.bsod.kr 실패, fallback 사용:', s.streamFallback);
-        return s.streamFallback;
+    // 캐시된 성공 URL 재사용 (forceRefresh=true 시 무시)
+    if (!forceRefresh && s._resolvedUrl) return s._resolvedUrl;
+
+    const isHttps = window.location.protocol === 'https:';
+    // streamFallbacks(배열) / streamFallback(단수, 하위 호환) 통합
+    const fallbacks = s.streamFallbacks
+      || (s.streamFallback ? [s.streamFallback] : []);
+    const all       = [s.stream, ...fallbacks];
+    const httpsUrls = all.filter(u => u.startsWith('https:'));
+    const httpUrls  = all.filter(u => !u.startsWith('https:'));
+
+    // 단일 URL 활성 여부 확인 (AbortController 5초 타임아웃)
+    const ping = url => new Promise(resolve => {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => { ctrl.abort(); resolve(false); }, 5000);
+      fetch(url, { method:'HEAD', cache:'no-store', signal:ctrl.signal })
+        .then(r  => { clearTimeout(tid); resolve(r.ok || r.status === 405); })
+        .catch(() => { clearTimeout(tid); resolve(false); });
+    });
+
+    // HTTPS URL들을 병렬 핑 → 원래 순서 우선순위로 첫 번째 성공 반환
+    if (httpsUrls.length) {
+      const ok = await Promise.all(httpsUrls.map(ping));
+      for (let i = 0; i < httpsUrls.length; i++) {
+        if (ok[i]) {
+          console.info('[스트림] 선택:', httpsUrls[i]);
+          s._resolvedUrl = httpsUrls[i];
+          return httpsUrls[i];
+        }
       }
+      console.warn('[스트림] HTTPS URL 전부 응답 없음:', httpsUrls);
     }
+
+    // HTTP URL — HTTPS 환경에서는 Mixed Content 오류 가능하지만 최후 수단으로 시도
+    if (httpUrls.length) {
+      if (isHttps) console.warn('[스트림] HTTP 직접 URL 시도 (Mixed Content 가능):', httpUrls[0]);
+      return httpUrls[0];
+    }
+
     return s.stream;
   }
+
+  // streamApi 방식 (동적 URL 획득)
   if (!forceRefresh && s._resolvedUrl) return s._resolvedUrl;
   try {
     const res  = await fetch(s.streamApi, { cache: 'no-store' });

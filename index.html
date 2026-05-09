@@ -1054,6 +1054,7 @@ const CHANGELOG = [
     'AbortController 5초 타임아웃으로 느린 서버 즉시 건너뜀',
     '성공한 URL 캐싱(_resolvedUrl) — 불필요한 재확인 방지',
     '기존 streamFallback(단수) 하위 호환 유지',
+    '?play=<id> URL 파라미터 지원 — PWA 숏컷·공유 링크로 방송국 바로 재생',
   ]},
   { version: 'v2.0.9', date: '2025-05-09', changes: [
     '긴급: installApp 함수 구조 붕괴로 initBackHandler 미실행 수정',
@@ -2555,26 +2556,27 @@ updateFavCount();
 renderAllList();
 updateFavList();
 
-// ── 2. 마지막 방송국 즉시 복원
-const _lastId = parseInt(localStorage.getItem('radio_last'));
-if (_lastId) {
-  S.current = STATIONS.find(s => s.id === _lastId) || null;
-  if (S.current) {
-    updateNowPlaying(); renderStations();
-    if (localStorage.getItem('radio_playing') === '1') {
-      // 즉시 재생 시도
-      playStation(S.current);
-      // 브라우저 자동재생 차단 시 — 첫 터치/클릭에서 자동 재개
-      const resumeOnGesture = () => {
-        if (!S.playing && !S.loading && S.current) {
-          playStation(S.current);
-        }
-        document.removeEventListener('touchstart', resumeOnGesture);
-        document.removeEventListener('click', resumeOnGesture);
-      };
-      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
-      document.addEventListener('click', resumeOnGesture, { once: true });
-    }
+// ── 2. ?play=<id> URL 파라미터 자동 실행 (PWA 숏컷·공유 링크 지원)
+const _urlPlayId   = parseInt(new URLSearchParams(location.search).get('play'));
+const _urlStation  = _urlPlayId ? STATIONS.find(s => s.id === _urlPlayId) : null;
+
+// ── 3. 마지막 방송국 즉시 복원 (URL 파라미터 없을 때)
+const _lastId         = _urlStation ? null : parseInt(localStorage.getItem('radio_last'));
+const _restoreStation = _urlStation || (_lastId ? STATIONS.find(s => s.id === _lastId) : null);
+if (_restoreStation) {
+  S.current = _restoreStation;
+  updateNowPlaying(); renderStations();
+  const _shouldPlay = _urlStation || localStorage.getItem('radio_playing') === '1';
+  if (_shouldPlay) {
+    if (_urlStation) history.replaceState({}, '', '/'); // 뒤로가기 시 파라미터 제거
+    playStation(S.current);
+    const resumeOnGesture = () => {
+      if (!S.playing && !S.loading && S.current) playStation(S.current);
+      document.removeEventListener('touchstart', resumeOnGesture);
+      document.removeEventListener('click', resumeOnGesture);
+    };
+    document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
+    document.addEventListener('click', resumeOnGesture, { once: true });
   }
 }
 

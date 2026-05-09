@@ -1,27 +1,45 @@
 {
-  "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control",   "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" },
+        { "key": "Content-Type",    "value": "application/javascript; charset=utf-8" }
+      ]
     },
     {
-      "src": "sw.js",
-      "use": "@vercel/static"
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Cache-Control",   "value": "no-cache" },
+        { "key": "Content-Type",    "value": "application/manifest+json; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control",   "value": "no-cache" }
+      ]
+    },
+    {
+      "source": "/icons/(.*)",
+      "headers": [
+        { "key": "Cache-Control",   "value": "public, max-age=604800, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options",        "value": "nosniff" },
+        { "key": "X-Frame-Options",               "value": "DENY" },
+        { "key": "Referrer-Policy",               "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",            "value": "autoplay=(*), microphone=()" }
+      ]
     }
   ],
-  "routes": [
-    {
-      "src": "/sw.js",
-      "dest": "/sw.js",
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Service-Worker-Allowed": "/"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/((?!api|sw.js|manifest.json|icons).*)", "destination": "/index.html" }
   ]
 }

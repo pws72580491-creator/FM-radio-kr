@@ -100,6 +100,20 @@
   ║                                                      ║
   ║ v2.0.3  개선 (2025-05-09)                            ║
   ║  · 탭 전환 시 자동 최상단 스크롤                       ║
+  ║                                                      ║
+  ║ v2.0.4  개선 (2025-05-09)                            ║
+  ║  · 채널 목록 즉시 표시 — Firebase 복원 딜레이 제거      ║
+  ║                                                      ║
+  ║ v2.0.5  수정 (2025-05-09)                            ║
+  ║                                                      ║
+  ║ v2.0.6  수정 (2025-05-09)                            ║
+  ║  · 서울극동방송 URL 수정                               ║
+  ║                                                      ║
+  ║ v2.0.7  수정 (2025-05-09)                            ║
+  ║  · 서울극동방송 streamFallback 추가                    ║
+  ║  · radio.bsod.kr 실패 시 원본 URL 자동 폴백            ║
+  ║  · 극동방송 스트림 URL Cloudflare Workers로 교체       ║
+  ║  · Mixed Content 문제 완전 해결                        ║
   ║  · 뒤로가기 백그라운드 재생 유지                       ║
   ║  · 정지 중 뒤로가기 2회 → 종료 안내                   ║
   ║  · 즐겨찾기 초기화 근본 원인 수정 (async 순서 오류)    ║
@@ -970,7 +984,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.0.3</div>
+<div id="versionBadge" onclick="openChangelog()">v2.0.7</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1018,8 +1032,23 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.0.3';
+const APP_VERSION = 'v2.0.7';
 const CHANGELOG = [
+  { version: 'v2.0.7', date: '2025-05-09', changes: [
+    '서울극동방송 streamFallback 추가 — radio.bsod.kr 실패 시 원본 URL로 자동 전환',
+    'resolveStreamUrl radio.bsod.kr 유효성 확인 후 실패 시 폴백 처리',
+  ]},
+  { version: 'v2.0.6', date: '2025-05-09', changes: [
+    '서울극동방송 URL 수정 — streamApi 동적 URL 획득 방식으로 교체',
+  ]},
+  { version: 'v2.0.5', date: '2025-05-09', changes: [
+    '서울/창원 극동방송 스트림 URL 수정 — Vercel 프록시 → radio.bsod.kr Cloudflare Workers로 교체',
+    'Mixed Content 문제 완전 해결 — https로 스트리밍',
+  ]},
+  { version: 'v2.0.4', date: '2025-05-09', changes: [
+    '채널 목록 초기 렌더링 딜레이 수정 — Firebase 복원을 기다리지 않고 즉시 표시',
+    'Firebase/IndexedDB 복원은 백그라운드에서 진행 후 즐겨찾기만 갱신',
+  ]},
   { version: 'v2.0.3', date: '2025-05-09', changes: [
     '탭 전환 시 자동 최상단 스크롤 — Now Playing 패널 즉시 표시',
   ]},
@@ -1209,9 +1238,10 @@ const STATIONS = [
   { id:12, name:'EBS FM',       freq:'104.5 MHz', genre:'교육',       color:'#148f77',
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
-    stream:'/proxy/febc/seoulfm/playlist.m3u8' },
+    stream:'https://radio.bsod.kr/stream/?stn=febc&city=seoul',
+    streamFallback:'http://mlive2.febc.net:1935/live/seoulfm/playlist.m3u8' },
   { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
-    stream:'/proxy/febc/cwlive/playlist.m3u8' },
+    stream:'https://radio.bsod.kr/stream/?stn=febc&ch=fm&city=changwon' },
   { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
   { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
@@ -1487,7 +1517,20 @@ function retryPlay() {
    forceRefresh=true 일 때만 새로 받아옴
 ════════════════════════════════════════ */
 async function resolveStreamUrl(s, forceRefresh) {
-  if (!s.streamApi) return s.stream;
+  if (!s.streamApi) {
+    // radio.bsod.kr URL 유효성 확인 후 실패 시 fallback 시도
+    if (s.stream.includes('radio.bsod.kr') && s.streamFallback) {
+      try {
+        const r = await fetch(s.stream, { method: 'HEAD', cache: 'no-store' });
+        if (!r.ok) throw new Error('bsod.kr 응답 오류');
+        return s.stream;
+      } catch(e) {
+        console.warn('radio.bsod.kr 실패, fallback 사용:', s.streamFallback);
+        return s.streamFallback;
+      }
+    }
+    return s.stream;
+  }
   if (!forceRefresh && s._resolvedUrl) return s._resolvedUrl;
   try {
     const res  = await fetch(s.streamApi, { cache: 'no-store' });

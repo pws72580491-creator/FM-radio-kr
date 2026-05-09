@@ -1,8 +1,14 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "sw.js",      "use": "@vercel/static" }
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sw.js",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
     {
@@ -11,13 +17,6 @@
       "headers": {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Service-Worker-Allowed": "/"
-      }
-    },
-    {
-      "src": "/proxy/febc/(.*)",
-      "dest": "http://mlive2.febc.net:1935/live/$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*"
       }
     },
     {

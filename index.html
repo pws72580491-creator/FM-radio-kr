@@ -51,129 +51,10 @@
   ║                                                      ║
   ║ v1.6.4  개선 (2025-04-19)                            ║
   ║                                                      ║
+  ║ v1.7.0  채널 추가 (2026-05-10)                       ║
+  ║  · 창원극동방송 (106.7 MHz) 추가                      ║
+  ║                                                      ║
   ║ v1.6.5  개선 (2025-04-19)                            ║
-  ║                                                      ║
-  ║ v1.7.0  기능 추가 (2025-04-19)                       ║
-  ║                                                      ║
-  ║ v1.7.1  버그 수정 (2025-04-19)                       ║
-  ║                                                      ║
-  ║ v1.7.2  개선 (2025-04-19)                            ║
-  ║                                                      ║
-  ║ v1.7.3  긴급 수정 (2025-04-19)                       ║
-  ║                                                      ║
-  ║ v1.7.4  긴급 수정 (2025-05-04)                       ║
-  ║                                                      ║
-  ║ v1.8.0  기능 추가 (2025-05-04)                       ║
-  ║                                                      ║
-  ║ v1.8.1  버그 수정 (2025-05-05)                       ║
-  ║  · 알림창 일시정지 상태 ▶ 버튼 미표시 수정            ║
-  ║                                                      ║
-  ║ v1.8.2  긴급 수정 (2025-05-05)                       ║
-  ║                                                      ║
-  ║ v1.8.3  기능 추가 (2025-05-05)                       ║
-  ║                                                      ║
-  ║ v1.8.4  긴급 수정 (2025-05-05)                       ║
-  ║                                                      ║
-  ║ v1.8.5  기능 추가 (2025-05-06)                       ║
-  ║                                                      ║
-  ║ v1.9.0  기능 추가 (2025-05-06)                       ║
-  ║                                                      ║
-  ║ v1.9.1  수정 (2025-05-06)                            ║
-  ║  · 서울극동방송 스트림 URL 업데이트                    ║
-  ║                                                      ║
-  ║ v1.9.2  채널 추가 (2025-05-06)                       ║
-  ║  · 창원극동방송 FM 98.1 채널 추가                      ║
-  ║                                                      ║
-  ║ v1.9.3  수정 (2025-05-06)                            ║
-  ║  · 창원극동방송 채널 제거 (스트림 URL 미확인)           ║
-  ║                                                      ║
-  ║ v1.9.4  수정 (2025-05-06)                            ║
-  ║                                                      ║
-  ║ v1.9.5  긴급 수정 (2025-05-06)                       ║
-  ║  · favLocked TDZ 문제 수정                             ║
-  ║                                                      ║
-  ║ v2.0.0  전체 점검 및 수정 (2025-05-09)               ║
-  ║                                                      ║
-  ║ v2.0.1  긴급 수정 (2025-05-09)                       ║
-  ║                                                      ║
-  ║ v2.0.2  기능 추가 (2025-05-09)                       ║
-  ║                                                      ║
-  ║ v2.0.3  개선 (2025-05-09)                            ║
-  ║  · 탭 전환 시 자동 최상단 스크롤                       ║
-  ║                                                      ║
-  ║ v2.0.4  개선 (2025-05-09)                            ║
-  ║  · 채널 목록 즉시 표시 — Firebase 복원 딜레이 제거      ║
-  ║                                                      ║
-  ║ v2.0.5  수정 (2025-05-09)                            ║
-  ║                                                      ║
-  ║ v2.0.6  수정 (2025-05-09)                            ║
-  ║  · 서울극동방송 URL 수정                               ║
-  ║                                                      ║
-  ║ v2.0.7  수정 (2025-05-09)                            ║
-  ║                                                      ║
-  ║ v2.0.8  개선 (2025-05-09)                            ║
-  ║  · 새로고침 후 자동재생 — 첫 터치로 자동 재개          ║
-  ║                                                      ║
-  ║ v2.0.9  긴급 수정 (2025-05-09)                       ║
-  ║                                                      ║
-  ║ v2.1.0  개선 (2025-05-09)                            ║
-  ║  · 뒤로가기 항상 백그라운드 유지                       ║
-  ║                                                      ║
-  ║ v2.1.1  수정 (2025-05-09)                            ║
-  ║                                                      ║
-  ║ v2.1.2  수정 (2025-05-10)                            ║
-  ║  · Vercel API 프록시로 극동방송 Mixed Content 해결     ║
-  ║  · 뒤로가기 두 번째 종료 문제 수정                     ║
-  ║  · 히스토리 스택 2개 유지                              ║
-  ║  · installApp 함수 구조 복구                           ║
-  ║  · 뒤로가기 백그라운드 재생 정상화                     ║
-  ║  · 서울극동방송 streamFallback 추가                    ║
-  ║  · radio.bsod.kr 실패 시 원본 URL 자동 폴백            ║
-  ║  · 극동방송 스트림 URL Cloudflare Workers로 교체       ║
-  ║  · Mixed Content 문제 완전 해결                        ║
-  ║  · 뒤로가기 백그라운드 재생 유지                       ║
-  ║  · 정지 중 뒤로가기 2회 → 종료 안내                   ║
-  ║  · 즐겨찾기 초기화 근본 원인 수정 (async 순서 오류)    ║
-  ║  · Firebase 복원 완료 후 UI 렌더링 보장               ║
-  ║  · CHANGELOG 중복 제거                                 ║
-  ║  · MediaSession 핸들러 이중 등록 제거                   ║
-  ║  · viewport 확대 방지 추가                             ║
-  ║  · offline 핸들러 조건 개선                            ║
-  ║  · 극동방송 Mixed Content 해결 — Vercel 프록시 적용    ║
-  ║  · 창원극동방송 FM 98.1 채널 추가                      ║
-  ║  · UUID 기반 사용자 식별 (IndexedDB 저장)              ║
-  ║  · Firebase 즐겨찾기·잠금·커스텀채널 자동 백업         ║
-  ║  · 인터넷 기록 삭제 후 Firebase→IndexedDB 자동 복원    ║
-  ║  · IndexedDB 이중 저장으로 즐겨찾기·잠금 보호          ║
-  ║  · 인터넷 기록 삭제 시 자동 복원                       ║
-  ║  · liveSyncDuration 3초 → 끊김 유발 수정              ║
-  ║  · FRAG_CHANGED 강제 점프 제거                         ║
-  ║  · hls.js 자체 라이브 동기화로 안정화                  ║
-  ║  · HLS liveSyncPosition 라이브 시점 즉시 점프          ║
-  ║  · 버퍼 지연 10초 초과 시 자동 라이브 복귀             ║
-  ║  · 통화 수신 시 알림창 재생중/실제 정지 불일치 수정    ║
-  ║  · pause 이벤트 S.playing 동기화 누락 수정            ║
-  ║  · 즐겨찾기 잠금 — 해제 실수 방지                     ║
-  ║  · 방송 추가 — 커스텀 채널 추가/삭제                  ║
-  ║  · 커스텀 채널 localStorage 영구 저장                 ║
-  ║  · 통화 후 재연결 안 되는 버그 수정                    ║
-  ║  · WiFi↔데이터 전환 후 방송 종료 버그 수정             ║
-  ║  · online 핸들러 중복 충돌 제거                        ║
-  ║  · 통화 후 재연결 10~20초 후 정지 버그 수정            ║
-  ║  · watchTimer 재연결 후 중복 실행 방지                 ║
-  ║  · reconnecting 플래그로 중복 재연결 차단              ║
-  ║  · 통화 종료 후 자동 재연결 안정화                     ║
-  ║  · Android 12+ AudioContext 차단 환경 대응            ║
-  ║  · visibilitychange·online·AudioContext 3중 감지      ║
-  ║                                                      ║
-  ║ v1.7.2  기능 추가 (2025-04-19)                       ║
-  ║  · 통화 종료 후 방송 자동 재연결                       ║
-  ║  · AudioContext 2초 주기 감시로 통화 종료 감지         ║
-  ║  · 즐겨찾기 파싱 실패 시 안전한 폴백 처리             ║
-  ║  · 즐겨찾기 저장 실패 시 토스트 알림                  ║
-  ║  · WiFi ↔ 데이터 전환 시 방송 자동 재연결             ║
-  ║  · online 이벤트 네트워크 복구 즉시 재연결            ║
-  ║  · offline 이벤트 끊김 감지 및 안내 메시지            ║
   ║  · HLS 에러 타입별 분기 처리                           ║
   ║  · 일시적 네트워크 오류 startLoad() 재시도             ║
   ║  · 미디어 오류 recoverMediaError() 2회 후 재연결       ║
@@ -190,7 +71,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>KOREA FM 라디오</title>
 
 <!-- PWA -->
@@ -683,99 +564,6 @@ input[type=range]::-webkit-slider-thumb {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
-
-/* ══ 즐겨찾기 잠금 버튼 ══ */
-#favLockBtn {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-family: var(--mono);
-  padding: 4px 10px; border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--bg2); color: var(--muted);
-  cursor: pointer; transition: all .2s;
-  letter-spacing: .5px;
-}
-#favLockBtn.locked {
-  border-color: var(--red); color: var(--red);
-  background: var(--red-glow);
-}
-#favLockBtn .lock-icon { font-size: 13px; }
-
-/* ══ 방송 추가 버튼 ══ */
-#addStationBtn {
-  position: fixed;
-  bottom: calc(var(--sab) + 36px);
-  left: 16px;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--red); color: #fff;
-  font-size: 22px; line-height: 1;
-  border: none; cursor: pointer;
-  box-shadow: 0 4px 16px var(--red-glow);
-  z-index: 150;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform .2s, box-shadow .2s;
-}
-#addStationBtn:active { transform: scale(.92); }
-
-/* ══ 방송 추가 시트 ══ */
-.add-station-bg {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.65); z-index: 400;
-  align-items: flex-end; justify-content: center;
-}
-.add-station-bg.show { display: flex; }
-.add-station-sheet {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 20px 20px 0 0;
-  padding: 24px 20px calc(var(--sab) + 24px);
-  width: min(520px,100%); display: flex; flex-direction: column; gap: 14px;
-}
-.add-station-title {
-  font-family: var(--mono); font-size: 13px; font-weight: 700;
-  letter-spacing: 2px; color: var(--red);
-}
-.add-station-field { display: flex; flex-direction: column; gap: 5px; }
-.add-station-field label {
-  font-size: 10px; color: var(--muted); letter-spacing: 1px;
-  font-family: var(--mono);
-}
-.add-station-field input {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 14px;
-  color: var(--text); font-size: 13px; outline: none;
-  transition: border-color .2s;
-}
-.add-station-field input:focus { border-color: var(--red); }
-.add-station-actions { display: flex; gap: 10px; margin-top: 4px; }
-.add-station-actions button {
-  flex: 1; padding: 12px; border-radius: 12px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: opacity .2s;
-}
-.btn-add-confirm {
-  background: var(--red); color: #fff; border: none;
-}
-.btn-add-cancel {
-  background: var(--bg3); color: var(--muted);
-  border: 1px solid var(--border);
-}
-.custom-station-badge {
-  font-size: 8px; background: var(--red); color: #fff;
-  padding: 1px 5px; border-radius: 4px;
-  font-family: var(--mono); letter-spacing: .5px;
-  vertical-align: middle; margin-left: 4px;
-}
-/* 사용자 추가 방송국 삭제 버튼 */
-.st-delete-btn {
-  position: absolute; top: 8px; right: 8px;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: rgba(231,76,60,.15); color: var(--red);
-  border: none; font-size: 12px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: opacity .2s;
-}
-.station-card:hover .st-delete-btn,
-.station-card:focus-within .st-delete-btn { opacity: 1; }
-
 /* ══ 버전 모달 ══ */
 #versionBadge {
   position: fixed;
@@ -903,13 +691,10 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 
   <!-- 탭 -->
-  <div class="tabs" style="display:flex;align-items:center;gap:8px">
-    <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
-    <button class="tab-btn" data-tab="fav" style="flex:1">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="all">전체 채널</button>
+    <button class="tab-btn" data-tab="fav">
       ⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span>
-    </button>
-    <button id="favLockBtn" onclick="toggleFavLock()" title="즐겨찾기 잠금">
-      <span class="lock-icon">🔓</span>
     </button>
   </div>
 
@@ -963,45 +748,8 @@ input[type=range]::-webkit-slider-thumb {
 <!-- 토스트 -->
 <div id="toast"></div>
 
-<!-- 방송 추가 버튼 -->
-<button id="addStationBtn" onclick="openAddStation()" title="방송 추가">＋</button>
-
-<!-- 방송 추가 시트 -->
-<div class="add-station-bg" id="addStationBg" onclick="closeAddStation(event)">
-  <div class="add-station-sheet">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <div class="add-station-title">📻 방송 추가</div>
-      <button class="changelog-close" onclick="closeAddStation()">✕</button>
-    </div>
-    <div class="add-station-field">
-      <label>방송국 이름 *</label>
-      <input id="asi-name" type="text" placeholder="예: OO FM" maxlength="30">
-    </div>
-    <div class="add-station-field">
-      <label>주파수</label>
-      <input id="asi-freq" type="text" placeholder="예: 100.0 MHz">
-    </div>
-    <div class="add-station-field">
-      <label>장르</label>
-      <input id="asi-genre" type="text" placeholder="예: 음악, 뉴스, 교양">
-    </div>
-    <div class="add-station-field">
-      <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
-      <input id="asi-url" type="url" placeholder="https://...m3u8">
-    </div>
-    <div class="add-station-field">
-      <label>색상 (선택)</label>
-      <input id="asi-color" type="color" value="#e74c3c" style="height:36px;padding:2px 6px;cursor:pointer">
-    </div>
-    <div class="add-station-actions">
-      <button class="btn-add-cancel" onclick="closeAddStation()">취소</button>
-      <button class="btn-add-confirm" onclick="confirmAddStation()">추가</button>
-    </div>
-  </div>
-</div>
-
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.1.2</div>
+<div id="versionBadge" onclick="openChangelog()">v1.7.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1049,138 +797,10 @@ if (window.Sentry) {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.1.2';
+const APP_VERSION = 'v1.7.0';
 const CHANGELOG = [
-  { version: 'v2.1.2', date: '2025-05-10', changes: [
-    'Vercel Serverless Function 프록시로 극동방송 Mixed Content 해결',
-    '서울/창원 극동방송 → /api/febc 프록시 경로로 교체',
-  ]},
-  { version: 'v2.1.1', date: '2025-05-09', changes: [
-    '뒤로가기 두 번째에서 종료되는 문제 수정 — 히스토리 스택 2개 유지',
-  ]},
-  { version: 'v2.1.0', date: '2025-05-09', changes: [
-    '뒤로가기 — 재생/정지 관계없이 항상 백그라운드 유지',
-    '정지 중 두 번 누르면 종료 로직 제거',
-  ]},
-  { version: 'v2.0.9', date: '2025-05-09', changes: [
-    '긴급: installApp 함수 구조 붕괴로 initBackHandler 미실행 수정',
-    '뒤로가기 백그라운드 재생 정상화 — 재생/로딩 중 뒤로가기 시 앱 종료 방지',
-  ]},
-  { version: 'v2.0.8', date: '2025-05-09', changes: [
-    '새로고침 후 자동재생 개선 — 브라우저 차단 시 첫 화면 터치로 자동 재개',
-    '자동재생 차단 에러 메시지 → 토스트 안내로 변경',
-  ]},
-  { version: 'v2.0.7', date: '2025-05-09', changes: [
-    '서울극동방송 streamFallback 추가 — radio.bsod.kr 실패 시 원본 URL로 자동 전환',
-    'resolveStreamUrl radio.bsod.kr 유효성 확인 후 실패 시 폴백 처리',
-  ]},
-  { version: 'v2.0.6', date: '2025-05-09', changes: [
-    '서울극동방송 URL 수정 — streamApi 동적 URL 획득 방식으로 교체',
-  ]},
-  { version: 'v2.0.5', date: '2025-05-09', changes: [
-    '서울/창원 극동방송 스트림 URL 수정 — Vercel 프록시 → radio.bsod.kr Cloudflare Workers로 교체',
-    'Mixed Content 문제 완전 해결 — https로 스트리밍',
-  ]},
-  { version: 'v2.0.4', date: '2025-05-09', changes: [
-    '채널 목록 초기 렌더링 딜레이 수정 — Firebase 복원을 기다리지 않고 즉시 표시',
-    'Firebase/IndexedDB 복원은 백그라운드에서 진행 후 즐겨찾기만 갱신',
-  ]},
-  { version: 'v2.0.3', date: '2025-05-09', changes: [
-    '탭 전환 시 자동 최상단 스크롤 — Now Playing 패널 즉시 표시',
-  ]},
-  { version: 'v2.0.2', date: '2025-05-09', changes: [
-    '뒤로가기 백그라운드 재생 유지 — 재생 중 뒤로가기 시 앱 종료 방지',
-    '정지 중 뒤로가기 2회 → 종료 안내 토스트 표시',
-  ]},
-  { version: 'v2.0.1', date: '2025-05-09', changes: [
-    '긴급: 인터넷 기록 삭제 후 즐겨찾기 초기화 근본 원인 수정',
-    'initFirebase(async) 완료 전 renderAllList() 실행으로 빈 화면 렌더링 버그 수정',
-    'Firebase/IndexedDB 복원 완료 후 UI 렌더링 보장 (async/await 순서 정리)',
-  ]},
-  { version: 'v2.0.0', date: '2025-05-09', changes: [
-    'CHANGELOG 중복 제거 (v1.7.2~v1.9.5 15개 버전 이중 등재)',
-    'MediaSession play·pause 핸들러 이중 등록 제거',
-    'viewport 확대 방지 추가 (user-scalable=no, maximum-scale=1)',
-    'offline 핸들러 조건 개선 — wasPlaying 상태에서도 정상 처리',
-    'WiFi↔데이터 전환 후 재연결 안정화',
-  ]},
-  { version: 'v1.9.5', date: '2025-05-06', changes: [
-    '정적 테스트: favLocked TDZ 문제 수정 — 선언 위치를 상태 블록으로 이동',
-  ]},
-  { version: 'v1.9.4', date: '2025-05-06', changes: [
-    '서울극동방송 Mixed Content 문제 해결 — Vercel 프록시 경로 적용',
-    '창원극동방송 FM 98.1 채널 추가',
-  ]},
-  { version: 'v1.9.3', date: '2025-05-06', changes: [
-    '창원극동방송 채널 제거 (스트림 URL 미확인)',
-  ]},
-  { version: 'v1.9.2', date: '2025-05-06', changes: [
-    '창원극동방송 FM 98.1 채널 추가',
-  ]},
-  { version: 'v1.9.1', date: '2025-05-06', changes: [
-    '서울극동방송 스트림 URL 업데이트 (mlive3 → mlive2)',
-  ]},
-  { version: 'v1.9.0', date: '2025-05-06', changes: [
-    'UUID 기반 사용자 식별 — IndexedDB에 저장 (인터넷 기록 삭제 후에도 유지)',
-    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업',
-    '인터넷 기록 삭제 후 재실행 시 Firebase → IndexedDB 순으로 자동 복원',
-    '즐겨찾기 변경·잠금 변경·커스텀채널 추가/삭제 시 Firebase 즉시 동기화',
-  ]},
-  { version: 'v1.8.5', date: '2025-05-06', changes: [
-    '인터넷 기록 삭제 시 즐겨찾기 초기화 방지',
-    'IndexedDB 이중 저장 — 즐겨찾기·잠금·커스텀채널 보호',
-    '앱 시작 시 localStorage 비어있으면 IndexedDB에서 자동 복원',
-  ]},
-  { version: 'v1.8.4', date: '2025-05-05', changes: [
-    '긴급: liveSyncDuration 3초 설정으로 인한 끊김 수정',
-    'FRAG_CHANGED currentTime 강제 점프 제거 (주기적 끊김 원인)',
-    'MANIFEST_PARSED currentTime 즉시 점프 제거 (초기 끊김 원인)',
-    'hls.js 자체 라이브 동기화에 위임 — 버퍼 30초로 안정화',
-  ]},
-  { version: 'v1.8.3', date: '2025-05-05', changes: [
-    'HLS liveSyncPosition 적용 — 항상 라이브 시점으로 재생',
-    'MANIFEST_PARSED 시 라이브 위치 즉시 점프',
-    '재생 중 버퍼 지연 10초 초과 시 자동으로 라이브 위치 복귀',
-    'liveSyncDuration 3초, liveMaxLatencyDuration 10초 설정',
-  ]},
-  { version: 'v1.8.2', date: '2025-05-05', changes: [
-    '긴급: 통화 수신 시 알림창 재생 중 표시 / 실제 정지 상태 불일치 수정',
-    'pause 이벤트 — S.playing = false 동기화 및 알림창 즉시 paused 반영',
-  ]},
-  { version: 'v1.8.1', date: '2025-05-05', changes: [
-    '알림창 일시정지 상태에서 ▶ 버튼 미표시 수정',
-    'updateMediaSession — playbackState 설정 전 핸들러 명시적 재등록',
-  ]},
-  { version: 'v1.8.0', date: '2025-05-04', changes: [
-    '즐겨찾기 잠금 기능 추가 — 잠금 시 즐겨찾기 해제 차단',
-    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
-    '추가된 채널은 localStorage에 저장되어 앱 재시작 후에도 유지',
-  ]},
-  { version: 'v1.7.4', date: '2025-05-04', changes: [
-    '통화 후 재연결 안 되는 버그 수정 — playStation의 wasPlaying 초기화 제거',
-    'WiFi↔데이터 전환 후 방송 종료 버그 수정 — online 핸들러 중복 충돌 제거',
-    'offline 감지 시 HLS 스트림 즉시 정리 및 상태 동기화',
-    'online 핸들러 callSuspect 조건 제거 — 네트워크 복구 시 항상 재연결',
-  ]},
-  { version: 'v1.7.3', date: '2025-04-19', changes: [
-    '긴급: 통화 후 재연결 10~20초 후 정지 버그 수정',
-    'watchTimer가 재연결 후에도 살아남아 반복 재연결 유발하는 원인 제거',
-    'reconnecting 플래그 추가로 중복 재연결 완전 차단',
-  ]},
-  { version: 'v1.7.2', date: '2025-04-19', changes: [
-    '통화 종료 후 자동 재연결 안정화',
-    'Android 12+ AudioContext 차단 환경 대응',
-    'visibilitychange·online·AudioContext 3중 감지로 통화 종료 확실하게 포착',
-    '기존 visibilitychange 핸들러를 initCallReconnect로 통합',
-  ]},
-  { version: 'v1.7.1', date: '2025-04-19', changes: [
-    '즐겨찾기 초기화 방지 — localStorage 파싱 실패 시 안전한 폴백',
-    '즐겨찾기 저장 실패 시 사용자 알림 토스트 표시',
-  ]},
-  { version: 'v1.7.0', date: '2025-04-19', changes: [
-    'WiFi ↔ 데이터 전환 시 방송 자동 재연결 추가',
-    'online 이벤트 — 네트워크 복구 즉시 라이브 재연결',
-    'offline 이벤트 — 끊김 감지 후 wasPlaying 세팅 및 안내 메시지',
+  { version: 'v1.7.0', date: '2026-05-10', changes: [
+    '채널 추가 — 창원극동방송 (106.7 MHz)',
   ]},
   { version: 'v1.6.5', date: '2025-04-19', changes: [
     'HLS 에러 핸들러 개선 — 에러 타입별 분기 처리',
@@ -1274,9 +894,11 @@ const STATIONS = [
   { id:12, name:'EBS FM',       freq:'104.5 MHz', genre:'교육',       color:'#148f77',
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
-    stream:'/api/febc?city=seoulfm&path=playlist.m3u8' },
-  { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
-    stream:'/api/febc?city=changwonfm&path=playlist.m3u8' },
+    stream:'https://mlive3.febc.net/live5/seoulfm/playlist.m3u8',
+    streamApi:'https://seoul.febc.net/radio/schedule/live/1' },
+  { id:16, name:'창원극동방송', freq:'106.7 MHz', genre:'기독교',     color:'#154360',
+    stream:'https://mlive3.febc.net/live5/cwlive/playlist.m3u8',
+    streamApi:'https://changwon.febc.net/radio/schedule/live/4' },
   { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
   { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
@@ -1296,17 +918,7 @@ const AppState = {
   retryCount:    0,       // 현재 재시도 횟수
   callId:        0,       // 채널 전환 경쟁 방지용 ID
   activeTab:     'all',   // 현재 탭 ('all' | 'fav')
-  favorites:     new Set((() => {
-    try {
-      const saved = localStorage.getItem('radio_favs');
-      if (!saved) return [];
-      const parsed = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch(e) {
-      console.warn('즐겨찾기 불러오기 실패, 초기화됩니다:', e);
-      return [];
-    }
-  })()),
+  favorites:     new Set(JSON.parse(localStorage.getItem('radio_favs') || '[]')),
   wasPlaying:    false,   // 인터럽트 전 재생 중이었는지
   needReconnect: false,   // 시스템 자동 재개 차단용
   userPaused:    false,   // 사용자/MediaSession 직접 정지 여부
@@ -1314,9 +926,6 @@ const AppState = {
 
 // 하위 호환 참조 (AppState 프로퍼티를 직접 사용)
 const S = AppState;
-
-// 즐겨찾기 잠금 상태 — 상태 블록 상단에 선언 (toggleFav TDZ 방지)
-let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 
 /* ════════════════════════════════════════
    탭 전환
@@ -1333,38 +942,17 @@ function switchTab(tab) {
     tab === 'all' ? 'translateX(0)' : 'translateX(-50%)';
   if (tab === 'fav') updateFavList();
   updateEmptyState();
-
-  // 탭 전환 시 최상단으로 스크롤 (Now Playing 패널이 보이도록)
-  // window, documentElement, body, .app 모두 시도 (브라우저/구조 차이 대응)
-  try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(e) {}
-  try { document.documentElement.scrollTop = 0; } catch(e) {}
-  try { document.body.scrollTop = 0; } catch(e) {}
-  const appEl = document.querySelector('.app');
-  if (appEl) appEl.scrollTop = 0;
-  // Now Playing 패널을 화면 최상단으로 스크롤
-  const npEl = document.getElementById('nowPlaying');
-  if (npEl) npEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ════════════════════════════════════════
    즐겨찾기
 ════════════════════════════════════════ */
 function saveFav() {
-  const data = JSON.stringify([...S.favorites]);
-  try { localStorage.setItem('radio_favs', data); } catch(e) {
-    showToast('⚠️ 즐겨찾기 저장에 실패했습니다.');
-  }
-  idbSet('radio_favs', data); // IndexedDB 백업
-  fbSaveUserData();            // Firebase 백업
+  localStorage.setItem('radio_favs', JSON.stringify([...S.favorites]));
 }
 
 function toggleFav(id, e) {
   e.stopPropagation();
-  // 잠금 상태에서 해제 시도 차단
-  if (favLocked && S.favorites.has(id)) {
-    showToast('🔒 즐겨찾기가 잠겨있습니다. 잠금 해제 후 변경하세요.');
-    return;
-  }
   S.favorites.has(id) ? S.favorites.delete(id) : S.favorites.add(id);
   saveFav(); updateFavCount();
   ['list-all','list-fav'].forEach(lid => {
@@ -1425,16 +1013,6 @@ function createCard(s) {
     <div class="live-dot" id="dot-${s.id}" style="opacity:${isActive?1:0}"></div>
   `;
   card.querySelector('.s-fav-btn').addEventListener('click', e => toggleFav(s.id, e));
-  // 커스텀 채널 삭제 버튼
-  if (s.custom) {
-    const delBtn = document.createElement('button');
-    delBtn.className = 'st-delete-btn';
-    delBtn.innerHTML = '✕';
-    delBtn.title = '채널 삭제';
-    delBtn.addEventListener('click', e => deleteCustomStation(s.id, e));
-    card.style.position = 'relative';
-    card.appendChild(delBtn);
-  }
   card.addEventListener('click', () => {
     if (S.current && S.current.id === s.id && !S.loading) togglePlay();
     else playStation(s, true);
@@ -1569,8 +1147,7 @@ async function resolveStreamUrl(s, forceRefresh) {
 ════════════════════════════════════════ */
 function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
-  S.needReconnect = false;   // 채널 변경 시 needReconnect 초기화
-  // S.wasPlaying은 건드리지 않음 — tryReconnect가 관리
+  S.needReconnect = false; S.wasPlaying = false;   // 채널 변경 시 인터럽트 플래그 초기화
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
@@ -1601,18 +1178,12 @@ function playStation(s, forceRefresh = false) {
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      S.hls = new window.Hls({
-        maxBufferLength:        30,   // 버퍼 여유 충분히 확보
-        maxMaxBufferLength:     60,
-        liveSyncDurationCount:   3,   // 세그먼트 3개 분량 여유 (약 6~12초)
-        liveMaxLatencyDurationCount: 6, // 세그먼트 6개 초과 시 hls.js가 자동 조정
-        enableWorker:           true,
-      });
+      S.hls = new window.Hls({ maxBufferLength: 15, maxMaxBufferLength: 30 });
       S.hls.loadSource(url); S.hls.attachMedia(audio);
       S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
-          showToast('▶ 화면을 탭하면 재생됩니다');
+          showError('자동재생이 차단됐습니다. 재생 버튼을 눌러주세요.');
           onFail(false);
         });
       });
@@ -1679,18 +1250,18 @@ audio.addEventListener('error', () => { if (S.current && S.playing && !S.loading
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; } // 직접 정지는 무시
   if (S.playing && S.current && !S.loading) {
-    S.wasPlaying = true;
+    S.wasPlaying    = true;
     S.needReconnect = true;
-    S.playing = false;  // 실제 오디오 정지 → 상태 동기화
-    updateNowPlaying(); renderStations();
-    // 알림창도 정지 상태로 즉시 반영
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused';
-    }
   }
 });
 
-// visibilitychange → initCallReconnect() 내부에서 통합 처리
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.wasPlaying && S.current) {
+    S.wasPlaying    = false;
+    S.needReconnect = false;
+    playStation(S.current);
+  }
+});
 
 audio.addEventListener('play', () => {
   // 시스템 자동 재개 차단 (Android 일부)
@@ -1703,73 +1274,7 @@ audio.addEventListener('play', () => {
   }
 });
 
-// ── 통화 종료 자동 재연결 ────────────────────────────
-(function initCallReconnect() {
-  let watchTimer  = null;
-  let callSuspect = false;
-  let reconnecting = false; // 재연결 진행 중 플래그 (중복 방지)
-
-  function tryReconnect() {
-    if (reconnecting || !S.current || !S.wasPlaying) return;
-    reconnecting    = true;
-    S.wasPlaying    = false;
-    S.needReconnect = false;
-    callSuspect     = false;
-    stopWatch();
-    showError(null); // 에러 메시지 초기화
-    setTimeout(() => {
-      playStation(S.current);
-      // 5초 후 무조건 해제 (playStation 실패 시에도 막히지 않도록)
-      setTimeout(() => { reconnecting = false; }, 5000);
-    }, 800);
-  }
-
-  function startWatch() {
-    if (watchTimer || reconnecting) return;
-    callSuspect = true;
-    watchTimer = setInterval(() => {
-      if (!S.wasPlaying || !S.current || reconnecting) {
-        stopWatch(); return;
-      }
-      if (audio.paused && navigator.onLine) {
-        try {
-          const testCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const state   = testCtx.state;
-          testCtx.close();
-          if (state === 'running') { tryReconnect(); return; }
-        } catch(e) {}
-      }
-    }, 2000);
-  }
-
-  function stopWatch() {
-    if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
-    callSuspect = false;
-  }
-
-  // pause → 0.5초 후 재연결 중이 아니면 감시 시작
-  audio.addEventListener('pause', () => {
-    setTimeout(() => {
-      if (S.wasPlaying && S.current && !reconnecting) startWatch();
-    }, 500);
-  });
-
-  // 재생 시작 → 감시 즉시 중단
-  audio.addEventListener('play', () => stopWatch());
-
-  // 화면 복귀 → 즉시 재연결
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    if (S.wasPlaying && S.current) tryReconnect();
-  });
-
-  // 네트워크 복구 → 재연결 (통화 종료 + WiFi↔데이터 전환 모두 처리)
-  window.addEventListener('online', () => {
-    if (S.wasPlaying && S.current) tryReconnect();
-  });
-})();
-
-
+// ── 블루투스 자동 재연결 ────────────────────────────
 // devicechange: 블루투스 기기 연결/해제 시 OS가 발생시키는 이벤트
 // 블루투스 재연결 감지 → _wasPlaying=true면 라이브 재연결
 (function initBluetoothReconnect() {
@@ -1836,24 +1341,6 @@ audio.addEventListener('play', () => {
   document.addEventListener('touchstart', () => { getAudioCtx(); watchAudioCtxState(); },
     { once: true, passive: true });
 })();
-
-/* ════════════════════════════════════════
-   네트워크 전환 감지 (WiFi ↔ 데이터)
-   → initCallReconnect 내부에서 통합 처리
-════════════════════════════════════════ */
-window.addEventListener('offline', () => {
-  if (!S.current) return;
-  if (!S.playing && !S.wasPlaying) return; // 재생 중이거나 재연결 대기 중일 때만
-  // 끊김 감지 → wasPlaying 세팅 + 재시도 타이머 정리
-  if (S.playing) {
-    S.wasPlaying = true;
-    S.playing    = false;
-  }
-  clearRetryTimer();
-  if (S.hls) S.hls.stopLoad();
-  updateNowPlaying(); renderStations();
-  showError('네트워크가 끊겼습니다. 연결을 확인 중...');
-});
 
 /* ════════════════════════════════════════
    볼륨
@@ -1958,129 +1445,6 @@ function installApp() {
 }
 
 /* ════════════════════════════════════════
-   뒤로가기 — 항상 백그라운드 유지
-════════════════════════════════════════ */
-(function initBackHandler() {
-  // 더미 히스토리 2개 쌓기 (두 번 뒤로가기해도 종료 안 되도록)
-  history.pushState({ page: 'radio' }, '', location.href);
-  history.pushState({ page: 'radio' }, '', location.href);
-
-  window.addEventListener('popstate', () => {
-    // 즉시 2개 다시 push — 항상 히스토리 여유 확보
-    history.pushState({ page: 'radio' }, '', location.href);
-    history.pushState({ page: 'radio' }, '', location.href);
-    if (S.playing || S.loading) {
-      showToast('🎵 방송이 백그라운드에서 계속 재생됩니다');
-    }
-  });
-})();
-
-
-/* ════════════════════════════════════════
-   사용자 UUID — IndexedDB에만 저장
-   인터넷 기록 삭제 후에도 유지됨
-════════════════════════════════════════ */
-let _userUUID = null;
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
-
-async function getUserUUID() {
-  if (_userUUID) return _userUUID;
-  // IndexedDB에서 UUID 불러오기
-  let uuid = await idbGet('user_uuid');
-  if (!uuid) {
-    uuid = generateUUID();
-    await idbSet('user_uuid', uuid);
-    console.info('[UUID] 새 UUID 생성:', uuid);
-  } else {
-    console.info('[UUID] IndexedDB에서 복원:', uuid);
-  }
-  _userUUID = uuid;
-  return uuid;
-}
-
-/* ════════════════════════════════════════
-   Firebase 사용자 데이터 동기화
-   즐겨찾기·잠금·커스텀채널 → Firebase에 저장
-   인터넷 기록 삭제 후 UUID로 복원 가능
-════════════════════════════════════════ */
-async function fbSaveUserData() {
-  if (!fbReady || !fbDb) return;
-  try {
-    const uuid = await getUserUUID();
-    await fbDb.ref(`users/${uuid}`).set({
-      favorites:      [...S.favorites],
-      favLocked:      favLocked,
-      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
-      updatedAt:      Date.now(),
-    });
-  } catch(e) { console.warn('Firebase 사용자 데이터 저장 실패:', e); }
-}
-
-async function fbLoadUserData() {
-  if (!fbReady || !fbDb) return false;
-  try {
-    const uuid = await getUserUUID();
-    const snap = await fbDb.ref(`users/${uuid}`).once('value');
-    const data = snap.val();
-    if (!data) return false;
-
-    // 즐겨찾기 복원
-    if (Array.isArray(data.favorites) && data.favorites.length > 0) {
-      S.favorites = new Set(data.favorites);
-      saveFav();
-      updateFavCount();
-      renderAllList();
-      updateFavList();
-    }
-
-    // 잠금 상태 복원
-    if (typeof data.favLocked === 'boolean') {
-      favLocked = data.favLocked;
-      const lockVal = favLocked ? '1' : '0';
-      try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
-      await idbSet('radio_fav_locked', lockVal);
-      applyFavLock();
-    }
-
-    // 커스텀 채널 복원
-    if (Array.isArray(data.customStations) && data.customStations.length > 0) {
-      const existing = JSON.parse(localStorage.getItem('radio_custom_stations') || '[]');
-      // 중복 없이 병합
-      const merged = [...existing];
-      data.customStations.forEach(s => {
-        if (!merged.find(x => x.id === s.id)) merged.push(s);
-      });
-      saveCustomStations(merged);
-      merged.forEach(s => {
-        if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
-      });
-      renderAllList();
-    }
-
-    console.info('[Firebase] 사용자 데이터 복원 완료');
-    return true;
-  } catch(e) {
-    console.warn('Firebase 사용자 데이터 불러오기 실패:', e);
-    return false;
-  }
-}
-
-// Firebase 초기화 후 사용자 데이터 불러오기
-async function initUserData() {
-  // 1. Firebase에서 먼저 시도
-  const fbRestored = await fbLoadUserData();
-  // 2. Firebase 실패 시 IndexedDB에서 복원 (restoreFromIDB)
-  if (!fbRestored) await restoreFromIDB();
-  console.info('[초기화] 사용자 데이터 로드 완료');
-}
-
-/* ════════════════════════════════════════
    Firebase 함께 듣기
 ════════════════════════════════════════ */
 const FB_CONFIG = {
@@ -2106,11 +1470,7 @@ function initFirebase() {
     firebase.initializeApp(FB_CONFIG);
     fbDb = firebase.database();
     fbReady = true;
-    initUserData(); // Firebase 준비 완료 → 사용자 데이터 로드
-  } catch(e) {
-    console.warn('Firebase 초기화 실패:', e);
-    restoreFromIDB(); // Firebase 실패 시 IndexedDB 복원
-  }
+  } catch(e) { console.warn('Firebase 초기화 실패:', e); }
 }
 
 function startSync() {
@@ -2182,224 +1542,6 @@ function showToast(msg) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
 }
 
-
-
-
-/* ════════════════════════════════════════
-   IndexedDB 백업 — 즐겨찾기/잠금/커스텀채널 보호
-   localStorage 삭제 시에도 IndexedDB에서 복원
-════════════════════════════════════════ */
-const DB_NAME    = 'kr-radio-db';
-const DB_VERSION = 1;
-const DB_STORE   = 'settings';
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      e.target.result.createObjectStore(DB_STORE, { keyPath: 'key' });
-    };
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-async function idbSet(key, value) {
-  try {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx  = db.transaction(DB_STORE, 'readwrite');
-      const st  = tx.objectStore(DB_STORE);
-      st.put({ key, value });
-      tx.oncomplete = () => resolve();
-      tx.onerror    = e => reject(e.target.error);
-    });
-  } catch(e) { console.warn('IndexedDB 저장 실패:', e); }
-}
-
-async function idbGet(key) {
-  try {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const tx  = db.transaction(DB_STORE, 'readonly');
-      const req = tx.objectStore(DB_STORE).get(key);
-      req.onsuccess = e => resolve(e.target.result?.value ?? null);
-      req.onerror   = e => reject(e.target.error);
-    });
-  } catch(e) { return null; }
-}
-
-// localStorage + IndexedDB 동시 저장
-async function saveProtected(key, value) {
-  try { localStorage.setItem(key, value); } catch(e) {}
-  await idbSet(key, value);
-}
-
-// localStorage 우선, 없으면 IndexedDB에서 복원
-async function loadProtected(key) {
-  const local = localStorage.getItem(key);
-  if (local !== null) return local;
-  // localStorage가 비어있으면 IndexedDB에서 복원 시도
-  const idb = await idbGet(key);
-  if (idb !== null) {
-    try { localStorage.setItem(key, idb); } catch(e) {}
-    console.info(`[복원] ${key} → IndexedDB에서 복구됨`);
-  }
-  return idb;
-}
-
-// 앱 시작 시 즐겨찾기 + 잠금 + 커스텀채널 복원
-async function restoreFromIDB() {
-  // 즐겨찾기 복원
-  const favs = await loadProtected('radio_favs');
-  if (favs) {
-    try {
-      const parsed = JSON.parse(favs);
-      if (Array.isArray(parsed)) {
-        S.favorites = new Set(parsed);
-        updateFavCount();
-        renderAllList();
-        updateFavList();
-      }
-    } catch(e) {}
-  }
-
-  // 잠금 상태 복원
-  const locked = await loadProtected('radio_fav_locked');
-  if (locked !== null) {
-    favLocked = locked === '1';
-    applyFavLock();
-  }
-
-  // 커스텀 채널 복원
-  const custom = await loadProtected('radio_custom_stations');
-  if (custom) {
-    try {
-      const parsed = JSON.parse(custom);
-      if (Array.isArray(parsed)) {
-        parsed.forEach(s => {
-          if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
-        });
-        renderAllList();
-      }
-    } catch(e) {}
-  }
-}
-
-/* ════════════════════════════════════════
-   즐겨찾기 잠금
-════════════════════════════════════════ */
-
-function applyFavLock() {
-  const btn = document.getElementById('favLockBtn');
-  if (!btn) return;
-  if (favLocked) {
-    btn.classList.add('locked');
-    btn.innerHTML = '<span class="lock-icon">🔒</span>';
-    btn.title = '즐겨찾기 잠금 해제';
-  } else {
-    btn.classList.remove('locked');
-    btn.innerHTML = '<span class="lock-icon">🔓</span>';
-    btn.title = '즐겨찾기 잠금';
-  }
-}
-
-function toggleFavLock() {
-  favLocked = !favLocked;
-  const lockVal = favLocked ? '1' : '0';
-  try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
-  idbSet('radio_fav_locked', lockVal); // IndexedDB 백업
-  fbSaveUserData();                    // Firebase 백업
-  applyFavLock();
-  showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
-}
-
-/* ════════════════════════════════════════
-   방송 추가 (사용자 커스텀 채널)
-════════════════════════════════════════ */
-// 사용자 추가 채널 불러오기
-function loadCustomStations() {
-  try {
-    const saved = localStorage.getItem('radio_custom_stations');
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch(e) { return []; }
-}
-
-function saveCustomStations(list) {
-  const data = JSON.stringify(list);
-  try { localStorage.setItem('radio_custom_stations', data); } catch(e) {
-    showToast('⚠️ 저장 공간이 부족합니다.');
-  }
-  idbSet('radio_custom_stations', data); // IndexedDB 백업
-  fbSaveUserData();                      // Firebase 백업
-}
-
-// 앱 시작 시 커스텀 채널을 STATIONS에 병합
-function mergeCustomStations() {
-  const custom = loadCustomStations();
-  custom.forEach(s => {
-    if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
-  });
-}
-
-function openAddStation() {
-  // 입력 초기화
-  ['asi-name','asi-freq','asi-genre','asi-url'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
-  document.getElementById('asi-color').value = '#e74c3c';
-  document.getElementById('addStationBg').classList.add('show');
-}
-
-function closeAddStation(e) {
-  if (e && e.target !== document.getElementById('addStationBg')) return;
-  document.getElementById('addStationBg').classList.remove('show');
-}
-
-function confirmAddStation() {
-  const name  = document.getElementById('asi-name').value.trim();
-  const freq  = document.getElementById('asi-freq').value.trim() || '—';
-  const genre = document.getElementById('asi-genre').value.trim() || '기타';
-  const url   = document.getElementById('asi-url').value.trim();
-  const color = document.getElementById('asi-color').value;
-
-  if (!name) { showToast('⚠️ 방송국 이름을 입력해주세요.'); return; }
-  if (!url)  { showToast('⚠️ 스트림 URL을 입력해주세요.');  return; }
-  if (!url.startsWith('http')) { showToast('⚠️ URL은 http로 시작해야 합니다.'); return; }
-
-  const custom = loadCustomStations();
-  // ID: 1000번대 (기본 채널과 충돌 방지)
-  const newId  = 1000 + Date.now() % 100000;
-  const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
-
-  custom.push(newStation);
-  saveCustomStations(custom);
-  STATIONS.push(newStation);
-
-  renderAllList();
-  updateFavCount();
-  closeAddStation();
-  showToast(`✅ "${name}" 채널이 추가됐습니다.`);
-}
-
-function deleteCustomStation(id, e) {
-  e.stopPropagation();
-  const s = STATIONS.find(x => x.id === id);
-  if (!s || !s.custom) return;
-  if (S.current && S.current.id === id) {
-    showToast('⚠️ 재생 중인 채널은 삭제할 수 없습니다.');
-    return;
-  }
-  const custom = loadCustomStations().filter(x => x.id !== id);
-  saveCustomStations(custom);
-  const idx = STATIONS.findIndex(x => x.id === id);
-  if (idx > -1) STATIONS.splice(idx, 1);
-  S.favorites.delete(id); saveFav();
-  renderAllList(); updateFavCount();
-  showToast(`🗑️ 채널이 삭제됐습니다.`);
-}
 
 /* ════════════════════════════════════════
    변경 이력
@@ -2473,9 +1615,10 @@ document.querySelectorAll('.tab-btn').forEach(b =>
   b.addEventListener('click', () => switchTab(b.dataset.tab))
 );
 
-mergeCustomStations();
-applyFavLock();
 handleVolume(S.volume);
+updateFavCount();
+renderAllList();
+updateFavList();
 
 // 업데이트 토스트: 마지막으로 본 버전과 현재 버전 비교
 (function checkUpdate() {
@@ -2490,52 +1633,18 @@ handleVolume(S.volume);
   localStorage.setItem('radio_seen_version', APP_VERSION);
 })();
 
-// ── 1. 즉시 렌더링 (Firebase 기다리지 않음 — 빠른 초기 화면)
-updateFavCount();
-renderAllList();
-updateFavList();
-
-// ── 2. 마지막 방송국 즉시 복원
 const _lastId = parseInt(localStorage.getItem('radio_last'));
 if (_lastId) {
   S.current = STATIONS.find(s => s.id === _lastId) || null;
   if (S.current) {
     updateNowPlaying(); renderStations();
+    // 앱 강제 종료 전 재생 중이었으면 자동 재개
+    // (통화 중 Android가 앱을 죽인 경우 포함)
     if (localStorage.getItem('radio_playing') === '1') {
-      // 즉시 재생 시도
       playStation(S.current);
-      // 브라우저 자동재생 차단 시 — 첫 터치/클릭에서 자동 재개
-      const resumeOnGesture = () => {
-        if (!S.playing && !S.loading && S.current) {
-          playStation(S.current);
-        }
-        document.removeEventListener('touchstart', resumeOnGesture);
-        document.removeEventListener('click', resumeOnGesture);
-      };
-      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
-      document.addEventListener('click', resumeOnGesture, { once: true });
     }
   }
 }
-
-// ── 3. Firebase/IndexedDB 복원 — 백그라운드에서 진행, 완료 후 즐겨찾기만 갱신
-(async function initData() {
-  try {
-    if (!fbReady) {
-      firebase.initializeApp(FB_CONFIG);
-      fbDb = firebase.database();
-      fbReady = true;
-    }
-    await initUserData();
-  } catch(e) {
-    console.warn('Firebase 초기화 실패:', e);
-    await restoreFromIDB().catch(() => {});
-  }
-  // 복원 완료 후 즐겨찾기·잠금 UI만 갱신 (채널 목록은 이미 표시 중)
-  updateFavCount();
-  updateFavList();
-  applyFavLock();
-})();
 </script>
 </body>
 </html>

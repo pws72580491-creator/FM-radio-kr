@@ -1295,6 +1295,7 @@ const AppState = {
   volume:        0.8,     // 볼륨 (0~1)
   hls:           null,    // HLS 인스턴스
   retryTimer:    null,    // 재시도 타이머
+  watchdogTimer: null,    // 재생 감시 타이머
   retryCount:    0,       // 현재 재시도 횟수
   callId:        0,       // 채널 전환 경쟁 방지용 ID
   activeTab:     'all',   // 현재 탭 ('all' | 'fav')
@@ -1530,6 +1531,35 @@ function showError(msg) {
   }
 }
 
+/* ════════════════════════════════════════
+   재생 감시 워치독 (실제 오디오 진행 확인)
+   — onOK() 이후 audio.currentTime이 멈추면 UI 동기화 + 재연결
+════════════════════════════════════════ */
+function startWatchdog() {
+  stopWatchdog();
+  let lastTime  = audio.currentTime;
+  let stallTick = 0;
+  S.watchdogTimer = setInterval(() => {
+    if (!S.playing || S.loading || S.userPaused) { stopWatchdog(); return; }
+    const cur = audio.currentTime;
+    if (audio.paused || cur === lastTime) {
+      stallTick++;
+      if (stallTick >= 4) {            // 8초 이상 실제 진행 없음
+        stopWatchdog();
+        S.playing = false;             // ★ UI 강제 동기화
+        updateNowPlaying(); renderStations();
+        scheduleRetry();               // 재연결 예약
+      }
+    } else {
+      stallTick = 0;
+      lastTime  = cur;
+    }
+  }, 2000);
+}
+function stopWatchdog() {
+  if (S.watchdogTimer) { clearInterval(S.watchdogTimer); S.watchdogTimer = null; }
+}
+
 function clearRetryTimer() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 }
@@ -1573,7 +1603,7 @@ function playStation(s, forceRefresh = false) {
   const thisCall = ++S.callId;
   S.needReconnect = false;   // 채널 변경 시 needReconnect 초기화
   // S.wasPlaying은 건드리지 않음 — tryReconnect가 관리
-  showError(null); clearRetryTimer(); S.retryCount = 0;
+  showError(null); clearRetryTimer(); stopWatchdog(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   S.wasPlaying = false;   // ★ 채널 전환 시 오작동 재연결 방지
   localStorage.setItem('radio_last', s.id);
@@ -1595,6 +1625,7 @@ function playStation(s, forceRefresh = false) {
       S.playing = true; S.loading = false; S.retryCount = 0;
       localStorage.setItem('radio_playing', '1');  // 재생 중 상태 저장
       updateNowPlaying(); renderStations(); updateMediaSession();
+      startWatchdog();  // ★ 실제 재생 감시 시작
     }
     function onFail(retry) {
       if (thisCall !== S.callId) return;
@@ -1664,7 +1695,7 @@ function playStation(s, forceRefresh = false) {
 function togglePlay() {
   if (!S.current || S.loading) return;
   if (S.playing) {
-    clearRetryTimer();
+    clearRetryTimer(); stopWatchdog();
     if (S.hls) S.hls.stopLoad();
     S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
     audio.pause(); S.playing = false;
@@ -1726,7 +1757,7 @@ audio.addEventListener('play', () => {
     stopWatch();
     showError(null); // 에러 메시지 초기화
     setTimeout(() => {
-      playStation(S.current);
+      playStation(S.current, true);  // ★ 긴 통화 후 URL 강제 갱신
       // 5초 후 무조건 해제 (playStation 실패 시에도 막히지 않도록)
       setTimeout(() => { reconnecting = false; }, 5000);
     }, 800);

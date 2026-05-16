@@ -1575,6 +1575,7 @@ function playStation(s, forceRefresh = false) {
   // S.wasPlaying은 건드리지 않음 — tryReconnect가 관리
   showError(null); clearRetryTimer(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
+  S.wasPlaying = false;   // ★ 채널 전환 시 오작동 재연결 방지
   localStorage.setItem('radio_last', s.id);
   updateNowPlaying(); renderStations();
   if (S.hls) { S.hls.destroy(); S.hls = null; }
@@ -1603,15 +1604,16 @@ function playStation(s, forceRefresh = false) {
     }
 
     if (window.Hls && window.Hls.isSupported()) {
-      S.hls = new window.Hls({
-        maxBufferLength:        30,   // 버퍼 여유 충분히 확보
+      const hls = new window.Hls({
+        maxBufferLength:        30,
         maxMaxBufferLength:     60,
-        liveSyncDurationCount:   3,   // 세그먼트 3개 분량 여유 (약 6~12초)
-        liveMaxLatencyDurationCount: 6, // 세그먼트 6개 초과 시 hls.js가 자동 조정
+        liveSyncDurationCount:   3,
+        liveMaxLatencyDurationCount: 6,
         enableWorker:           true,
       });
-      S.hls.loadSource(url); S.hls.attachMedia(audio);
-      S.hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+      S.hls = hls;  // ★ 로컬 참조 별도 보관
+      hls.loadSource(url); hls.attachMedia(audio);
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
           showToast('▶ 화면을 탭하면 재생됩니다');
@@ -1619,25 +1621,29 @@ function playStation(s, forceRefresh = false) {
         });
       });
       let mediaErrorCount = 0;
-      S.hls.on(window.Hls.Events.ERROR, (_, d) => {
+      hls.on(window.Hls.Events.ERROR, (_, d) => {
+        if (thisCall !== S.callId) { hls.destroy(); return; }  // ★ 구 채널 에러는 조용히 폐기
         if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
           if (d.fatal) {
-            S.hls.destroy(); S.hls = null; onFail(true);
+            if (S.hls === hls) S.hls = null;  // ★ 현재 인스턴스일 때만 전역 초기화
+            hls.destroy(); onFail(true);
           } else {
-            S.hls.startLoad(); // 일시적 네트워크 오류 → 재시도
+            hls.startLoad();
           }
           return;
         }
         if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
           if (mediaErrorCount < 2) {
-            mediaErrorCount++; S.hls.recoverMediaError(); // 디코딩 오류 → 자체 복구
+            mediaErrorCount++; hls.recoverMediaError();
           } else {
-            S.hls.destroy(); S.hls = null; onFail(true); // 반복되면 재연결
+            if (S.hls === hls) S.hls = null;
+            hls.destroy(); onFail(true);
           }
           return;
         }
         if (d.fatal) {
-          S.hls.destroy(); S.hls = null; onFail(true); // 기타 치명 오류 → 재연결
+          if (S.hls === hls) S.hls = null;
+          hls.destroy(); onFail(true);
         }
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {

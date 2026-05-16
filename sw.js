@@ -1,128 +1,134 @@
-/* ════════════════════════════════════════════════════════════════
-   KOREA FM 라디오 — Service Worker
-   전략:
-     · 앱 셸(index.html·manifest·아이콘)  → Network First + 캐시 폴백
-     · HLS·스트림 URL                      → 캐시 없이 네트워크 패스스루
-     · Firebase·외부 CDN                   → 네트워크 패스스루
-   ════════════════════════════════════════════════════════════════ */
+const CACHE_NAME = 'grateful-v4';
 
-const CACHE_VER  = 'kr-radio-v2.1.0';
-const APP_SHELL  = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icons/icon-72.png',
-  '/icons/icon-96.png',
-  '/icons/icon-128.png',
-  '/icons/icon-144.png',
-  '/icons/icon-152.png',
-  '/icons/icon-192.png',
-  '/icons/icon-384.png',
-  '/icons/icon-512.png',
-  '/icons/icon-192-maskable.png',
-  '/icons/icon-512-maskable.png',
+const CACHE_FILES = [
+  './',
+  './index.html',
+  './app.css',
+  './app.js',
+  './firebase-init.js',
+  './manifest.json',
+  './apple-touch-icon.png',
+  './favicon.png',
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png',
 ];
 
-/* ── 설치: 앱 셸 사전 캐싱 ─────────────────────── */
 self.addEventListener('install', e => {
-  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_VER).then(cache => {
-      // 실패해도 SW 설치를 막지 않음
-      return cache.addAll(APP_SHELL).catch(err => {
-        console.warn('[SW] 앱 셸 캐싱 일부 실패:', err);
-      });
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(CACHE_FILES))
+      .then(() => self.skipWaiting())
   );
 });
 
-/* ── 활성화: 이전 버전 캐시 정리 ───────────────── */
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_VER)
-          .map(k => { console.log('[SW] 구버전 캐시 삭제:', k); return caches.delete(k); })
+self.addEventListener('activate', e => e.waitUntil(
+  caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+    .then(() => self.clients.claim())
+));
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  // 페이지 자신 → Cache-First + 백그라운드 갱신
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      caches.match(e.request).then(cached => {
+        const network = fetch(e.request).then(res => {
+          if (res && res.ok) caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+          return res;
+        }).catch(() => cached);
+        return cached || network;
+      })
+    );
+    return;
+  }
+  // 폰트 → Cache-First
+  if (url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('fonts.googleapis.com')) {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached ||
+        fetch(e.request, { mode: 'no-cors' }).then(res => {
+          caches.open(CACHE_NAME).then(c => c.put(e.request, res.clone()));
+          return res;
+        }).catch(() => new Response('', { status: 408 }))
       )
-    ).then(() => self.clients.claim())
-  );
+    );
+  }
+  // Firebase, gstatic (SDK), Anthropic → 기본 네트워크
 });
 
-/* ── 패스스루 여부 판단 ────────────────────────── */
-function shouldPassthrough(url) {
-  const h = url.hostname;
-  const p = url.pathname;
-  return (
-    // 스트리밍 서버
-    h.includes('febc.net')        ||
-    h.includes('bsod.kr')         ||
-    h.includes('ebs.co.kr')       ||
-    h.includes('kbs.co.kr')       ||
-    h.includes('mbc.co.kr')       ||
-    h.includes('sbs.co.kr')       ||
-    h.includes('cbs.co.kr')       ||
-    h.includes('tbs.seoul.kr')    ||
-    h.includes('ytn.co.kr')       ||
-    // HLS 세그먼트·플레이리스트
-    p.endsWith('.m3u8')           ||
-    p.endsWith('.ts')             ||
-    // Firebase / 외부 라이브러리
-    h.includes('firebase')        ||
-    h.includes('firebaseio.com')  ||
-    h.includes('gstatic.com')     ||
-    h.includes('googleapis.com')  ||
-    h.includes('cdnjs.cloudflare.com') ||
-    h.includes('fonts.googleapis.com') ||
-    h.includes('fonts.gstatic.com')
-  );
+let _swTimer = null, _swSchedule = null;
+
+function _msUntil(h, m) {
+  const now = new Date(), t = new Date(now);
+  t.setHours(h, m, 0, 0);
+  if (t <= now) t.setDate(t.getDate() + 1);
+  return t - now;
 }
 
-/* ── Fetch: Network First ──────────────────────── */
-self.addEventListener('fetch', e => {
-  // POST 등 캐시 불가 요청
-  if (e.request.method !== 'GET') return;
+async function _fireReminder() {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+  let hasRecord = false;
+  if (clients.length > 0) {
+    hasRecord = await new Promise(res => {
+      const mc = new MessageChannel();
+      mc.port1.onmessage = e => res(!!e.data?.hasRecord);
+      clients[0].postMessage({ type: 'CHECK_TODAY' }, [mc.port2]);
+      setTimeout(() => res(false), 2000);
+    });
+  }
+  if (!hasRecord) {
+    await self.registration.showNotification('오늘의 감사를 기록해 보세요 🌿', {
+      body: '하루의 따뜻한 순간들을 기억해요 ✦',
+      icon: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27%3E%3Crect width=%27192%27 height=%27192%27 rx=%2744%27 fill=%27%23f9f5ef%27/%3E%3Ctext x=%2796%27 y=%27136%27 text-anchor=%27middle%27 font-size=%27110%27%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E',
+      badge: 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 96 96%27%3E%3Crect width=%2796%27 height=%2796%27 rx=%2722%27 fill=%27%23c17a52%27/%3E%3Ctext x=%2748%27 y=%2768%27 text-anchor=%27middle%27 font-size=%2756%27 fill=%27white%27%3E%E2%9C%A6%3C/text%3E%3C/svg%3E',
+      tag: 'grateful-reminder',
+      vibrate: [200, 100, 200],
+    });
+  }
+  _scheduleSW(_swSchedule);
+}
 
-  let url;
-  try { url = new URL(e.request.url); } catch { return; }
+function _scheduleSW(s) {
+  clearTimeout(_swTimer); _swTimer = null; _swSchedule = s;
+  if (!s || !s.on || !s.time) return;
+  const parts = s.time.split(':').map(Number);
+  _swTimer = setTimeout(() => _fireReminder(), _msUntil(parts[0], parts[1]));
+}
 
-  // 패스스루: 캐시 관여 없이 네트워크로 직행
-  if (shouldPassthrough(url)) return;
-
-  // chrome-extension 등 무시
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return;
-
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        // 성공 응답 → 캐시 갱신 (Stale-While-Revalidate 효과)
-        if (res.ok && res.type !== 'opaque') {
-          const clone = res.clone();
-          caches.open(CACHE_VER).then(c => c.put(e.request, clone));
-        }
-        return res;
-      })
-      .catch(() =>
-        // 오프라인 → 캐시 폴백
-        caches.match(e.request).then(cached => {
-          if (cached) return cached;
-          // index.html 폴백 (SPA 네비게이션)
-          if (e.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        })
-      )
-  );
+self.addEventListener('message', e => {
+  const d = e.data || {};
+  if (d.type === 'SET_REMINDER')    _scheduleSW(d.schedule);
+  if (d.type === 'CANCEL_REMINDER') { clearTimeout(_swTimer); _swTimer = null; }
+  if (d.type === 'TEST_REMINDER') {
+    self.registration.showNotification('테스트 알림 🌿', {
+      body: '백그라운드 알림이 정상 작동해요 ✦', tag: 'grateful-test',
+    });
+  }
+  if (d.type === 'CACHE_URL' && d.url) {
+    caches.open(CACHE_NAME).then(cache =>
+      fetch(d.url).then(res => { if (res.ok) cache.put(d.url, res); }).catch(() => {})
+    );
+  }
 });
 
-/* ── 푸시 알림 (향후 확장용) ───────────────────── */
 self.addEventListener('push', e => {
-  const data = e.data ? e.data.json() : {};
+  const d = e.data ? (e.data.json ? e.data.json() : {}) : {};
+  e.waitUntil(self.registration.showNotification(
+    d.title || '오늘의 감사를 기록해 보세요 🌿',
+    { body: d.body || '하루의 따뜻한 순간들을 기억해요 ✦', tag: 'grateful-push' }
+  ));
+});
+
+self.addEventListener('periodicsync', e => {
+  if (e.tag === 'grateful-daily-reminder') e.waitUntil(_fireReminder());
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
   e.waitUntil(
-    self.registration.showNotification(data.title || 'FM 라디오', {
-      body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-96.png',
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const w = list.find(c => 'focus' in c);
+      return w ? w.focus() : self.clients.openWindow(self.location.origin + self.location.pathname);
     })
   );
 });

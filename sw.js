@@ -1,99 +1,128 @@
-/* ════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════
    KOREA FM 라디오 — Service Worker
    전략:
-   - JS/CSS/HTML : Network First (항상 최신 코드)
-   - 폰트/이미지  : Cache First (빠른 로딩)
-   - 오디오 스트림: 캐시 제외 (항상 라이브)
-════════════════════════════════════════ */
-const CACHE_NAME  = 'kr-radio-v2.1.2';
-const CACHE_SHELL = [
-  './',
-  './index.html',
-  
-  
-  
-  
-  
-  
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
+     · 앱 셸(index.html·manifest·아이콘)  → Network First + 캐시 폴백
+     · HLS·스트림 URL                      → 캐시 없이 네트워크 패스스루
+     · Firebase·외부 CDN                   → 네트워크 패스스루
+   ════════════════════════════════════════════════════════════════ */
+
+const CACHE_VER  = 'kr-radio-v2.1.0';
+const APP_SHELL  = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icons/icon-72.png',
+  '/icons/icon-96.png',
+  '/icons/icon-128.png',
+  '/icons/icon-144.png',
+  '/icons/icon-152.png',
+  '/icons/icon-192.png',
+  '/icons/icon-384.png',
+  '/icons/icon-512.png',
+  '/icons/icon-192-maskable.png',
+  '/icons/icon-512-maskable.png',
 ];
 
-/* ── 설치: 앱 셸 사전 캐싱 ── */
+/* ── 설치: 앱 셸 사전 캐싱 ─────────────────────── */
 self.addEventListener('install', e => {
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(CACHE_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_VER).then(cache => {
+      // 실패해도 SW 설치를 막지 않음
+      return cache.addAll(APP_SHELL).catch(err => {
+        console.warn('[SW] 앱 셸 캐싱 일부 실패:', err);
+      });
+    })
   );
 });
 
-/* ── 활성화: 이전 캐시 정리 ── */
+/* ── 활성화: 이전 버전 캐시 정리 ───────────────── */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
+          .filter(k => k !== CACHE_VER)
+          .map(k => { console.log('[SW] 구버전 캐시 삭제:', k); return caches.delete(k); })
       )
     ).then(() => self.clients.claim())
   );
 });
 
-/* ── fetch 전략 ── */
+/* ── 패스스루 여부 판단 ────────────────────────── */
+function shouldPassthrough(url) {
+  const h = url.hostname;
+  const p = url.pathname;
+  return (
+    // 스트리밍 서버
+    h.includes('febc.net')        ||
+    h.includes('bsod.kr')         ||
+    h.includes('ebs.co.kr')       ||
+    h.includes('kbs.co.kr')       ||
+    h.includes('mbc.co.kr')       ||
+    h.includes('sbs.co.kr')       ||
+    h.includes('cbs.co.kr')       ||
+    h.includes('tbs.seoul.kr')    ||
+    h.includes('ytn.co.kr')       ||
+    // HLS 세그먼트·플레이리스트
+    p.endsWith('.m3u8')           ||
+    p.endsWith('.ts')             ||
+    // Firebase / 외부 라이브러리
+    h.includes('firebase')        ||
+    h.includes('firebaseio.com')  ||
+    h.includes('gstatic.com')     ||
+    h.includes('googleapis.com')  ||
+    h.includes('cdnjs.cloudflare.com') ||
+    h.includes('fonts.googleapis.com') ||
+    h.includes('fonts.gstatic.com')
+  );
+}
+
+/* ── Fetch: Network First ──────────────────────── */
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
+  // POST 등 캐시 불가 요청
+  if (e.request.method !== 'GET') return;
 
-  // 오디오 스트림, Firebase, CDN 라이브러리 → 캐시 완전 제외 (항상 네트워크)
-  if (
-    url.hostname.includes('febc.net')       ||
-    url.hostname.includes('bsod.kr')        ||
-    url.hostname.includes('ebs.co.kr')      ||
-    url.hostname.includes('firebase')       ||
-    url.hostname.includes('gstatic.com')    ||
-    url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('cdnjs.cloudflare.com') ||
-    url.pathname.endsWith('.m3u8')          ||
-    url.pathname.endsWith('.ts')
-  ) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
+  let url;
+  try { url = new URL(e.request.url); } catch { return; }
 
-  // 폰트 → Cache First (변경 없음)
-  if (url.hostname.includes('fonts.gstatic.com')) {
-    e.respondWith(
-      caches.match(e.request).then(cached =>
-        cached || fetch(e.request).then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          return res;
-        })
-      )
-    );
-    return;
-  }
+  // 패스스루: 캐시 관여 없이 네트워크로 직행
+  if (shouldPassthrough(url)) return;
 
-  // 앱 셸(JS/CSS/HTML/이미지) → Network First, 실패 시 캐시 폴백
+  // chrome-extension 등 무시
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return;
+
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        // 정상 응답이면 캐시 갱신
-        if (res && res.status === 200 && res.type !== 'opaque') {
+        // 성공 응답 → 캐시 갱신 (Stale-While-Revalidate 효과)
+        if (res.ok && res.type !== 'opaque') {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          caches.open(CACHE_VER).then(c => c.put(e.request, clone));
         }
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() =>
+        // 오프라인 → 캐시 폴백
+        caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          // index.html 폴백 (SPA 네비게이션)
+          if (e.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+        })
+      )
   );
 });
 
-/* ── 백그라운드 동기화 메시지 처리 ── */
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+/* ── 푸시 알림 (향후 확장용) ───────────────────── */
+self.addEventListener('push', e => {
+  const data = e.data ? e.data.json() : {};
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'FM 라디오', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-96.png',
+    })
+  );
 });

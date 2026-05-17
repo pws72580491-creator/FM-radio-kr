@@ -1,43 +1,78 @@
 {
   "name": "KOREA FM 라디오",
   "short_name": "FM 라디오",
-  "description": "한국 FM/AM 라디오 스트리밍 — KBS·MBC·SBS·CBS·극동방송 등 무료 청취",
-  "start_url": "/",
-  "scope": "/",
+  "description": "한국 FM 라디오 스트리밍 앱",
+  "start_url": "./index.html",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
   "background_color": "#0d0d1a",
   "theme_color": "#0d0d1a",
   "lang": "ko",
-  "categories": ["music", "entertainment"],
   "icons": [
-    { "src": "/icons/icon-72.png",            "sizes": "72x72",   "type": "image/png" },
-    { "src": "/icons/icon-96.png",            "sizes": "96x96",   "type": "image/png" },
-    { "src": "/icons/icon-128.png",           "sizes": "128x128", "type": "image/png" },
-    { "src": "/icons/icon-144.png",           "sizes": "144x144", "type": "image/png" },
-    { "src": "/icons/icon-152.png",           "sizes": "152x152", "type": "image/png" },
-    { "src": "/icons/icon-192.png",           "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-384.png",           "sizes": "384x384", "type": "image/png" },
-    { "src": "/icons/icon-512.png",           "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/icon-192-maskable.png",  "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon-512-maskable.png",  "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ],
-  "shortcuts": [
     {
-      "name": "KBS 1라디오",
-      "short_name": "KBS 1",
-      "description": "KBS 1라디오 97.3 MHz",
-      "url": "/?play=1",
-      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+      "src": "./icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "name": "서울극동방송",
-      "short_name": "극동방송",
-      "description": "서울극동방송 106.9 MHz",
-      "url": "/?play=13",
-      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+      "src": "./icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
-  "prefer_related_applications": false
+  "categories": ["entertainment", "music"],
+  "shortcuts": [
+    {
+      "name": "KBS 쿨FM",
+      "short_name": "쿨FM",
+      "description": "KBS 쿨FM 89.1MHz 바로듣기",
+      "url": "./index.html?autoplay=3",
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "MBC FM4U",
+      "short_name": "FM4U",
+      "description": "MBC FM4U 91.9MHz 바로듣기",
+      "url": "./index.html?autoplay=6",
+      "icons": [{ "src": "./icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ]
 }

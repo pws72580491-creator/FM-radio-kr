@@ -595,6 +595,101 @@ input[type=range]::-webkit-slider-thumb {
 .station-card:hover .st-delete-btn,
 .station-card:focus-within .st-delete-btn { opacity: 1; }
 
+/* ══ 계정 버튼 ══ */
+#accountBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 4px 10px; border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .5px; white-space: nowrap;
+}
+#accountBtn.logged-in {
+  border-color: var(--red); color: var(--red);
+  background: var(--red-glow);
+}
+#accountBtn .acc-name {
+  max-width: 60px; overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══ 계정 모달 ══ */
+.account-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.account-modal-bg.show { display: flex; }
+.account-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(var(--sab) + 24px);
+  width: min(520px,100%);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.account-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.account-title-text {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.account-tabs {
+  display: flex; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.account-tab {
+  flex: 1; padding: 9px; font-size: 12px; font-weight: 600;
+  background: var(--bg2); color: var(--muted);
+  border: none; cursor: pointer; transition: all .2s;
+  font-family: var(--kr);
+}
+.account-tab.active { background: var(--red); color: #fff; }
+.account-field { display: flex; flex-direction: column; gap: 5px; }
+.account-field label {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.account-field input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s;
+}
+.account-field input:focus { border-color: var(--red); }
+.account-hint {
+  font-size: 10px; color: var(--muted); line-height: 1.7;
+  padding: 8px 12px; background: var(--bg2); border-radius: 8px;
+  border-left: 2px solid var(--red);
+}
+.account-actions { display: flex; gap: 10px; }
+.account-actions button {
+  flex: 1; padding: 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity .2s; font-family: var(--kr);
+}
+.btn-acc-confirm { background: var(--red); color: #fff; border: none; }
+.btn-acc-cancel  {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-acc-logout  {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.account-user-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; background: var(--bg2);
+  border-radius: 12px; border: 1px solid var(--border);
+}
+.account-user-icon { font-size: 24px; }
+.account-user-name {
+  font-size: 14px; font-weight: 700; color: var(--red);
+  font-family: var(--mono);
+}
+.account-user-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
 /* ══ 버전 모달 ══ */
 #versionBadge {
   position: fixed;
@@ -690,6 +785,7 @@ input[type=range]::-webkit-slider-thumb {
         <span class="sync-dot"></span>함께 듣기
       </button>
       <button id="themeBtn" onclick="toggleTheme()" aria-label="테마 전환">🌙</button>
+      <button id="accountBtn" onclick="openAccountModal()" aria-label="계정">👤</button>
       <button id="installBtn" onclick="installApp()">📲 홈 화면 추가</button>
     </div>
   </header>
@@ -832,6 +928,57 @@ input[type=range]::-webkit-slider-thumb {
       <button class="changelog-close" onclick="closeChangelog()">✕</button>
     </div>
     <div id="changelogBody"></div>
+  </div>
+</div>
+
+<!-- 계정 모달 -->
+<div class="account-modal-bg" id="accountModalBg" onclick="closeAccountModal(event)">
+  <div class="account-sheet">
+    <div class="account-title-row">
+      <div class="account-title-text">🔐 계정</div>
+      <button class="changelog-close" onclick="closeAccountModal()">✕</button>
+    </div>
+
+    <!-- 로그아웃 상태: 로그인/회원가입 폼 -->
+    <div id="accFormWrap" style="display:flex;flex-direction:column;gap:14px">
+      <div class="account-tabs">
+        <button class="account-tab active" id="accTabLogin"    onclick="switchAccountTab('login')">로그인</button>
+        <button class="account-tab"        id="accTabRegister" onclick="switchAccountTab('register')">회원가입</button>
+      </div>
+      <div class="account-field">
+        <label>아이디 (3~12자, 영문/숫자/한글)</label>
+        <input id="acc-id" type="text" placeholder="예: radio123" maxlength="12"
+               autocomplete="username" onkeydown="if(event.key==='Enter')doAccountAction()">
+      </div>
+      <div class="account-field">
+        <label>PIN 번호 (숫자 4자리 · 선택)</label>
+        <input id="acc-pin" type="password" placeholder="없으면 비워두세요" maxlength="4"
+               inputmode="numeric" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doAccountAction()">
+      </div>
+      <div class="account-hint" id="accHint">
+        아이디를 기억해두면 인터넷 기록을 삭제해도<br>어느 기기에서든 즐겨찾기를 복원할 수 있습니다.
+      </div>
+      <div class="account-actions">
+        <button class="btn-acc-cancel"  onclick="closeAccountModal()">취소</button>
+        <button class="btn-acc-confirm" id="accConfirmBtn" onclick="doAccountAction()">로그인</button>
+      </div>
+    </div>
+
+    <!-- 로그인 상태: 사용자 정보 -->
+    <div id="accLoggedWrap" style="display:none;flex-direction:column;gap:14px">
+      <div class="account-user-card">
+        <div class="account-user-icon">👤</div>
+        <div>
+          <div class="account-user-name" id="accUserName"></div>
+          <div class="account-user-sub">즐겨찾기가 클라우드에 자동 동기화됩니다</div>
+        </div>
+      </div>
+      <div class="account-actions">
+        <button class="btn-acc-cancel" onclick="closeAccountModal()">닫기</button>
+        <button class="btn-acc-logout" onclick="doLogout()">로그아웃</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1558,16 +1705,53 @@ function generateUUID() {
   });
 }
 
+/* ──────────────────────────────────────
+   UUID 쿠키 헬퍼
+   인터넷 기록 삭제(방문기록+캐시)로는 쿠키가 지워지지 않으므로
+   UUID를 쿠키에도 백업해 IndexedDB 소실에 대비
+─────────────────────────────────────── */
+function setCookieUUID(uuid) {
+  try {
+    // 10년 유효기간
+    const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `kr_radio_uuid=${uuid}; expires=${expires}; path=/; SameSite=Lax`;
+  } catch(e) {}
+}
+
+function getCookieUUID() {
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)kr_radio_uuid=([^;]+)/);
+    return m ? m[1] : null;
+  } catch(e) { return null; }
+}
+
 async function getUserUUID() {
   if (_userUUID) return _userUUID;
+
+  // 1순위: IndexedDB
   let uuid = await idbGet('user_uuid');
+
+  // 2순위: 쿠키 (IDB가 지워진 경우 복원)
+  if (!uuid) {
+    uuid = getCookieUUID();
+    if (uuid) {
+      await idbSet('user_uuid', uuid);
+      console.info('[UUID] 쿠키에서 복원 → IndexedDB 재저장:', uuid);
+    }
+  }
+
+  // 없으면 신규 생성 후 양쪽에 저장
   if (!uuid) {
     uuid = generateUUID();
     await idbSet('user_uuid', uuid);
     console.info('[UUID] 새 UUID 생성:', uuid);
   } else {
-    console.info('[UUID] IndexedDB에서 복원:', uuid);
+    console.info('[UUID] 복원 완료:', uuid);
   }
+
+  // 항상 쿠키에도 동기화
+  setCookieUUID(uuid);
+
   _userUUID = uuid;
   return uuid;
 }
@@ -1667,6 +1851,208 @@ async function initUserData() {
   const fbRestored = await fbLoadUserData();
   if (!fbRestored) await restoreFromIDB();
   console.info('[초기화] 사용자 데이터 로드 완료');
+}
+
+/* ════════════════════════════════════════
+   계정 관리 (ID 기반 즐겨찾기 클라우드 백업)
+   — 인터넷 기록 삭제 후에도 로그인으로 복원 가능
+════════════════════════════════════════ */
+let _accountId  = localStorage.getItem('radio_account_id')  || null;
+let _accountPin = localStorage.getItem('radio_account_pin') || '';
+let _accTab     = 'login'; // 'login' | 'register'
+
+/* 계정 데이터를 Firebase 계정 경로에 저장 */
+async function saveAccountData() {
+  if (!_accountId || !fbReady || !fbDb) return;
+  try {
+    await fbDb.ref(`accounts/${_accountId}`).update({
+      pin:            _accountPin,
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+  } catch(e) { console.warn('[계정] 저장 실패:', e); }
+}
+
+/* Firebase 계정 데이터로 로컬 상태 복원 */
+function _restoreFromAccount(data) {
+  if (Array.isArray(data.favorites)) {
+    S.favorites = new Set(data.favorites);
+    saveProtected('radio_favs', JSON.stringify([...S.favorites])).catch(() => {});
+    updateFavCount(); renderAllList(); updateFavList();
+  }
+  if (typeof data.favLocked === 'boolean') {
+    favLocked = data.favLocked;
+    saveProtected('radio_fav_locked', favLocked ? '1' : '0').catch(() => {});
+    applyFavLock();
+  }
+  if (Array.isArray(data.customStations) && data.customStations.length > 0) {
+    const existing = loadCustomStations();
+    const merged   = [...existing];
+    data.customStations.forEach(s => {
+      if (!merged.find(x => x.id === s.id)) merged.push(s);
+    });
+    saveCustomStations(merged);
+    merged.forEach(s => {
+      if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+    });
+    renderAllList();
+  }
+}
+
+/* 계정 상태를 로컬에 저장 + 버튼 UI 갱신 */
+function _setAccount(id, pin) {
+  _accountId  = id;
+  _accountPin = pin;
+  try { localStorage.setItem('radio_account_id',  id);  } catch(e) {}
+  try { localStorage.setItem('radio_account_pin', pin); } catch(e) {}
+  idbSet('radio_account_id',  id).catch(() => {});
+  idbSet('radio_account_pin', pin).catch(() => {});
+  // 쿠키에도 백업 (IDB+localStorage 동시 삭제 대비)
+  try {
+    const exp = new Date(Date.now() + 10 * 365 * 86400000).toUTCString();
+    document.cookie = `kr_radio_acct=${encodeURIComponent(id)}|${encodeURIComponent(pin)}; expires=${exp}; path=/; SameSite=Lax`;
+  } catch(e) {}
+  _updateAccountBtn();
+}
+
+/* 헤더 버튼 UI 갱신 */
+function _updateAccountBtn() {
+  const btn = document.getElementById('accountBtn');
+  if (!btn) return;
+  if (_accountId) {
+    btn.classList.add('logged-in');
+    btn.innerHTML = `👤 <span class="acc-name">${esc(_accountId)}</span>`;
+    btn.title = '계정 정보';
+  } else {
+    btn.classList.remove('logged-in');
+    btn.innerHTML = '👤';
+    btn.title = '로그인 / 회원가입';
+  }
+}
+
+/* 모달 열기 */
+function openAccountModal() {
+  const formWrap   = document.getElementById('accFormWrap');
+  const loggedWrap = document.getElementById('accLoggedWrap');
+  if (_accountId) {
+    formWrap.style.display               = 'none';
+    loggedWrap.style.display             = 'flex';
+    document.getElementById('accUserName').textContent = _accountId;
+  } else {
+    formWrap.style.display               = 'flex';
+    loggedWrap.style.display             = 'none';
+    document.getElementById('acc-id').value  = '';
+    document.getElementById('acc-pin').value = '';
+    switchAccountTab('login');
+    setTimeout(() => document.getElementById('acc-id').focus(), 120);
+  }
+  document.getElementById('accountModalBg').classList.add('show');
+}
+
+/* 모달 닫기 */
+function closeAccountModal(e) {
+  if (e && e.target !== document.getElementById('accountModalBg')) return;
+  document.getElementById('accountModalBg').classList.remove('show');
+}
+
+/* 탭 전환 */
+function switchAccountTab(tab) {
+  _accTab = tab;
+  document.getElementById('accTabLogin').classList.toggle('active',    tab === 'login');
+  document.getElementById('accTabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('accConfirmBtn').textContent = tab === 'login' ? '로그인' : '회원가입';
+  document.getElementById('accHint').innerHTML =
+    tab === 'login'
+      ? '아이디를 기억해두면 인터넷 기록을 삭제해도<br>어느 기기에서든 즐겨찾기를 복원할 수 있습니다.'
+      : '새 계정을 만들면 현재 즐겨찾기가 클라우드에<br>저장되고 어디서든 복원할 수 있습니다.';
+}
+
+/* 로그인 또는 회원가입 실행 */
+async function doAccountAction() {
+  // Firebase가 아직 준비 안 됐으면 직접 초기화 시도
+  // (페이지 로드 직후 모달을 빠르게 열었을 때 대비)
+  if (!fbReady || !fbDb) {
+    try {
+      try { firebase.initializeApp(FB_CONFIG); } catch(e) {} // 이미 초기화됐으면 무시
+      fbDb    = firebase.database();
+      fbReady = true;
+    } catch(e) {
+      showToast('⚠️ Firebase에 연결할 수 없습니다.'); return;
+    }
+  }
+
+  const id  = document.getElementById('acc-id').value.trim().toLowerCase();
+  const pin = document.getElementById('acc-pin').value.trim();
+
+  if (!id || id.length < 3) {
+    showToast('⚠️ 아이디를 3자 이상 입력해주세요.'); return;
+  }
+  if (id.length > 12 || !/^[a-z0-9_\-가-힣]+$/.test(id)) {
+    showToast('⚠️ 아이디는 영문·숫자·한글·_·- 만 사용 가능합니다.'); return;
+  }
+  if (pin && !/^\d{4}$/.test(pin)) {
+    showToast('⚠️ PIN은 숫자 4자리로 입력해주세요.'); return;
+  }
+
+  if (_accTab === 'register') await _doRegister(id, pin);
+  else                          await _doLogin(id, pin);
+}
+
+async function _doRegister(id, pin) {
+  try {
+    const snap = await fbDb.ref(`accounts/${id}`).once('value');
+    if (snap.exists()) {
+      showToast('⚠️ 이미 사용 중인 아이디입니다.'); return;
+    }
+    await fbDb.ref(`accounts/${id}`).set({
+      pin,
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+    _setAccount(id, pin);
+    closeAccountModal();
+    showToast(`✅ "${id}" 계정이 생성됐습니다`);
+  } catch(e) {
+    console.warn('[계정] 등록 실패:', e);
+    showToast('⚠️ 등록에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+async function _doLogin(id, pin) {
+  try {
+    const snap = await fbDb.ref(`accounts/${id}`).once('value');
+    if (!snap.exists()) {
+      showToast('⚠️ 존재하지 않는 아이디입니다.'); return;
+    }
+    const data = snap.val();
+    if (data.pin && data.pin !== pin) {
+      showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+    }
+    _setAccount(id, pin);
+    _restoreFromAccount(data);
+    closeAccountModal();
+    showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
+  } catch(e) {
+    console.warn('[계정] 로그인 실패:', e);
+    showToast('⚠️ 로그인에 실패했습니다. 다시 시도해주세요.');
+  }
+}
+
+function doLogout() {
+  _accountId  = null;
+  _accountPin = '';
+  try { localStorage.removeItem('radio_account_id');  } catch(e) {}
+  try { localStorage.removeItem('radio_account_pin'); } catch(e) {}
+  idbSet('radio_account_id',  '').catch(() => {});
+  idbSet('radio_account_pin', '').catch(() => {});
+  try { document.cookie = 'kr_radio_acct=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'; } catch(e) {}
+  _updateAccountBtn();
+  closeAccountModal();
+  showToast('로그아웃됐습니다');
 }
 
 /* ════════════════════════════════════════
@@ -1771,6 +2157,7 @@ function saveFav() {
     showToast('⚠️ 즐겨찾기 저장에 실패했습니다.');
   });
   fbSaveUserData();
+  saveAccountData(); // ★ 계정 클라우드 백업
 }
 
 function toggleFav(id, e) {
@@ -2012,6 +2399,7 @@ function toggleFavLock() {
   try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
   idbSet('radio_fav_locked', lockVal);
   fbSaveUserData();
+  saveAccountData(); // ★ 계정 클라우드 백업
   applyFavLock();
   showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
 }
@@ -2035,6 +2423,7 @@ function saveCustomStations(list) {
   }
   idbSet('radio_custom_stations', data);
   fbSaveUserData();
+  saveAccountData(); // ★ 계정 클라우드 백업
 }
 
 function mergeCustomStations() {
@@ -2171,6 +2560,7 @@ document.querySelectorAll('.tab-btn').forEach(b =>
 
 mergeCustomStations();
 applyFavLock();
+_updateAccountBtn(); // ★ 계정 버튼 초기 상태
 handleVolume(S.volume);
 
 // 업데이트 토스트
@@ -2212,22 +2602,61 @@ if (_lastId) {
 
 // 3. Firebase/IndexedDB 복원 — 백그라운드
 (async function initData() {
-  // ★ localStorage가 비어있으면(인터넷 기록 삭제 등) 반드시 IndexedDB 먼저 복원
-  const localFavs = localStorage.getItem('radio_favs');
-  if (!localFavs) {
-    await restoreFromIDB().catch(() => {});
-  }
-
+  // ★ Firebase를 최우선으로 초기화 — 사용자가 즉시 계정 모달을 열어도 동작하도록
   try {
     if (!fbReady) {
       firebase.initializeApp(FB_CONFIG);
       fbDb    = firebase.database();
       fbReady = true;
     }
-    await initUserData();
   } catch(e) {
-    console.warn('Firebase 초기화 실패:', e);
-    // Firebase 실패 시 IndexedDB로만 (이미 위에서 했을 수도 있지만 재시도)
+    console.warn('Firebase 사전 초기화 실패:', e);
+  }
+
+  // ★ localStorage가 비어있으면(인터넷 기록 삭제 등) 반드시 IndexedDB 먼저 복원
+  const localFavs   = localStorage.getItem('radio_favs');
+  const localLocked = localStorage.getItem('radio_fav_locked');
+  if (!localFavs || localLocked === null) {
+    await restoreFromIDB().catch(() => {});
+  }
+
+  try {
+    await initUserData();
+
+    // ★ 계정 ID 복원: localStorage → IDB → 쿠키 순으로 확인 후 Firebase에서 데이터 로드
+    if (!_accountId) {
+      // IDB에서 계정 ID 확인
+      const savedId  = await idbGet('radio_account_id').catch(() => null);
+      const savedPin = await idbGet('radio_account_pin').catch(() => '');
+      let   restoredId  = savedId  || '';
+      let   restoredPin = savedPin || '';
+
+      // IDB도 없으면 쿠키에서 확인
+      if (!restoredId) {
+        try {
+          const m = document.cookie.match(/(?:^|;\s*)kr_radio_acct=([^;]+)/);
+          if (m) {
+            const parts = decodeURIComponent(m[1]).split('|');
+            restoredId  = parts[0] || '';
+            restoredPin = parts[1] || '';
+          }
+        } catch(e) {}
+      }
+
+      if (restoredId) {
+        try {
+          const snap = await fbDb.ref(`accounts/${restoredId}`).once('value');
+          if (snap.exists()) {
+            _setAccount(restoredId, restoredPin);
+            _restoreFromAccount(snap.val());
+            console.info(`[계정] "${restoredId}" 자동 복원 완료`);
+          }
+        } catch(e) { console.warn('[계정] 자동 복원 실패:', e); }
+      }
+    }
+  } catch(e) {
+    console.warn('Firebase 데이터 복원 실패:', e);
+    // Firebase 실패 시 IndexedDB로만 복원
     if (!localFavs) await restoreFromIDB().catch(() => {});
   }
   updateFavCount();

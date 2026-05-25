@@ -2147,7 +2147,15 @@ document.getElementById('nickInput').addEventListener('keydown', e => {
 /* ══ ui.js ══ */
 /* 뷰포트 높이 동기화 — 스크롤 분리 방식으로 변경되어 불필요 (no-op 유지) */
 function syncViewportHeight() {
-  // channel-scroll-area 가 flex:1 + overflow-y:auto 로 자동 처리됨
+  const vp = document.getElementById('swipeViewport');
+  if (!vp) return;
+  const panels = vp.querySelectorAll('.swipe-panel');
+  const idx    = S.activeTab === 'all' ? 0 : 1;
+  const target = panels[idx];
+  if (target) {
+    // 콘텐츠 높이만큼만 설정 → 빈 영역 터치/스크롤 방지
+    vp.style.height = target.scrollHeight + 'px';
+  }
 }
 
 /* ════════════════════════════════════════

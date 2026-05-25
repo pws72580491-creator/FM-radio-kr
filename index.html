@@ -79,18 +79,18 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--kr);
-  overflow-x: hidden;
+  overflow: hidden; /* ★ 전체 페이지 스크롤 제거 */
 }
 
 /* ══ 레이아웃 ══ */
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;       /* ★ 뷰포트 꽉 채우기 */
   max-width: 520px;
   margin: 0 auto;
   padding-top: var(--sat);
-  padding-bottom: calc(var(--sab) + 80px);
+  overflow: hidden;     /* ★ 앱 자체 스크롤 없음 */
 }
 
 /* ══ 헤더 ══ */
@@ -357,8 +357,15 @@ input[type=range]::-webkit-slider-thumb {
 .swipe-viewport {
   overflow: hidden;
   width: 100%;
-  /* ★ 높이는 JS로 동적 제어 — 현재 탭 패널 높이에만 맞춤 */
-  transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ══ 채널 스크롤 영역 ══ */
+.channel-scroll-area {
+  flex: 1;              /* ★ 남은 공간 전부 차지 */
+  overflow-y: auto;     /* ★ 채널 목록만 스크롤 */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--sab) + 80px); /* ★ 하단 여백 */
 }
 .swipe-track {
   display: flex; width: 200%;
@@ -819,6 +826,9 @@ input[type=range]::-webkit-slider-thumb {
     <div class="np-status" id="npStatus">재생 중인 채널이 없습니다</div>
   </div>
 
+  <!-- ★ 채널 스크롤 영역 시작 — 헤더/Now Playing은 고정, 여기서부터 스크롤 -->
+  <div class="channel-scroll-area">
+
   <!-- 탭 -->
   <div class="tabs" style="display:flex;align-items:center;gap:8px">
     <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
@@ -861,6 +871,8 @@ input[type=range]::-webkit-slider-thumb {
 
     </div>
   </div>
+
+  </div><!-- /.channel-scroll-area -->
 
 </div><!-- /.app -->
 
@@ -918,7 +930,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.3.2</div>
+<div id="versionBadge" onclick="openChangelog()">v2.4.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -994,7 +1006,7 @@ input[type=range]::-webkit-slider-thumb {
 
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode = "\nconst CACHE='kr-radio-v2.3.2';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
+  const swCode = "\nconst CACHE='kr-radio-v2.4.0';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
   const blob = new Blob([swCode], {type:'text/javascript'});
   const swUrl = URL.createObjectURL(blob);
   window.addEventListener('load', ()=>{
@@ -1019,8 +1031,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.3.2';
+const APP_VERSION = 'v2.4.0';
 const CHANGELOG = [
+  { version: 'v2.4.0', date: '2026-05-25', changes: [
+    '계정 시스템 추가 — 아이디/PIN으로 회원가입 후 즐겨찾기를 Firebase에 영구 저장',
+    '로그인 시 어느 기기에서든 즐겨찾기·잠금·커스텀채널 즉시 복원',
+    'UUID 쿠키 백업 — 인터넷 기록 삭제 후에도 UUID 유지 (IDB → 쿠키 → 신규 순 복원)',
+    'initData() 복원 조건 개선 — radio_fav_locked 누락 시에도 IndexedDB 복원 실행',
+    'Firebase 초기화 순서 변경 — restoreFromIDB() 이전에 선행 초기화하여 즉시 계정 연동 가능',
+    '화면 분리 — Now Playing 카드 고정, 채널 목록만 독립 스크롤',
+  ]},
   { version: 'v2.3.2', date: '2026-05-20', changes: [
     '캐시 버스팅 추가 — forceRefresh 시 모든 채널 URL에 타임스탬프 파라미터 부여 (_t=)',
     'stalled 이벤트 감지 추가 — native 재생 환경에서 데이터 수신 중단 즉시 재연결',
@@ -2017,8 +2037,12 @@ async function _doRegister(id, pin) {
     closeAccountModal();
     showToast(`✅ "${id}" 계정이 생성됐습니다`);
   } catch(e) {
-    console.warn('[계정] 등록 실패:', e);
-    showToast('⚠️ 등록에 실패했습니다. 다시 시도해주세요.');
+    console.error('[계정] 등록 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 쓰기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 등록 실패: ${e?.message || e}`);
+    }
   }
 }
 
@@ -2037,8 +2061,12 @@ async function _doLogin(id, pin) {
     closeAccountModal();
     showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
   } catch(e) {
-    console.warn('[계정] 로그인 실패:', e);
-    showToast('⚠️ 로그인에 실패했습니다. 다시 시도해주세요.');
+    console.error('[계정] 로그인 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 읽기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 로그인 실패: ${e?.message || e}`);
+    }
   }
 }
 
@@ -2117,17 +2145,9 @@ document.getElementById('nickInput').addEventListener('keydown', e => {
 });
 
 /* ══ ui.js ══ */
-/* ════════════════════════════════════════
-   뷰포트 높이 동기화
-   현재 탭 패널 콘텐츠 높이에 맞게 조정
-════════════════════════════════════════ */
+/* 뷰포트 높이 동기화 — 스크롤 분리 방식으로 변경되어 불필요 (no-op 유지) */
 function syncViewportHeight() {
-  const vp = document.getElementById('swipeViewport');
-  if (!vp) return;
-  const panels = vp.querySelectorAll('.swipe-panel');
-  const idx    = S.activeTab === 'all' ? 0 : 1;
-  const target = panels[idx];
-  if (target) vp.style.height = target.scrollHeight + 'px';
+  // channel-scroll-area 가 flex:1 + overflow-y:auto 로 자동 처리됨
 }
 
 /* ════════════════════════════════════════

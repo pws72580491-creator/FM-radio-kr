@@ -79,18 +79,18 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--kr);
-  overflow-x: hidden;
+  overflow: hidden; /* ★ 전체 페이지 스크롤 제거 */
 }
 
 /* ══ 레이아웃 ══ */
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100dvh;       /* ★ 뷰포트 꽉 채우기 */
   max-width: 520px;
   margin: 0 auto;
   padding-top: var(--sat);
-  padding-bottom: calc(var(--sab) + 80px);
+  overflow: hidden;     /* ★ 앱 자체 스크롤 없음 */
 }
 
 /* ══ 헤더 ══ */
@@ -357,8 +357,15 @@ input[type=range]::-webkit-slider-thumb {
 .swipe-viewport {
   overflow: hidden;
   width: 100%;
-  /* ★ 높이는 JS로 동적 제어 — 현재 탭 패널 높이에만 맞춤 */
-  transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ══ 채널 스크롤 영역 ══ */
+.channel-scroll-area {
+  flex: 1;              /* ★ 남은 공간 전부 차지 */
+  overflow-y: auto;     /* ★ 채널 목록만 스크롤 */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--sab) + 80px); /* ★ 하단 여백 */
 }
 .swipe-track {
   display: flex; width: 200%;
@@ -819,6 +826,9 @@ input[type=range]::-webkit-slider-thumb {
     <div class="np-status" id="npStatus">재생 중인 채널이 없습니다</div>
   </div>
 
+  <!-- ★ 채널 스크롤 영역 시작 — 헤더/Now Playing은 고정, 여기서부터 스크롤 -->
+  <div class="channel-scroll-area">
+
   <!-- 탭 -->
   <div class="tabs" style="display:flex;align-items:center;gap:8px">
     <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
@@ -861,6 +871,8 @@ input[type=range]::-webkit-slider-thumb {
 
     </div>
   </div>
+
+  </div><!-- /.channel-scroll-area -->
 
 </div><!-- /.app -->
 
@@ -918,7 +930,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.3.2</div>
+<div id="versionBadge" onclick="openChangelog()">v2.4.0</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -983,10 +995,62 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 오디오 -->
-<audio id="audioEl" style="display:none"></audio>
+<audio id="audioEl" playsinline x-webkit-airplay="allow" style="display:none"></audio>
 
 <!-- 외부 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
+<script>
+/* ════════════════════════════════════════
+   NoSleep — 화면 꺼져도 오디오 계속 재생
+   무음 MP4를 반복재생해 Android가
+   "미디어 활성" 상태로 유지하게 강제
+════════════════════════════════════════ */
+(function initNoSleep() {
+  // 1픽셀 무음 MP4 (base64) — 재생권한 없어도 muted+loop로 동작
+  const BLANK_MP4 =
+    'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28ybXA0MWAAAA' +
+    'htb292AAAAbG12aGQAAAAA3xnEUt8ZxFIAAHoYAAACWAABAAAA' +
+    'AQAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
+    'AAAAAAAAAAAAAIAAAAZXhkdGEAAAAAAAAA3xnEUt8ZxFIAAAAA' +
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAAACxtZGhk' +
+    'AAAAAAAAA3xnEUt8ZxFIAAHoYAAACWAACAAAAAAAAAAAAAAAA' +
+    'AAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+
+  let noSleepVideo = null;
+
+  function enable() {
+    if (noSleepVideo) return;
+    noSleepVideo = document.createElement('video');
+    noSleepVideo.setAttribute('muted',    '');
+    noSleepVideo.setAttribute('loop',     '');
+    noSleepVideo.setAttribute('playsinline', '');
+    noSleepVideo.setAttribute('webkit-playsinline', '');
+    noSleepVideo.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:-10px';
+    noSleepVideo.src = BLANK_MP4;
+    document.body.appendChild(noSleepVideo);
+    noSleepVideo.play().catch(() => {});
+  }
+
+  function disable() {
+    if (!noSleepVideo) return;
+    noSleepVideo.pause();
+    noSleepVideo.remove();
+    noSleepVideo = null;
+  }
+
+  // 재생 시작 시 NoSleep 활성화, 사용자 정지 시 비활성화
+  window._noSleep = { enable, disable };
+
+  // 첫 사용자 제스처(터치/클릭)에서 미리 활성화
+  function onFirstGesture() {
+    enable();
+    document.removeEventListener('touchstart', onFirstGesture, true);
+    document.removeEventListener('click',      onFirstGesture, true);
+  }
+  document.addEventListener('touchstart', onFirstGesture, { once: true, passive: true, capture: true });
+  document.addEventListener('click',      onFirstGesture, { once: true, passive: true, capture: true });
+})();
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
@@ -994,7 +1058,7 @@ input[type=range]::-webkit-slider-thumb {
 
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode = "\nconst CACHE='kr-radio-v2.3.2';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
+  const swCode = "\nconst CACHE='kr-radio-v2.4.0';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
   const blob = new Blob([swCode], {type:'text/javascript'});
   const swUrl = URL.createObjectURL(blob);
   window.addEventListener('load', ()=>{
@@ -1019,8 +1083,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.3.2';
+const APP_VERSION = 'v2.4.0';
 const CHANGELOG = [
+  { version: 'v2.4.0', date: '2026-05-25', changes: [
+    '계정 시스템 추가 — 아이디/PIN으로 회원가입 후 즐겨찾기를 Firebase에 영구 저장',
+    '로그인 시 어느 기기에서든 즐겨찾기·잠금·커스텀채널 즉시 복원',
+    'UUID 쿠키 백업 — 인터넷 기록 삭제 후에도 UUID 유지 (IDB → 쿠키 → 신규 순 복원)',
+    'initData() 복원 조건 개선 — radio_fav_locked 누락 시에도 IndexedDB 복원 실행',
+    'Firebase 초기화 순서 변경 — restoreFromIDB() 이전에 선행 초기화하여 즉시 계정 연동 가능',
+    '화면 분리 — Now Playing 카드 고정, 채널 목록만 독립 스크롤',
+  ]},
   { version: 'v2.3.2', date: '2026-05-20', changes: [
     '캐시 버스팅 추가 — forceRefresh 시 모든 채널 URL에 타임스탬프 파라미터 부여 (_t=)',
     'stalled 이벤트 감지 추가 — native 재생 환경에서 데이터 수신 중단 즉시 재연결',
@@ -1227,9 +1299,9 @@ function startWatchdog() {
     const cur = audio.currentTime;
     if (audio.paused || cur === lastTime) {
       stallTick++;
-      if (stallTick >= 4) {           // 8초 이상 실제 진행 없음
+      if (stallTick >= 2) {           // ★ 4초(기존 8초→4초)이상 진행 없으면 재연결
         stopWatchdog();
-        S.playing = false;            // UI 강제 동기화
+        S.playing = false;
         updateNowPlaying(); renderStations();
         scheduleRetry();
       }
@@ -1295,6 +1367,7 @@ function playStation(s, forceRefresh = false) {
       if (thisCall !== S.callId) return;
       S.playing = true; S.loading = false; S.retryCount = 0;
       localStorage.setItem('radio_playing', '1');
+      if (window._noSleep) window._noSleep.enable(); // ★ 화면 꺼짐 방지 활성화
       updateNowPlaying(); renderStations(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
     }
@@ -1371,6 +1444,7 @@ function togglePlay() {
     S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
+    if (window._noSleep) window._noSleep.disable(); // ★ 화면 꺼짐 방지 해제
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
     playStation(S.current);
@@ -1382,13 +1456,46 @@ function togglePlay() {
 ════════════════════════════════════════ */
 audio.addEventListener('ended',   () => { if (S.current && S.playing) scheduleRetry(); });
 audio.addEventListener('error',   () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
-// ★ stalled: 데이터 수신 중단 즉시 감지 — 워치독(8초) 보다 빠른 보완
+// ★ stalled: 데이터 수신 중단 즉시 감지 — 워치독(4초) 보다 빠른 보완
 audio.addEventListener('stalled', () => {
   if (!S.current || !S.playing || S.loading) return;
-  // HLS.js가 살아있으면 자체 복구에 맡기고 워치독이 백업
-  // native 재생(iOS Safari 등) 에서만 즉시 재시도
-  if (!S.hls) scheduleRetry();
+  // HLS.js 포함 모든 환경에서 즉시 재시도 (기존엔 native만)
+  scheduleRetry();
 });
+
+/* ════════════════════════════════════════
+   네트워크 전환 감지 (WiFi ↔ 데이터)
+   — Android에서 online/offline 이벤트 없이
+     IP만 바뀌는 경우를 Network Information API로 감지
+════════════════════════════════════════ */
+(function initNetworkSwitchDetect() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!conn) return; // 미지원 브라우저 (iOS 등)는 워치독으로 처리
+
+  let lastType = conn.effectiveType || conn.type || '';
+
+  conn.addEventListener('change', () => {
+    const newType = conn.effectiveType || conn.type || '';
+    if (newType === lastType) return; // 실제 변경 없으면 무시
+    lastType = newType;
+
+    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`);
+    if (!S.current || !S.wasPlaying && !S.playing) return;
+
+    // 네트워크 전환 직후 잠깐 대기 후 재연결
+    // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
+    setTimeout(() => {
+      if (S.current && (S.wasPlaying || S.playing)) {
+        console.info('[네트워크] 전환 후 재연결 실행');
+        S.wasPlaying = false;
+        S.needReconnect = false;
+        stopWatchdog();
+        clearRetryTimer();
+        playStation(S.current);
+      }
+    }, 500);
+  });
+})();
 
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; }
@@ -1399,6 +1506,18 @@ audio.addEventListener('pause', () => {
     updateNowPlaying(); renderStations();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
+    }
+
+    // ★ 화면이 꺼진 상태에서 OS가 강제로 pause시킨 경우 즉시 resume 시도
+    // (사용자가 직접 pause한 게 아니므로 자동 재생)
+    if (document.visibilityState === 'hidden') {
+      setTimeout(() => {
+        if (S.wasPlaying && S.current && audio.paused) {
+          audio.play().catch(() => {
+            // resume 실패시 화면 켜질 때 visibilitychange가 처리
+          });
+        }
+      }, 500);
     }
   }
 });
@@ -1469,12 +1588,42 @@ let reconnectingCall = false;
   audio.addEventListener('play', () => stopWatch());
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    if (S.wasPlaying && S.current) tryReconnect();
+    if (document.visibilityState === 'hidden') {
+      // ★ 화면 꺼짐 — HLS가 있으면 버퍼 유지, 재생 상태 기록
+      if (S.playing) {
+        S.wasPlaying = true;
+        // HLS.js는 백그라운드에서도 계속 로드하도록 설정
+        if (S.hls) {
+          try { S.hls.startLoad(); } catch(e) {}
+        }
+      }
+      return;
+    }
+
+    // ★ 화면 켜짐 — 재생 중이었는데 멈춰있으면 즉시 재시작
+    if (S.wasPlaying && S.current) {
+      if (audio.paused) {
+        // 단순 resume 먼저 시도 (버퍼가 남아있으면 빠르게 복구)
+        audio.play().catch(() => {
+          // resume 실패 시 전체 재연결
+          stopWatchdog(); clearRetryTimer();
+          S.wasPlaying = false; S.needReconnect = false;
+          playStation(S.current);
+        });
+      }
+    }
   });
 
   window.addEventListener('online', () => {
-    if (S.wasPlaying && S.current) tryReconnect();
+    if (!S.current) return;
+    // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
+    if (S.wasPlaying || S.playing) {
+      setTimeout(() => {
+        stopWatchdog(); clearRetryTimer();
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      }, 500);
+    }
   });
 })();
 
@@ -2017,8 +2166,12 @@ async function _doRegister(id, pin) {
     closeAccountModal();
     showToast(`✅ "${id}" 계정이 생성됐습니다`);
   } catch(e) {
-    console.warn('[계정] 등록 실패:', e);
-    showToast('⚠️ 등록에 실패했습니다. 다시 시도해주세요.');
+    console.error('[계정] 등록 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 쓰기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 등록 실패: ${e?.message || e}`);
+    }
   }
 }
 
@@ -2037,8 +2190,12 @@ async function _doLogin(id, pin) {
     closeAccountModal();
     showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
   } catch(e) {
-    console.warn('[계정] 로그인 실패:', e);
-    showToast('⚠️ 로그인에 실패했습니다. 다시 시도해주세요.');
+    console.error('[계정] 로그인 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 읽기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 로그인 실패: ${e?.message || e}`);
+    }
   }
 }
 
@@ -2117,17 +2274,17 @@ document.getElementById('nickInput').addEventListener('keydown', e => {
 });
 
 /* ══ ui.js ══ */
-/* ════════════════════════════════════════
-   뷰포트 높이 동기화
-   현재 탭 패널 콘텐츠 높이에 맞게 조정
-════════════════════════════════════════ */
+/* 뷰포트 높이 동기화 — 스크롤 분리 방식으로 변경되어 불필요 (no-op 유지) */
 function syncViewportHeight() {
   const vp = document.getElementById('swipeViewport');
   if (!vp) return;
   const panels = vp.querySelectorAll('.swipe-panel');
   const idx    = S.activeTab === 'all' ? 0 : 1;
   const target = panels[idx];
-  if (target) vp.style.height = target.scrollHeight + 'px';
+  if (target) {
+    // 콘텐츠 높이만큼만 설정 → 빈 영역 터치/스크롤 방지
+    vp.style.height = target.scrollHeight + 'px';
+  }
 }
 
 /* ════════════════════════════════════════

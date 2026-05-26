@@ -1247,9 +1247,9 @@ function startWatchdog() {
     const cur = audio.currentTime;
     if (audio.paused || cur === lastTime) {
       stallTick++;
-      if (stallTick >= 4) {           // 8초 이상 실제 진행 없음
+      if (stallTick >= 2) {           // ★ 4초(기존 8초→4초)이상 진행 없으면 재연결
         stopWatchdog();
-        S.playing = false;            // UI 강제 동기화
+        S.playing = false;
         updateNowPlaying(); renderStations();
         scheduleRetry();
       }
@@ -1402,13 +1402,46 @@ function togglePlay() {
 ════════════════════════════════════════ */
 audio.addEventListener('ended',   () => { if (S.current && S.playing) scheduleRetry(); });
 audio.addEventListener('error',   () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
-// ★ stalled: 데이터 수신 중단 즉시 감지 — 워치독(8초) 보다 빠른 보완
+// ★ stalled: 데이터 수신 중단 즉시 감지 — 워치독(4초) 보다 빠른 보완
 audio.addEventListener('stalled', () => {
   if (!S.current || !S.playing || S.loading) return;
-  // HLS.js가 살아있으면 자체 복구에 맡기고 워치독이 백업
-  // native 재생(iOS Safari 등) 에서만 즉시 재시도
-  if (!S.hls) scheduleRetry();
+  // HLS.js 포함 모든 환경에서 즉시 재시도 (기존엔 native만)
+  scheduleRetry();
 });
+
+/* ════════════════════════════════════════
+   네트워크 전환 감지 (WiFi ↔ 데이터)
+   — Android에서 online/offline 이벤트 없이
+     IP만 바뀌는 경우를 Network Information API로 감지
+════════════════════════════════════════ */
+(function initNetworkSwitchDetect() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!conn) return; // 미지원 브라우저 (iOS 등)는 워치독으로 처리
+
+  let lastType = conn.effectiveType || conn.type || '';
+
+  conn.addEventListener('change', () => {
+    const newType = conn.effectiveType || conn.type || '';
+    if (newType === lastType) return; // 실제 변경 없으면 무시
+    lastType = newType;
+
+    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`);
+    if (!S.current || !S.wasPlaying && !S.playing) return;
+
+    // 네트워크 전환 직후 잠깐 대기 후 재연결
+    // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
+    setTimeout(() => {
+      if (S.current && (S.wasPlaying || S.playing)) {
+        console.info('[네트워크] 전환 후 재연결 실행');
+        S.wasPlaying = false;
+        S.needReconnect = false;
+        stopWatchdog();
+        clearRetryTimer();
+        playStation(S.current);
+      }
+    }, 500);
+  });
+})();
 
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; }
@@ -1494,7 +1527,15 @@ let reconnectingCall = false;
   });
 
   window.addEventListener('online', () => {
-    if (S.wasPlaying && S.current) tryReconnect();
+    if (!S.current) return;
+    // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
+    if (S.wasPlaying || S.playing) {
+      setTimeout(() => {
+        stopWatchdog(); clearRetryTimer();
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      }, 500);
+    }
   });
 })();
 

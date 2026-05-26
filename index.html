@@ -995,62 +995,10 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 오디오 -->
-<audio id="audioEl" playsinline x-webkit-airplay="allow" style="display:none"></audio>
+<audio id="audioEl" style="display:none"></audio>
 
 <!-- 외부 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
-<script>
-/* ════════════════════════════════════════
-   NoSleep — 화면 꺼져도 오디오 계속 재생
-   무음 MP4를 반복재생해 Android가
-   "미디어 활성" 상태로 유지하게 강제
-════════════════════════════════════════ */
-(function initNoSleep() {
-  // 1픽셀 무음 MP4 (base64) — 재생권한 없어도 muted+loop로 동작
-  const BLANK_MP4 =
-    'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28ybXA0MWAAAA' +
-    'htb292AAAAbG12aGQAAAAA3xnEUt8ZxFIAAHoYAAACWAABAAAA' +
-    'AQAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' +
-    'AAAAAAAAAAAAAIAAAAZXhkdGEAAAAAAAAA3xnEUt8ZxFIAAAAA' +
-    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFAAAACxtZGhk' +
-    'AAAAAAAAA3xnEUt8ZxFIAAHoYAAACWAACAAAAAAAAAAAAAAAA' +
-    'AAEBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
-
-  let noSleepVideo = null;
-
-  function enable() {
-    if (noSleepVideo) return;
-    noSleepVideo = document.createElement('video');
-    noSleepVideo.setAttribute('muted',    '');
-    noSleepVideo.setAttribute('loop',     '');
-    noSleepVideo.setAttribute('playsinline', '');
-    noSleepVideo.setAttribute('webkit-playsinline', '');
-    noSleepVideo.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;top:-10px';
-    noSleepVideo.src = BLANK_MP4;
-    document.body.appendChild(noSleepVideo);
-    noSleepVideo.play().catch(() => {});
-  }
-
-  function disable() {
-    if (!noSleepVideo) return;
-    noSleepVideo.pause();
-    noSleepVideo.remove();
-    noSleepVideo = null;
-  }
-
-  // 재생 시작 시 NoSleep 활성화, 사용자 정지 시 비활성화
-  window._noSleep = { enable, disable };
-
-  // 첫 사용자 제스처(터치/클릭)에서 미리 활성화
-  function onFirstGesture() {
-    enable();
-    document.removeEventListener('touchstart', onFirstGesture, true);
-    document.removeEventListener('click',      onFirstGesture, true);
-  }
-  document.addEventListener('touchstart', onFirstGesture, { once: true, passive: true, capture: true });
-  document.addEventListener('click',      onFirstGesture, { once: true, passive: true, capture: true });
-})();
-</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
@@ -1367,7 +1315,6 @@ function playStation(s, forceRefresh = false) {
       if (thisCall !== S.callId) return;
       S.playing = true; S.loading = false; S.retryCount = 0;
       localStorage.setItem('radio_playing', '1');
-      if (window._noSleep) window._noSleep.enable(); // ★ 화면 꺼짐 방지 활성화
       updateNowPlaying(); renderStations(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
     }
@@ -1444,7 +1391,6 @@ function togglePlay() {
     S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
-    if (window._noSleep) window._noSleep.disable(); // ★ 화면 꺼짐 방지 해제
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
     playStation(S.current);
@@ -1506,18 +1452,6 @@ audio.addEventListener('pause', () => {
     updateNowPlaying(); renderStations();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
-    }
-
-    // ★ 화면이 꺼진 상태에서 OS가 강제로 pause시킨 경우 즉시 resume 시도
-    // (사용자가 직접 pause한 게 아니므로 자동 재생)
-    if (document.visibilityState === 'hidden') {
-      setTimeout(() => {
-        if (S.wasPlaying && S.current && audio.paused) {
-          audio.play().catch(() => {
-            // resume 실패시 화면 켜질 때 visibilitychange가 처리
-          });
-        }
-      }, 500);
     }
   }
 });
@@ -1588,30 +1522,8 @@ let reconnectingCall = false;
   audio.addEventListener('play', () => stopWatch());
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      // ★ 화면 꺼짐 — HLS가 있으면 버퍼 유지, 재생 상태 기록
-      if (S.playing) {
-        S.wasPlaying = true;
-        // HLS.js는 백그라운드에서도 계속 로드하도록 설정
-        if (S.hls) {
-          try { S.hls.startLoad(); } catch(e) {}
-        }
-      }
-      return;
-    }
-
-    // ★ 화면 켜짐 — 재생 중이었는데 멈춰있으면 즉시 재시작
-    if (S.wasPlaying && S.current) {
-      if (audio.paused) {
-        // 단순 resume 먼저 시도 (버퍼가 남아있으면 빠르게 복구)
-        audio.play().catch(() => {
-          // resume 실패 시 전체 재연결
-          stopWatchdog(); clearRetryTimer();
-          S.wasPlaying = false; S.needReconnect = false;
-          playStation(S.current);
-        });
-      }
-    }
+    if (document.visibilityState !== 'visible') return;
+    if (S.wasPlaying && S.current) tryReconnect();
   });
 
   window.addEventListener('online', () => {

@@ -1296,7 +1296,7 @@ function startWatchdog() {
     const cur = audio.currentTime;
     if (audio.paused || cur === lastTime) {
       stallTick++;
-      if (stallTick >= 2) {           // ★ 4초(기존 8초→4초)이상 진행 없으면 재연결
+      if (stallTick >= 4) {           // ★ 8초(기존 4초)이상 진행 없으면 재연결 — maxBufferLength:2 환경에서 세그먼트 경계 오탐 방지
         stopWatchdog();
         S.playing = false;
         updateNowPlaying(); renderStations();
@@ -1378,28 +1378,11 @@ function playStation(s, forceRefresh = false) {
     function onOK() {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
-      S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
-
-      // ★ 재생 시작 시 라이브 엣지 강제 동기화
-      // HLS.js가 backBufferLength:0 + startPosition:-1 을 적용했지만
-      // 혹시라도 오래된 위치에서 시작되는 경우를 대비한 최종 안전장치
-      if (S.hls) {
-        try {
-          const levels  = S.hls.levels;
-          const details = levels && levels[S.hls.currentLevel] && levels[S.hls.currentLevel].details;
-          if (details && details.live && details.edge) {
-            const edge = details.edge;
-            if (edge - audio.currentTime > 5) {
-              // 라이브 엣지보다 5초 이상 뒤처지면 즉시 점프
-              audio.currentTime = Math.max(0, edge - 1.5);
-            }
-          }
-        } catch(e) {}
-      }
+      S.userPaused = false;
 
       localStorage.setItem('radio_playing', '1');
       updateNowPlaying(); renderStations(); updateMediaSession();
-      startWatchdog();   // 실제 재생 감시 시작
+      startWatchdog();
     }
     function onFail(retry) {
       if (thisCall !== S.callId) return;
@@ -1410,20 +1393,19 @@ function playStation(s, forceRefresh = false) {
 
     if (window.Hls && window.Hls.isSupported()) {
       const hls = new window.Hls({
-        // ★ 라이브 엣지 즉시 재생 설정 — 버퍼를 최소화해 항상 현재 시점 방송 재생
-        maxBufferLength:              2,   // 앞 버퍼 최대 2초 (사실상 거의 없음)
-        maxMaxBufferLength:           4,   // 버퍼 자동 확장 상한 4초
-        backBufferLength:             0,   // 뒤 버퍼 완전 제거 (재생 지점 이전 데이터 즉시 폐기)
-        liveSyncDurationCount:        1,   // 라이브 엣지 1세그먼트 뒤에서 재생 (최소 지연)
-        liveMaxLatencyDurationCount:  2,   // 2세그먼트 이상 밀리면 즉시 라이브 엣지로 점프
-        liveDurationInfinity:        true, // 라이브 스트림 duration을 Infinity로 유지
-        startPosition:               -1,   // 항상 라이브 엣지에서 시작 (-1 = 최신 위치)
+        // ★ 라이브 스트림 안정 재생 설정
+        maxBufferLength:              8,   // 앞 버퍼 최대 8초 — 세그먼트 경계 stall 방지
+        maxMaxBufferLength:           16,  // 버퍼 자동 확장 상한 16초
+        backBufferLength:             0,   // 뒤 버퍼 완전 제거
+        liveSyncDurationCount:        2,   // 라이브 엣지 2세그먼트 뒤에서 재생
+        liveMaxLatencyDurationCount:  5,   // 5세그먼트 이상 밀릴 때만 점프 (잦은 seek 방지)
+        liveDurationInfinity:        true,
+        startPosition:               -1,
         enableWorker:                true,
       });
       S.hls = hls;
       hls.loadSource(url); hls.attachMedia(audio);
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-        // ★ 매니페스트 파싱 후 명시적으로 라이브 엣지 위치에서 로드 시작
         hls.startLoad(-1);
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
@@ -1431,15 +1413,9 @@ function playStation(s, forceRefresh = false) {
           onFail(false);
         });
       });
-      hls.on(window.Hls.Events.LEVEL_LOADED, (_, data) => {
-        // ★ 라이브 스트림 로드 시마다 현재 위치가 엣지에서 너무 멀면 강제 점프
-        if (!data.details.live) return;
-        const edge = data.details.edge;
-        if (edge && audio.duration && (edge - audio.currentTime > 8)) {
-          // 라이브 엣지보다 8초 이상 뒤처지면 최신 위치로 이동
-          audio.currentTime = Math.max(0, edge - 2);
-        }
-      });
+      // ★ LEVEL_LOADED audio.currentTime 강제 점프 제거
+      // liveMaxLatencyDurationCount가 이미 라이브 엣지 동기화 담당
+      // 강제 seek → 버퍼 재로드 stall → 워치독 오발동 루프의 원인이었음
       let mediaErrorCount = 0;
       hls.on(window.Hls.Events.ERROR, (_, d) => {
         if (thisCall !== S.callId) { hls.destroy(); return; } // 구 채널 에러 조용히 폐기
@@ -1525,12 +1501,12 @@ audio.addEventListener('stalled', () => {
     if (newType === lastType) return;
     console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`); // ★ lastType 갱신 전에 로그
     lastType = newType;
-    if (!S.current || (!S.wasPlaying && !S.playing)) return; // ★ 연산자 우선순위 명확화
+    if (!S.current || (!S.wasPlaying && !S.playing)) return;
 
-    // 네트워크 전환 직후 잠깐 대기 후 재연결
-    // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
     setTimeout(() => {
-      if (S.current && (S.wasPlaying || S.playing)) {
+      // ★ 이미 정상 재생 중이면 개입 불필요 — effectiveType 진동(4g↔3g) 시 반복 재시작 방지
+      if (S.playing) return;
+      if (S.current && S.wasPlaying) {
         console.info('[네트워크] 전환 후 재연결 실행');
         S.wasPlaying = false;
         S.needReconnect = false;
@@ -1702,9 +1678,11 @@ let stopCallWatch = () => {};
 
   window.addEventListener('online', () => {
     if (!S.current) return;
-    // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
-    if (S.wasPlaying || S.playing) {
+    // ★ S.wasPlaying만 체크 — 이미 재생 중(S.playing=true)이면 스트림 유지
+    // S.playing=true일 때 playStation 호출하면 정상 재생 중인 스트림을 불필요하게 재시작
+    if (S.wasPlaying) {
       setTimeout(() => {
+        if (!S.current || !S.wasPlaying) return;
         stopWatchdog(); clearRetryTimer();
         S.wasPlaying = false; S.needReconnect = false;
         playStation(S.current);
@@ -1809,12 +1787,15 @@ window.addEventListener('offline', () => {
     // 외부 중단(통화/음성입력)으로 인한 pause인지 판단:
     // S.playing=true 였고, userPaused가 아직 소비되지 않은 상태가 아닐 때
     if (!S.current) return;
-    // playing이었거나, 로딩 중에 OS가 pause를 걸었을 때 wasPlaying 보존
-    if (S.playing || S.loading) {
+    // ★ S.loading 제외 — 채널 전환(playStation) 중 audio.pause() 호출 시
+    //   wasPlaying을 true로 강제 설정하면 재연결 루프 발생
+    if (S.playing) {
       S.wasPlaying = true;
     }
     // pause 후 폴링 시작 — 음성입력/통화 종료 감지 (주 감지 실패 대비 폴백)
     stopVoiceTimer();
+    // ★ wasPlaying이 없으면 폴링 불필요 (수동 정지 / 채널 전환 시 타이머 낭비 방지)
+    if (!S.wasPlaying) return;
     let tick = 0;
     _voiceTimer = setInterval(() => {
       tick++;
@@ -1835,13 +1816,10 @@ window.addEventListener('offline', () => {
   // play 이벤트 시 폴링 종료
   audio.addEventListener('play', () => stopVoiceTimer());
 
-  // ② visibilitychange — 탭 전환이 발생하는 경우(전화, 일부 음성입력)
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return;
-    doReconnect('visibilitychange');
-  });
+  // ★ visibilitychange는 initCallReconnect에서 이미 처리하므로 중복 제거
+  //   (두 핸들러가 동시에 doReconnect/tryReconnect를 호출하면 경쟁 조건 발생)
 
-  // ③ pageshow — 백/포워드 캐시로 복귀 시 (bfcache)
+  // ② pageshow — 백/포워드 캐시로 복귀 시 (bfcache)
   window.addEventListener('pageshow', (e) => {
     if (!e.persisted) return;
     doReconnect('pageshow(bfcache)');

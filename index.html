@@ -1479,15 +1479,66 @@ audio.addEventListener('pause', () => {
 });
 
 audio.addEventListener('play', () => {
-  // ★ 통화 중 OS가 잠깐 play 시도할 때 오발동 차단
+  // ★ 통화/음성입력 중 OS가 잠깐 play를 시도할 때 오발동 차단
+  // needReconnect: 통화/음성입력으로 인한 외부 중단 상태
   if (S.needReconnect && S.current && !reconnectingCall) {
     S.needReconnect = false;
-    S.wasPlaying    = false;
+    S.wasPlaying    = true;  // ★ false → true: 재연결 트리거가 wasPlaying을 필요로 함
     S.userPaused    = true;
     audio.pause();
-    playStation(S.current);
+    // ★ 즉시 재시작 대신 공유 AudioContext resume → statechange 흐름에 위임
+    // AudioContext가 이미 running이면 바로 재연결
+    const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
+    if (ctx && ctx.state === 'running') {
+      S.wasPlaying = false; S.needReconnect = false;
+      playStation(S.current);
+    } else if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {}); // statechange → ensureAudioCtxWatch가 재연결
+    } else {
+      playStation(S.current); // 폴백
+    }
   }
 });
+
+/* ════════════════════════════════════════
+   공유 AudioContext 싱글턴
+   통화·음성입력 종료 감지를 위해
+   initCallReconnect + initBluetoothReconnect가 공통으로 사용
+════════════════════════════════════════ */
+let _sharedAudioCtx  = null;
+let _ctxStateWatched = false; // statechange 리스너 중복 등록 방지
+
+function getSharedAudioCtx() {
+  if (_sharedAudioCtx && _sharedAudioCtx.state !== 'closed') return _sharedAudioCtx;
+  try {
+    _sharedAudioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    _ctxStateWatched = false; // 새 인스턴스 → 리스너 재등록 필요
+  } catch(e) {}
+  return _sharedAudioCtx;
+}
+
+function ensureAudioCtxWatch() {
+  if (_ctxStateWatched) return;
+  const ctx = getSharedAudioCtx();
+  if (!ctx) return;
+  _ctxStateWatched = true;
+  ctx.addEventListener('statechange', () => {
+    // 오래된 컨텍스트의 이벤트 무시
+    if (ctx !== _sharedAudioCtx || ctx.state === 'closed') return;
+    // play 이벤트 중 suspended → resume 시도
+    if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
+    // running 복귀 = 통화/음성입력 종료 → 재연결
+    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+      console.info('[AudioCtx] running 복귀 → 재연결');
+      S.wasPlaying = false; S.needReconnect = false;
+      playStation(S.current);
+    }
+  });
+}
+
+// ★ 앱 시작 즉시 AudioContext 생성 + statechange 등록
+// 사용자 첫 터치 전이라 suspended 상태지만, 상태 변화는 감지 가능
+try { getSharedAudioCtx(); ensureAudioCtxWatch(); } catch(e) {}
 
 /* ════════════════════════════════════════
    통화 종료 자동 재연결
@@ -1522,16 +1573,17 @@ let stopCallWatch = () => {};
   function startWatch() {
     if (watchTimer || reconnectingCall) return;
     callSuspect = true;
+    // ★ AudioContext statechange가 주 감지 수단이지만,
+    //    suspended 상태가 지속될 경우를 대비한 폴백 폴링
     watchTimer = setInterval(() => {
       if (!S.wasPlaying || !S.current || reconnectingCall) { stopWatch(); return; }
-      if (audio.paused && navigator.onLine) {
-        try {
-          const testCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const state   = testCtx.state;
-          testCtx.close();
-          if (state === 'running') { tryReconnect(); return; }
-        } catch(e) {}
-      }
+      if (!audio.paused || !navigator.onLine) return;
+      // ★ 매번 새 컨텍스트 생성 금지 — 공유 싱글턴 재사용
+      const ctx = getSharedAudioCtx();
+      if (!ctx) return;
+      // suspended면 resume 시도 → statechange → tryReconnect 흐름으로 이어짐
+      if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
+      if (ctx.state === 'running') { tryReconnect(); }
     }, 2000);
   }
 
@@ -1575,12 +1627,8 @@ let stopCallWatch = () => {};
 (function initBluetoothReconnect() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.addEventListener) return;
 
-  let audioCtx = null;
-  function getAudioCtx() {
-    if (audioCtx && audioCtx.state !== 'closed') return audioCtx;
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
-    return audioCtx;
-  }
+  // ★ 독립 AudioContext 제거 — 공유 싱글턴(getSharedAudioCtx) 사용
+  //    앱 시작 시 이미 statechange 리스너 등록됨 (ensureAudioCtxWatch)
 
   navigator.mediaDevices.addEventListener('devicechange', async () => {
     if (!S.current) return;
@@ -1599,32 +1647,25 @@ let stopCallWatch = () => {};
     }
   });
 
+  // ★ play 이벤트 시 공유 AudioContext가 suspended면 resume 시도
   audio.addEventListener('play', () => {
-    const ctx = getAudioCtx();
+    const ctx = getSharedAudioCtx();
     if (!ctx) return;
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch(); // statechange 리스너 확실히 등록
   }, { once: false });
 
-  function watchAudioCtxState() {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    ctx.addEventListener('statechange', () => {
-      if (ctx.state === 'running' && S.wasPlaying && S.current) {
-        S.wasPlaying = false; S.needReconnect = false;
-        playStation(S.current);
-      }
-    });
-  }
-  // ★ click + touchstart 동시 발생(모바일) 시 이중 등록 방지 — 플래그로 한 번만 실행
-  let _audioCtxWatching = false;
-  function initAudioCtxOnce() {
-    getAudioCtx();
-    if (_audioCtxWatching) return;
-    _audioCtxWatching = true;
-    watchAudioCtxState();
-  }
-  document.addEventListener('click',      initAudioCtxOnce, { once: true, passive: true });
-  document.addEventListener('touchstart', initAudioCtxOnce, { once: true, passive: true });
+  // ★ 첫 터치 시 공유 AudioContext resume 시도 + 리스너 보장
+  document.addEventListener('click', () => {
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch();
+  }, { once: true, passive: true });
+  document.addEventListener('touchstart', () => {
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch();
+  }, { once: true, passive: true });
 })();
 
 /* ════════════════════════════════════════
@@ -1639,6 +1680,73 @@ window.addEventListener('offline', () => {
   updateNowPlaying(); renderStations();
   showError('네트워크가 끊겼습니다. 연결을 확인 중...');
 });
+
+/* ════════════════════════════════════════
+   음성입력(마이크) 종료 후 재생 복원
+   visibilitychange가 발생하지 않는 음성입력 UI 오버레이 대응
+════════════════════════════════════════ */
+(function initVoiceInputReconnect() {
+
+  // ① window focus 이벤트 — 음성입력/통화 종료 후 앱으로 포커스 복귀 시 감지
+  window.addEventListener('focus', () => {
+    if (!S.current || S.playing || S.loading) return;
+    if (!S.wasPlaying) return;
+    // AudioContext가 running으로 복귀했는지 확인
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {}); // resume → statechange → ensureAudioCtxWatch가 재연결
+    } else {
+      // running이거나 AudioContext 없는 환경 → 직접 재연결
+      console.info('[VoiceInput] window focus 재연결');
+      S.wasPlaying = false; S.needReconnect = false;
+      playStation(S.current);
+    }
+  });
+
+  // ② Web Speech API 감지 — SpeechRecognition 종료 이벤트 직접 후킹
+  //    음성입력 앱(삼성 키보드 등)이 SpeechRecognition을 사용할 경우 대응
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    const _origStart = SR.prototype.start;
+    SR.prototype.start = function(...args) {
+      // 음성입력 시작 → wasPlaying 보존
+      if (S.playing) { S.wasPlaying = true; }
+      const result = _origStart.apply(this, args);
+      const onEnd = () => {
+        this.removeEventListener('end',   onEnd);
+        this.removeEventListener('error', onEnd);
+        // 음성입력 종료 → 300ms 후 재연결 (마이크 해제 대기)
+        setTimeout(() => {
+          if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
+          console.info('[VoiceInput] SpeechRecognition 종료 → 재연결');
+          const ctx = getSharedAudioCtx();
+          if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+          } else {
+            S.wasPlaying = false; S.needReconnect = false;
+            playStation(S.current);
+          }
+        }, 300);
+      };
+      this.addEventListener('end',   onEnd);
+      this.addEventListener('error', onEnd);
+      return result;
+    };
+  }
+
+  // ③ audio interrupted 이벤트 — iOS Safari 통화/Siri 대응
+  audio.addEventListener('pause', () => {
+    // pause 발생 직후 AudioContext state 확인 후 resume 시도
+    // 통화 종료 시 AudioContext가 suspended → running으로 전환되면 statechange가 재연결 처리
+    setTimeout(() => {
+      const ctx = getSharedAudioCtx();
+      if (ctx && ctx.state === 'suspended' && S.wasPlaying) {
+        ctx.resume().catch(() => {});
+      }
+    }, 800);
+  });
+
+})();
 
 /* ════════════════════════════════════════
    볼륨

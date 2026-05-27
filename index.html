@@ -930,7 +930,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.5.2</div>
+<div id="versionBadge" onclick="openChangelog()">v2.5.3</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1006,7 +1006,7 @@ input[type=range]::-webkit-slider-thumb {
 
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode = "\nconst CACHE='kr-radio-v2.5.2';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
+  const swCode = "\nconst CACHE='kr-radio-v2.5.3';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
   const blob = new Blob([swCode], {type:'text/javascript'});
   const swUrl = URL.createObjectURL(blob);
   window.addEventListener('load', ()=>{
@@ -1031,8 +1031,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.5.2';
+const APP_VERSION = 'v2.5.3';
 const CHANGELOG = [
+  { version: 'v2.5.3', date: '2026-05-27', changes: [
+    '[개선] 버퍼 최소화 — maxBufferLength 10→2초, maxMaxBufferLength 20→4초, backBufferLength 0 추가',
+    '[개선] 항상 라이브 현재 시점 재생 — startPosition:-1, liveSyncDurationCount:1, liveMaxLatencyDurationCount:2',
+    '[개선] MANIFEST_PARSED 후 hls.startLoad(-1) 명시 호출 — 라이브 엣지에서 강제 시작',
+    '[개선] LEVEL_LOADED 이벤트에서 8초 이상 뒤처지면 라이브 엣지로 강제 점프',
+    '[개선] onOK 재생 시작 시 5초 이상 뒤처지면 라이브 엣지로 즉시 동기화',
+    '[개선] liveDurationInfinity:true — 라이브 스트림 duration 무한 유지',
+  ]},
   { version: 'v2.5.2', date: '2026-05-27', changes: [
     '[개선] tryReconnect: 1200ms 대기 전 기존 스트림 즉시 정리 — 대기 중 HLS ERROR 발생 및 불필요한 네트워크 사용 차단',
     '[개선] tryReconnect: S.userPaused·S.playing 선행 초기화 — audio.pause() 호출 시 pause 핸들러 오발동 방지',
@@ -1371,6 +1379,24 @@ function playStation(s, forceRefresh = false) {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
+
+      // ★ 재생 시작 시 라이브 엣지 강제 동기화
+      // HLS.js가 backBufferLength:0 + startPosition:-1 을 적용했지만
+      // 혹시라도 오래된 위치에서 시작되는 경우를 대비한 최종 안전장치
+      if (S.hls) {
+        try {
+          const levels  = S.hls.levels;
+          const details = levels && levels[S.hls.currentLevel] && levels[S.hls.currentLevel].details;
+          if (details && details.live && details.edge) {
+            const edge = details.edge;
+            if (edge - audio.currentTime > 5) {
+              // 라이브 엣지보다 5초 이상 뒤처지면 즉시 점프
+              audio.currentTime = Math.max(0, edge - 1.5);
+            }
+          }
+        } catch(e) {}
+      }
+
       localStorage.setItem('radio_playing', '1');
       updateNowPlaying(); renderStations(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
@@ -1384,20 +1410,35 @@ function playStation(s, forceRefresh = false) {
 
     if (window.Hls && window.Hls.isSupported()) {
       const hls = new window.Hls({
-        maxBufferLength:             10,   // ★ 30→10: 재연결 시 빠른 재생 시작
-        maxMaxBufferLength:          20,   // ★ 60→20
-        liveSyncDurationCount:        2,   // ★ 3→2: 더 빠른 라이브 동기화
-        liveMaxLatencyDurationCount:  4,   // ★ 6→4
+        // ★ 라이브 엣지 즉시 재생 설정 — 버퍼를 최소화해 항상 현재 시점 방송 재생
+        maxBufferLength:              2,   // 앞 버퍼 최대 2초 (사실상 거의 없음)
+        maxMaxBufferLength:           4,   // 버퍼 자동 확장 상한 4초
+        backBufferLength:             0,   // 뒤 버퍼 완전 제거 (재생 지점 이전 데이터 즉시 폐기)
+        liveSyncDurationCount:        1,   // 라이브 엣지 1세그먼트 뒤에서 재생 (최소 지연)
+        liveMaxLatencyDurationCount:  2,   // 2세그먼트 이상 밀리면 즉시 라이브 엣지로 점프
+        liveDurationInfinity:        true, // 라이브 스트림 duration을 Infinity로 유지
+        startPosition:               -1,   // 항상 라이브 엣지에서 시작 (-1 = 최신 위치)
         enableWorker:                true,
       });
       S.hls = hls;
       hls.loadSource(url); hls.attachMedia(audio);
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        // ★ 매니페스트 파싱 후 명시적으로 라이브 엣지 위치에서 로드 시작
+        hls.startLoad(-1);
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
           showToast('▶ 화면을 탭하면 재생됩니다');
           onFail(false);
         });
+      });
+      hls.on(window.Hls.Events.LEVEL_LOADED, (_, data) => {
+        // ★ 라이브 스트림 로드 시마다 현재 위치가 엣지에서 너무 멀면 강제 점프
+        if (!data.details.live) return;
+        const edge = data.details.edge;
+        if (edge && audio.duration && (edge - audio.currentTime > 8)) {
+          // 라이브 엣지보다 8초 이상 뒤처지면 최신 위치로 이동
+          audio.currentTime = Math.max(0, edge - 2);
+        }
       });
       let mediaErrorCount = 0;
       hls.on(window.Hls.Events.ERROR, (_, d) => {

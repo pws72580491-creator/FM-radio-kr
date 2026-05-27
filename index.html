@@ -930,7 +930,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.5.0</div>
+<div id="versionBadge" onclick="openChangelog()">v2.5.1</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1006,7 +1006,7 @@ input[type=range]::-webkit-slider-thumb {
 
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode = "\nconst CACHE='kr-radio-v2.5.0';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
+  const swCode = "\nconst CACHE='kr-radio-v2.5.1';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
   const blob = new Blob([swCode], {type:'text/javascript'});
   const swUrl = URL.createObjectURL(blob);
   window.addEventListener('load', ()=>{
@@ -1031,8 +1031,19 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.5.0';
+const APP_VERSION = 'v2.5.1';
 const CHANGELOG = [
+  { version: 'v2.5.1', date: '2026-05-27', changes: [
+    '[버그수정] 음성입력 후 재생 미복원 핵심 원인 수정 — userPaused 상태에서도 wasPlaying 강제 보존',
+    '[버그수정] initVoiceInputReconnect 전면 재작성 — 2초 폴링+AudioCtx 복합 감지로 교체',
+    '[버그수정] window.focus 제거 (Android WebView 미발생) → visibilitychange+pageshow로 교체',
+    '[버그수정] SpeechRecognition 후킹 제거 (삼성 IME 미작동) → 폴링 폴백으로 대체',
+    '[버그수정] scheduleRetry 5회 실패 시 S.loading 초기화 누락 → 영구 로딩 UI 방지',
+    '[버그수정] startWatchdog에서 S.userPaused 체크 제거 — 외부 인터럽트도 감지하도록 수정',
+    '[버그수정] resumeOnGesture click 이벤트 once+passive 옵션 누락 수정',
+    '[개선] initNetworkSwitchDetect 조건식 연산자 우선순위 명확화',
+    '[개선] Firebase 복원 시 불필요한 IDB 재저장 루프 제거',
+  ]},
   { version: 'v2.5.0', date: '2026-05-27', changes: [
     '[버그수정] 통화 종료·음성입력 후 재생이 재개되지 않는 문제 수정',
     '[버그수정] 공유 AudioContext 싱글턴 도입 — 앱 시작 시 즉시 statechange 감지 시작',
@@ -1268,7 +1279,8 @@ function startWatchdog() {
   let lastTime  = audio.currentTime;
   let stallTick = 0;
   S.watchdogTimer = setInterval(() => {
-    if (!S.playing || S.loading || S.userPaused) { stopWatchdog(); return; }
+    if (!S.playing || S.loading) { stopWatchdog(); return; }
+    // ★ userPaused 체크 제거 — 외부 인터럽트로 인한 pause도 워치독이 감지해야 함
     const cur = audio.currentTime;
     if (audio.paused || cur === lastTime) {
       stallTick++;
@@ -1304,6 +1316,8 @@ function scheduleRetry() {
   updateNowPlaying(); renderStations();
 
   if (S.retryCount >= 5) {
+    S.loading = false; // ★ 영구 로딩 UI 방지
+    updateNowPlaying(); renderStations();
     showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
     return;
   }
@@ -1466,7 +1480,7 @@ audio.addEventListener('stalled', () => {
     if (newType === lastType) return;
     console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`); // ★ lastType 갱신 전에 로그
     lastType = newType;
-    if (!S.current || !S.wasPlaying && !S.playing) return;
+    if (!S.current || (!S.wasPlaying && !S.playing)) return; // ★ 연산자 우선순위 명확화
 
     // 네트워크 전환 직후 잠깐 대기 후 재연결
     // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
@@ -1704,64 +1718,73 @@ window.addEventListener('offline', () => {
    visibilitychange가 발생하지 않는 음성입력 UI 오버레이 대응
 ════════════════════════════════════════ */
 (function initVoiceInputReconnect() {
+  let _voiceTimer = null;
 
-  // ① window focus 이벤트 — 음성입력/통화 종료 후 앱으로 포커스 복귀 시 감지
-  window.addEventListener('focus', () => {
-    if (!S.current || S.playing || S.loading) return;
-    if (!S.wasPlaying) return;
-    // AudioContext가 running으로 복귀했는지 확인
+  function stopVoiceTimer() {
+    if (_voiceTimer) { clearInterval(_voiceTimer); _voiceTimer = null; }
+  }
+
+  // ★ 핵심 재연결 함수 — 호출 시 즉시 재연결 or AudioContext resume 위임
+  function doReconnect(reason) {
+    if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
+    stopVoiceTimer();
+    console.info('[VoiceInput]', reason, '→ 재연결');
     const ctx = getSharedAudioCtx();
     if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {}); // resume → statechange → ensureAudioCtxWatch가 재연결
+      // AudioContext가 아직 suspended면 resume → statechange → ensureAudioCtxWatch 흐름
+      ctx.resume().catch(() => {
+        // resume 실패 시 직접 재연결
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      });
     } else {
-      // running이거나 AudioContext 없는 환경 → 직접 재연결
-      console.info('[VoiceInput] window focus 재연결');
       S.wasPlaying = false; S.needReconnect = false;
       playStation(S.current);
     }
-  });
-
-  // ② Web Speech API 감지 — SpeechRecognition 종료 이벤트 직접 후킹
-  //    음성입력 앱(삼성 키보드 등)이 SpeechRecognition을 사용할 경우 대응
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SR) {
-    const _origStart = SR.prototype.start;
-    SR.prototype.start = function(...args) {
-      // 음성입력 시작 → wasPlaying 보존
-      if (S.playing) { S.wasPlaying = true; }
-      const result = _origStart.apply(this, args);
-      const onEnd = () => {
-        this.removeEventListener('end',   onEnd);
-        this.removeEventListener('error', onEnd);
-        // 음성입력 종료 → 300ms 후 재연결 (마이크 해제 대기)
-        setTimeout(() => {
-          if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
-          console.info('[VoiceInput] SpeechRecognition 종료 → 재연결');
-          const ctx = getSharedAudioCtx();
-          if (ctx && ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-          } else {
-            S.wasPlaying = false; S.needReconnect = false;
-            playStation(S.current);
-          }
-        }, 300);
-      };
-      this.addEventListener('end',   onEnd);
-      this.addEventListener('error', onEnd);
-      return result;
-    };
   }
 
-  // ③ audio interrupted 이벤트 — iOS Safari 통화/Siri 대응
+  // ① pause 이벤트 — userPaused 여부와 무관하게 wasPlaying 강제 보존
+  //    기존 pause 핸들러가 userPaused=true일 때 wasPlaying을 세팅하지 않는 문제를 여기서 보완
   audio.addEventListener('pause', () => {
-    // pause 발생 직후 AudioContext state 확인 후 resume 시도
-    // 통화 종료 시 AudioContext가 suspended → running으로 전환되면 statechange가 재연결 처리
-    setTimeout(() => {
+    // 외부 중단(통화/음성입력)으로 인한 pause인지 판단:
+    // S.playing=true 였고, userPaused가 아직 소비되지 않은 상태가 아닐 때
+    if (!S.current) return;
+    // playing이었거나, 로딩 중에 OS가 pause를 걸었을 때 wasPlaying 보존
+    if (S.playing || S.loading) {
+      S.wasPlaying = true;
+    }
+    // pause 후 폴링 시작 — 음성입력/통화 종료 감지 (주 감지 실패 대비 폴백)
+    stopVoiceTimer();
+    let tick = 0;
+    _voiceTimer = setInterval(() => {
+      tick++;
+      if (S.playing || S.loading || !S.current) { stopVoiceTimer(); return; }
+      if (!S.wasPlaying) { stopVoiceTimer(); return; }
+      if (tick > 60) { stopVoiceTimer(); return; } // 최대 2분 감지
+      // AudioContext가 running이면 마이크 사용이 종료된 것
       const ctx = getSharedAudioCtx();
-      if (ctx && ctx.state === 'suspended' && S.wasPlaying) {
-        ctx.resume().catch(() => {});
+      if (!ctx) return;
+      if (ctx.state === 'running') {
+        doReconnect('폴링 감지(AudioCtx running)');
+      } else if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {}); // resume 시도 → statechange로 처리
       }
-    }, 800);
+    }, 2000);
+  });
+
+  // play 이벤트 시 폴링 종료
+  audio.addEventListener('play', () => stopVoiceTimer());
+
+  // ② visibilitychange — 탭 전환이 발생하는 경우(전화, 일부 음성입력)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    doReconnect('visibilitychange');
+  });
+
+  // ③ pageshow — 백/포워드 캐시로 복귀 시 (bfcache)
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    doReconnect('pageshow(bfcache)');
   });
 
 })();
@@ -2043,7 +2066,10 @@ async function fbLoadUserData() {
 
     if (Array.isArray(data.favorites) && data.favorites.length > 0) {
       S.favorites = new Set(data.favorites);
-      saveFav(); updateFavCount(); renderAllList(); updateFavList();
+      // ★ saveFav() 대신 직접 저장 — Firebase 복원 데이터를 다시 Firebase로 쓰는 불필요한 루프 방지
+      try { localStorage.setItem('radio_favs', JSON.stringify([...S.favorites])); } catch(e) {}
+      idbSet('radio_favs', JSON.stringify([...S.favorites])).catch(() => {});
+      updateFavCount(); renderAllList(); updateFavList();
     }
 
     if (typeof data.favLocked === 'boolean') {
@@ -2836,7 +2862,7 @@ if (_lastId) {
         document.removeEventListener('click', resumeOnGesture);
       };
       document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
-      document.addEventListener('click', resumeOnGesture, { once: true });
+      document.addEventListener('click', resumeOnGesture, { once: true, passive: true }); // ★ passive 추가
     }
   }
 }

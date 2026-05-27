@@ -1193,7 +1193,8 @@ const STATIONS = [
    streamApi 방송(극동방송): 캐시 재사용
    일반 방송: 바로 stream URL 반환
 ════════════════════════════════════════ */
-const _streamCache = {};
+const _streamCache = {}; // { [id]: { url, ts } }
+const CACHE_TTL_MS  = 30 * 60 * 1000; // ★ 30분 후 만료 — CDN URL 교체 대응
 
 /* ★ 캐시 버스팅 — CDN/프록시 캐시 강제 우회 */
 function bustUrl(url) {
@@ -1203,15 +1204,21 @@ function bustUrl(url) {
 
 async function resolveStreamUrl(s, forceRefresh = false) {
   if (!s.streamApi) {
-    // streamApi 없는 일반 채널: forceRefresh 시 캐시 버스팅 적용
     return forceRefresh ? bustUrl(s.stream) : s.stream;
   }
-  if (!forceRefresh && _streamCache[s.id]) return _streamCache[s.id];
+  // ★ 캐시 TTL 체크 — 만료됐거나 forceRefresh면 재요청
+  const cached = _streamCache[s.id];
+  if (!forceRefresh && cached && (Date.now() - cached.ts < CACHE_TTL_MS)) {
+    return cached.url;
+  }
   try {
     const res  = await fetch(s.streamApi, { cache: 'no-store' });
     const text = await res.text();
     const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
-    if (m) { _streamCache[s.id] = m[0]; return m[0]; }
+    if (m) {
+      _streamCache[s.id] = { url: m[0], ts: Date.now() }; // ★ url + 타임스탬프 저장
+      return m[0];
+    }
     console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
   } catch(e) { console.warn('streamApi 실패:', e); }
   return forceRefresh ? bustUrl(s.stream) : s.stream;
@@ -1273,7 +1280,15 @@ function clearRetryTimer() {
 
 function scheduleRetry() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
-  if (S.retryCount >= 5) { showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.'); return; }
+
+  // ★ 재시도 대기 중에도 LIVE가 표시되는 문제 수정 — 즉시 playing 상태 해제
+  S.playing = false;
+  updateNowPlaying(); renderStations();
+
+  if (S.retryCount >= 5) {
+    showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
+    return;
+  }
   S.retryCount++;
   const delay = Math.min(2000 * Math.pow(2, S.retryCount - 1), 30000);
   showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
@@ -1294,6 +1309,10 @@ function playStation(s, forceRefresh = false) {
   S.needReconnect = false;
   S.wasPlaying    = false;   // 채널 전환 시 오작동 재연결 방지
 
+  // ★ 수동 채널 선택 시 자동 재연결 락·인터벌 즉시 해제 (중복 실행 차단)
+  reconnectingCall = false;
+  stopCallWatch();
+
   showError(null); clearRetryTimer(); stopWatchdog(); S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
@@ -1305,6 +1324,7 @@ function playStation(s, forceRefresh = false) {
 
   // Firebase 동기화
   if (typeof syncMode !== 'undefined' && syncMode && typeof fbDb !== 'undefined' && fbDb) {
+    _fbIgnore = Date.now(); // ★ 이 기기가 쓴 이벤트임을 타임스탬프로 표시
     fbDb.ref('shared/station').set({ id: s.id, nick: myNick, at: Date.now() });
   }
 
@@ -1313,7 +1333,8 @@ function playStation(s, forceRefresh = false) {
 
     function onOK() {
       if (thisCall !== S.callId) return;
-      S.playing = true; S.loading = false; S.retryCount = 0;
+      S.playing    = true; S.loading = false; S.retryCount = 0;
+      S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
       localStorage.setItem('radio_playing', '1');
       updateNowPlaying(); renderStations(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
@@ -1327,10 +1348,10 @@ function playStation(s, forceRefresh = false) {
 
     if (window.Hls && window.Hls.isSupported()) {
       const hls = new window.Hls({
-        maxBufferLength:             30,
-        maxMaxBufferLength:          60,
-        liveSyncDurationCount:        3,
-        liveMaxLatencyDurationCount:  6,
+        maxBufferLength:             10,   // ★ 30→10: 재연결 시 빠른 재생 시작
+        maxMaxBufferLength:          20,   // ★ 60→20
+        liveSyncDurationCount:        2,   // ★ 3→2: 더 빠른 라이브 동기화
+        liveMaxLatencyDurationCount:  4,   // ★ 6→4
         enableWorker:                true,
       });
       S.hls = hls;
@@ -1402,10 +1423,12 @@ function togglePlay() {
 ════════════════════════════════════════ */
 audio.addEventListener('ended',   () => { if (S.current && S.playing) scheduleRetry(); });
 audio.addEventListener('error',   () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
-// ★ stalled: 데이터 수신 중단 즉시 감지 — 워치독(4초) 보다 빠른 보완
+// ★ stalled: 데이터 수신 중단 감지
+// HLS.js 활성 상태에서는 HLS.js 내부가 자체 복구하므로 외부 개입 금지
+// native <audio> 전용으로만 scheduleRetry 호출
 audio.addEventListener('stalled', () => {
   if (!S.current || !S.playing || S.loading) return;
-  // HLS.js 포함 모든 환경에서 즉시 재시도 (기존엔 native만)
+  if (S.hls) return; // ★ HLS.js가 자체 복구 처리 중 — 외부 재시작 금지
   scheduleRetry();
 });
 
@@ -1422,10 +1445,9 @@ audio.addEventListener('stalled', () => {
 
   conn.addEventListener('change', () => {
     const newType = conn.effectiveType || conn.type || '';
-    if (newType === lastType) return; // 실제 변경 없으면 무시
+    if (newType === lastType) return;
+    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`); // ★ lastType 갱신 전에 로그
     lastType = newType;
-
-    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`);
     if (!S.current || !S.wasPlaying && !S.playing) return;
 
     // 네트워크 전환 직후 잠깐 대기 후 재연결
@@ -1473,12 +1495,17 @@ audio.addEventListener('play', () => {
 // ★ play 이벤트 오발동 차단용으로 외부에서 참조
 let reconnectingCall = false;
 
+// ★ playStation 내부에서 통화감지 인터벌을 즉시 멈추기 위한 외부 참조
+let stopCallWatch = () => {};
+
 (function initCallReconnect() {
   let watchTimer  = null;
   let callSuspect = false;
 
   function tryReconnect() {
     if (reconnectingCall || !S.current || !S.wasPlaying) return;
+    // ★ 수동 재생/로딩 중이면 중복 실행 방지
+    if (S.playing || S.loading) { S.wasPlaying = false; return; }
     reconnectingCall = true;
     S.wasPlaying     = false;
     S.needReconnect  = false;
@@ -1512,6 +1539,7 @@ let reconnectingCall = false;
     if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
     callSuspect = false;
   }
+  stopCallWatch = stopWatch; // ★ playStation에서 인터벌 경쟁 차단용으로 외부 노출
 
   audio.addEventListener('pause', () => {
     setTimeout(() => {
@@ -1523,6 +1551,8 @@ let reconnectingCall = false;
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    // ★ 이미 재생 중이거나 로딩 중이면 자동 재연결 무시
+    if (S.playing || S.loading) return;
     if (S.wasPlaying && S.current) tryReconnect();
   });
 
@@ -1585,8 +1615,16 @@ let reconnectingCall = false;
       }
     });
   }
-  document.addEventListener('click',      () => { getAudioCtx(); watchAudioCtxState(); }, { once: true, passive: true });
-  document.addEventListener('touchstart', () => { getAudioCtx(); watchAudioCtxState(); }, { once: true, passive: true });
+  // ★ click + touchstart 동시 발생(모바일) 시 이중 등록 방지 — 플래그로 한 번만 실행
+  let _audioCtxWatching = false;
+  function initAudioCtxOnce() {
+    getAudioCtx();
+    if (_audioCtxWatching) return;
+    _audioCtxWatching = true;
+    watchAudioCtxState();
+  }
+  document.addEventListener('click',      initAudioCtxOnce, { once: true, passive: true });
+  document.addEventListener('touchstart', initAudioCtxOnce, { once: true, passive: true });
 })();
 
 /* ════════════════════════════════════════
@@ -1669,13 +1707,16 @@ const DB_NAME    = 'kr-radio-db';
 const DB_VERSION = 1;
 const DB_STORE   = 'settings';
 
+let _idbInstance = null; // ★ 싱글턴 — 매 호출마다 새 커넥션 생성 방지
+
 function openDB() {
+  if (_idbInstance) return Promise.resolve(_idbInstance);
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = e => {
       e.target.result.createObjectStore(DB_STORE, { keyPath: 'key' });
     };
-    req.onsuccess = e => resolve(e.target.result);
+    req.onsuccess = e => { _idbInstance = e.target.result; resolve(_idbInstance); };
     req.onerror   = e => reject(e.target.error);
   });
 }
@@ -1835,7 +1876,7 @@ let fbReady    = false;
 let fbListener = null;
 let syncMode   = false;
 let myNick     = localStorage.getItem('radio_nick') || '';
-let _fbIgnore  = false;
+let _fbIgnore  = 0; // ★ boolean → 타임스탬프로 변경: 300ms 이내 이벤트만 무시
 
 function initFirebase() {
   if (fbReady) return;
@@ -2132,11 +2173,12 @@ function startSync() {
   fbListener = fbDb.ref('shared/station').on('value', snap => {
     const data = snap.val();
     if (!data) return;
-    if (_fbIgnore) { _fbIgnore = false; return; }
+    // ★ 타임스탬프 기반 무시 — 이 기기가 300ms 이내에 쓴 이벤트만 스킵
+    // boolean 방식은 타이밍에 따라 다른 사용자 이벤트를 잘못 무시할 수 있음
+    if (Date.now() - _fbIgnore < 300) return;
     const s = STATIONS.find(x => x.id === data.id);
     if (!s || (S.current && S.current.id === s.id)) return;
     if (data.nick === myNick) return;
-    _fbIgnore = true;
     playStation(s, true);
     showToast(`📻 ${data.nick || '누군가'}님이 ${s.name}으로 변경했습니다`);
   });
@@ -2490,9 +2532,11 @@ function saveCustomStations(list) {
   try { localStorage.setItem('radio_custom_stations', data); } catch(e) {
     showToast('⚠️ 저장 공간이 부족합니다.');
   }
-  idbSet('radio_custom_stations', data);
+  idbSet('radio_custom_stations', data).catch(e => // ★ 오류 무시 방지
+    console.warn('[IndexedDB] 커스텀 채널 저장 실패:', e)
+  );
   fbSaveUserData();
-  saveAccountData(); // ★ 계정 클라우드 백업
+  saveAccountData();
 }
 
 function mergeCustomStations() {
@@ -2527,7 +2571,8 @@ function confirmAddStation() {
   if (!url.startsWith('http')) { showToast('⚠️ URL은 http로 시작해야 합니다.'); return; }
 
   const custom    = loadCustomStations();
-  const newId     = 1000 + Date.now() % 100000;
+  // ★ Date.now() + 랜덤값 조합 — 빠른 연속 추가나 장기 사용 시에도 ID 충돌 방지
+  const newId      = 1000000 + Math.floor(Math.random() * 900000);
   const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
 
   custom.push(newStation);
@@ -2551,6 +2596,7 @@ function deleteCustomStation(id, e) {
   if (idx > -1) STATIONS.splice(idx, 1);
   S.favorites.delete(id); saveFav();
   renderAllList(); updateFavCount();
+  updateFavList(); // ★ 즐겨찾기 탭에서 삭제된 채널 즉시 제거
   showToast('🗑️ 채널이 삭제됐습니다.');
 }
 

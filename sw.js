@@ -1,5 +1,5 @@
-/* KOREA FM 라디오 — Service Worker v2.6.2 */
-const CACHE = 'kr-radio-v2.6.2';
+/* KOREA FM 라디오 — Service Worker v2.6.4 */
+const CACHE = 'kr-radio-v2.6.4';
 const SHELL = ['/'];
 
 self.addEventListener('install', e => {

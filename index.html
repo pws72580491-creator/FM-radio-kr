@@ -1010,7 +1010,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.5.9</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.1</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1086,7 +1086,7 @@ input[type=range]::-webkit-slider-thumb {
 
 (function(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode = "\nconst CACHE='kr-radio-v2.5.9';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
+  const swCode = "\nconst CACHE='kr-radio-v2.6.1';\nconst SHELL=['./'];\nself.addEventListener('install',e=>{\n  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()));\n});\nself.addEventListener('activate',e=>{\n  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));\n});\nself.addEventListener('fetch',e=>{\n  const u=new URL(e.request.url);\n  if(['febc.net','bsod.kr','ebs.co.kr','firebase','gstatic.com','googleapis.com','cdnjs.cloudflare.com'].some(h=>u.hostname.includes(h))||['.m3u8','.ts'].some(x=>u.pathname.endsWith(x))){\n    e.respondWith(fetch(e.request));return;\n  }\n  e.respondWith(fetch(e.request).then(r=>{\n    if(r&&r.status===200&&r.type!=='opaque'){const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));}\n    return r;\n  }).catch(()=>caches.match(e.request)));\n});\nself.addEventListener('message',e=>{if(e.data&&e.data.type==='SKIP_WAITING')self.skipWaiting();});\n";
   const blob = new Blob([swCode], {type:'text/javascript'});
   const swUrl = URL.createObjectURL(blob);
   window.addEventListener('load', ()=>{
@@ -1111,8 +1111,19 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.5.9';
+const APP_VERSION = 'v2.6.1';
 const CHANGELOG = [
+  { version: 'v2.6.1', date: '2026-05-28', changes: [
+    '[버그수정] 백그라운드에서 manifestLoadError 반복 루프 완전 차단 — scheduleRetry가 hidden 상태를 감지해 재시도 없이 wasPlaying 보존 후 즉시 종료',
+    '[버그수정] 창을 내리면 방송 중단되는 문제 수정 — 로딩 중 백그라운드 진입 시 HLS 즉시 정리, 포그라운드 복귀 시 forceRefresh=true로 재연결',
+    '[버그수정] tryReconnect·_fullReconnect 백그라운드 실행 차단 — visibilityState hidden 체크 추가',
+    '[개선] 포그라운드 복귀 재연결 단순화 — wasPlaying=true면 retryCount 무관하게 즉시 재연결',
+    '[개선] 백그라운드 진입 시 모든 타이머(재시도·워치독·통화감지 폴링) 일괄 중단',
+  ]},
+  { version: 'v2.6.0', date: '2026-05-28', changes: [
+    '[개선] 소프트 재연결 도입 — OS 인터럽트 후 HLS 유효 시 play() 재시도로 끊김 최소화',
+    '[개선] 전체 재연결은 소프트 재연결 실패 시에만 — 알림음 등 짧은 중단 시 2~3초 침묵 제거',
+  ]},
   { version: 'v2.5.9', date: '2026-05-28', changes: [
     '[버그수정] 재생 중 순간 끊김 수정 — LEVEL_LOADED 강제 currentTime 점프 제거 (주원인)',
     '[버그수정] 재생 시작 시 끊김 수정 — onOK() 내 currentTime 강제 점프 제거',
@@ -1554,13 +1565,22 @@ function clearRetryTimer() {
 function scheduleRetry() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 
-  // ★ 재시도 대기 중에도 LIVE가 표시되는 문제 수정 — 즉시 playing 상태 해제
   S.playing = false;
+  S.loading = false; // ★ 영구 로딩 UI 방지
   updateNowPlaying(); renderStations();
 
+  // ★ 백그라운드 상태에서는 재시도 루프 없이 즉시 종료
+  // → 포그라운드 복귀 시 visibilitychange에서 자동 재연결
+  if (document.visibilityState === 'hidden') {
+    if (S.current) S.wasPlaying = true; // 복귀 시 재연결 트리거
+    S.retryCount = 0;
+    if (S.hls) { S.hls.destroy(); S.hls = null; } // HLS 인스턴스 정리
+    audio.src = '';
+    RLog.info('백그라운드 재시도 건너뜀 — 포그라운드 복귀 시 재연결');
+    return;
+  }
+
   if (S.retryCount >= 5) {
-    S.loading = false; // ★ 영구 로딩 UI 방지
-    updateNowPlaying(); renderStations();
     RLog.error('재연결 5회 실패 — 방송 중단');
     showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
     return;
@@ -1880,6 +1900,8 @@ let stopCallWatch = () => {};
 
   function tryReconnect() {
     if (reconnectingCall || !S.current || !S.wasPlaying) return;
+    // ★ 백그라운드에서는 재연결 시도하지 않음 — 포그라운드 복귀 시 visibilitychange가 처리
+    if (document.visibilityState === 'hidden') return;
     // ★ 수동 재생/로딩 중이면 중복 실행 방지
     if (S.playing || S.loading) { S.wasPlaying = false; return; }
     reconnectingCall = true;
@@ -1888,25 +1910,59 @@ let stopCallWatch = () => {};
     callSuspect      = false;
     stopWatch();
     showError(null);
-    RLog.reconnect('통화/음성입력 종료 → 자동 재연결 시작');
 
+    // ★ 소프트 재연결 먼저 시도 — HLS가 살아있으면 play()만 재호출
+    // 알림음·짧은 인터럽트는 HLS 스트림이 유효하므로 전체 재연결(2~3초 침묵) 불필요
+    if (S.hls && audio.src) {
+      RLog.reconnect('인터럽트 종료 → play() 재시도 (소프트 재연결)');
+      S.userPaused = true; // pause 핸들러 오발동 방지
+      setTimeout(() => {
+        audio.play().then(() => {
+          // ★ 소프트 재연결 성공 — HLS 인스턴스 재사용, 끊김 최소화
+          reconnectingCall = false;
+          S.playing = true; S.loading = false; S.userPaused = false;
+          RLog.play('소프트 재연결 성공 (play() 재시도)');
+          updateNowPlaying(); renderStations(); updateMediaSession();
+          startWatchdog();
+        }).catch(() => {
+          // ★ play() 실패 → 전체 재연결로 폴백
+          reconnectingCall = false;
+          RLog.reconnect('소프트 재연결 실패 → 전체 재연결');
+          _fullReconnect();
+        });
+      }, 600); // 인터럽트 해제까지 최소 대기
+      return;
+    }
+
+    // HLS가 없거나 src가 비어있으면 바로 전체 재연결
+    RLog.reconnect('통화/음성입력 종료 → 전체 재연결');
+    _fullReconnect();
+  }
+
+  function _fullReconnect() {
+    reconnectingCall = true;
     // ★ pause 핸들러 오발동 방지 — 반드시 상태 먼저 초기화
     S.userPaused = true;
     S.playing    = false;
 
-    // ★ 1200ms 대기 전에 기존 스트림 즉시 정리
-    // → 대기 중 HLS ERROR 이벤트 발생 방지 + 불필요한 네트워크 사용 차단
+    // ★ 대기 전에 기존 스트림 즉시 정리
     try {
       audio.pause();
       if (S.hls) { S.hls.destroy(); S.hls = null; }
       audio.src = '';
     } catch(e) {
-      console.warn('[tryReconnect] 기존 스트림 정리 실패:', e);
+      console.warn('[fullReconnect] 기존 스트림 정리 실패:', e);
     }
 
     setTimeout(() => {
+      // ★ 백그라운드 진입 시 전체 재연결 취소 — 포그라운드 복귀 시 자동 재연결
+      if (document.visibilityState === 'hidden') {
+        reconnectingCall = false;
+        if (S.current) S.wasPlaying = true;
+        RLog.info('백그라운드 상태 — 전체 재연결 연기 (포그라운드 복귀 시 재연결)');
+        return;
+      }
       playStation(S.current, true);  // 긴 통화 후 URL 강제 갱신
-      // ★ 5초 고정 락 → 2초로 단축 (onFail 시 scheduleRetry가 이어받음)
       setTimeout(() => { reconnectingCall = false; }, 2000);
     }, 1200);
   }
@@ -1944,45 +2000,55 @@ let stopCallWatch = () => {};
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      // ★ 백그라운드 진입: 워치독 일시 정지 (OS의 currentTime 갱신 지연으로 인한 오작동 방지)
-      // 워치독 자체를 멈추되, 재생 상태는 유지
       RLog.info('앱 백그라운드 진입', `playing=${S.playing}, wasPlaying=${S.wasPlaying}`);
-      if (S.watchdogTimer) {
-        clearInterval(S.watchdogTimer);
-        S.watchdogTimer = null;
-        S._watchdogPaused = true; // 복귀 시 재시작 플래그
-      }
-      // ★ 재생 중이 아닌 상태에서 백그라운드 진입 시 retryTimer 중단
-      // → 백그라운드에서 manifestLoadError 루프 방지 (포그라운드 복귀 시 재개)
-      if (!S.playing) {
-        clearRetryTimer();
+
+      // ★ 재생/로딩 중이면 wasPlaying 보존 (복귀 시 재연결 트리거)
+      if (S.playing || S.loading) S.wasPlaying = true;
+
+      // ★ 백그라운드 진입 시 모든 재시도·폴링 즉시 중단
+      // → 백그라운드에서 manifestLoadError 루프 완전 차단
+      clearRetryTimer();
+      stopCallWatch(); // 통화감지 폴링 중단
+      stopWatchdog();
+      S._watchdogPaused = S.playing; // 재생 중이었으면 복귀 시 워치독 재시작
+
+      // ★ 로딩/재연결 중이면 HLS 인스턴스 즉시 정리 (백그라운드 manifest 요청 중단)
+      // 이미 재생 성공 중인 경우는 오디오를 유지해 백그라운드 재생 허용
+      if (S.loading) {
+        if (S.hls) { S.hls.destroy(); S.hls = null; }
+        audio.pause(); audio.src = '';
+        S.loading = false;
+        S.retryCount = 0;
+        updateNowPlaying(); renderStations();
       }
       return;
     }
 
     // ★ 포그라운드 복귀
     RLog.info('앱 포그라운드 복귀', `playing=${S.playing}, wasPlaying=${S.wasPlaying}`);
-    // 1) 워치독이 백그라운드 진입으로 정지됐으면 재시작
+
+    // 1) 워치독 재시작
     if (S._watchdogPaused && S.playing && !S.loading) {
       S._watchdogPaused = false;
       startWatchdog();
     }
 
-    // 2) 재생이 끊겼으면 재연결
+    // 2) 이미 재생/로딩 중이면 스킵
     if (S.playing || S.loading) return;
-    // ★ reconnectingCall 락 확인 — tryReconnect가 이미 실행 중이면 중복 호출 방지
-    //    (로그에서 296ms 간격 중복 실행 확인됨)
     if (reconnectingCall) {
       RLog.info('visibilitychange 재연결 스킵 (tryReconnect 진행 중)');
       return;
     }
-    // ★ 백그라운드에서 중단된 retryTimer가 retryCount를 쌓은 상태라면 scheduleRetry로 재개
-    //    (wasPlaying이 없어도 retryCount가 남아있으면 재시도 재개)
-    if (S.retryCount > 0 && S.current) {
-      scheduleRetry();
-      return;
+
+    // ★ wasPlaying이면 즉시 재연결 (forceRefresh=true — 백그라운드 중 CDN URL 교체 대비)
+    // retryCount·scheduleRetry 잔재와 무관하게 wasPlaying이 최우선 트리거
+    if (S.wasPlaying && S.current) {
+      RLog.reconnect('포그라운드 복귀 → 재연결');
+      S.wasPlaying = false;
+      S.retryCount = 0;
+      clearRetryTimer();
+      playStation(S.current, true);
     }
-    if (S.wasPlaying && S.current) tryReconnect();
   });
 
   window.addEventListener('online', () => {

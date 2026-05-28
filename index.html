@@ -1111,8 +1111,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.1';
+const APP_VERSION = 'v2.6.2';
 const CHANGELOG = [
+  { version: 'v2.6.2', date: '2026-05-28', changes: [
+    '[버그수정] 백그라운드 중 외부 인터럽트(통화/음성입력) 후 OS play 이벤트 오발동으로 playStation이 백그라운드에서 실행되어 manifestLoadError 발생하는 문제 수정 — play 핸들러의 needReconnect 분기에 visibilityState hidden 체크 추가',
+    '[버그수정] AudioContext statechange 핸들러에서도 동일한 백그라운드 playStation 호출 차단 — hidden 상태에서 running 복귀 이벤트 수신 시 visibilitychange에 위임',
+  ]},
   { version: 'v2.6.1', date: '2026-05-28', changes: [
     '[버그수정] 백그라운드에서 manifestLoadError 반복 루프 완전 차단 — scheduleRetry가 hidden 상태를 감지해 재시도 없이 wasPlaying 보존 후 즉시 종료',
     '[버그수정] 창을 내리면 방송 중단되는 문제 수정 — 로딩 중 백그라운드 진입 시 HLS 즉시 정리, 포그라운드 복귀 시 forceRefresh=true로 재연결',
@@ -1831,6 +1835,9 @@ audio.addEventListener('play', () => {
     S.wasPlaying    = true;  // ★ false → true: 재연결 트리거가 wasPlaying을 필요로 함
     S.userPaused    = true;
     audio.pause();
+    // ★ 백그라운드 상태에서는 playStation 호출 금지
+    // wasPlaying=true가 이미 세팅됐으므로 포그라운드 복귀 시 visibilitychange가 재연결
+    if (document.visibilityState === 'hidden') return;
     // ★ 즉시 재시작 대신 공유 AudioContext resume → statechange 흐름에 위임
     // AudioContext가 이미 running이면 바로 재연결
     const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
@@ -1874,6 +1881,8 @@ function ensureAudioCtxWatch() {
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
     if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+      // ★ 백그라운드 상태에서는 playStation 호출 금지 — visibilitychange가 처리
+      if (document.visibilityState === 'hidden') return;
       console.info('[AudioCtx] running 복귀 → 재연결');
       S.wasPlaying = false; S.needReconnect = false;
       playStation(S.current);

@@ -1013,7 +1013,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.1</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.3</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -3416,6 +3416,7 @@ if (_lastId) {
   // ★ 로그 시스템 초기화 — IDB에서 기존 로그 로드
   RLog.load().then(() => {
     RLog.info('앱 시작', `v${APP_VERSION}`);
+    document.getElementById('versionBadge').textContent = APP_VERSION; // ★ 항상 최신 버전 표시
   });
 })();
 

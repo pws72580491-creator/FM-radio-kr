@@ -1078,7 +1078,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 오디오 -->
-<audio id="audioEl" style="display:none" playsinline></audio>
+<audio id="audioEl" style="display:none" playsinline webkit-playsinline x-webkit-airplay="allow" preload="none"></audio>
 
 <!-- 외부 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
@@ -1095,8 +1095,19 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.2';
+const APP_VERSION = 'v2.6.3';
 const CHANGELOG = [
+  { version: 'v2.6.3', date: '2026-05-29', changes: [
+    '[버그수정] 라이트 테마에서 로그 시트가 다크 배경으로 보이던 문제 수정 — .log-sheet background #0d0d1a 하드코딩을 var(--panel)로 교체',
+    '[버그수정] 로그 항목 구분선 흰색 하드코딩 수정 — var(--border)로 교체, 라이트 테마 INFO/RECONNECT/ERROR 태그 색상 보완',
+    '[버그수정] 창을 내리면 재생 중단되는 핑심 원인 수정 — playStation() 진입 시 wasPlaying을 무조건 false로 초기화하던 문제, 수동 채널 전환 시에만 초기화',
+    '[버그수정] 로딩 중 백그라운드 진입 시 wasPlaying 레이스 컨디션 해결 — audio.pause() 전에 wasPlaying=true 먼저 보존',
+    '[버그수정] _voiceTimer가 백그라운드에서 중단되지 않아 의도치 않은 playStation 호출되던 문제 수정 — stopVoiceInputTimer 전역 노출하여 hidden 진입 시 즉시 중단',
+    '[버그수정] pause 핸들러에서 userPaused 시 외부 중단으로 오판하던 문제 수정, hidden 상태에서 폴링 타이머 시작 차단',
+    '[개선] MediaMetadata에 artwork 추가 — Android 알림바 미디어 콘트롤 표시되어 OS가 백그라운드 오디오를 포그라운드 서비스로 승격',
+    '[개선] Screen WakeLock API 적용 — 재생 성공 시 획득, 정지 시 해제, 포그라운드 복군 시 자동 재획득',
+    '[개선] audio 태그에 webkit-playsinline, x-webkit-airplay="allow" 속성 추가',
+  ]},
   { version: 'v2.6.2', date: '2026-05-28', changes: [
     '[버그수정] 백그라운드 중 외부 인터럽트(통화/음성입력) 후 OS play 이벤트 오발동으로 playStation이 백그라운드에서 실행되어 manifestLoadError 발생하는 문제 수정 — play 핸들러의 needReconnect 분기에 visibilityState hidden 체크 추가',
     '[버그수정] AudioContext statechange 핸들러에서도 동일한 백그라운드 playStation 호출 차단 — hidden 상태에서 running 복귀 이벤트 수신 시 visibilitychange에 위임',
@@ -1592,7 +1603,9 @@ function retryPlay() {
 function playStation(s, forceRefresh = false, isRetry = false) {
   const thisCall = ++S.callId;
   S.needReconnect = false;
-  S.wasPlaying    = false;   // 채널 전환 시 오작동 재연결 방지
+  // ★ 수동 채널 전환 시에만 wasPlaying 초기화
+  // 재시도/재연결(isRetry=true) 경로에서는 덮어쓰지 않음
+  if (!isRetry) S.wasPlaying = false;
 
   // ★ 수동 채널 선택 시 자동 재연결 락·인터벌 즉시 해제 (중복 실행 차단)
   reconnectingCall = false;
@@ -1633,6 +1646,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       localStorage.setItem('radio_playing', '1');
       updateNowPlaying(); renderStations(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
+      requestWakeLock(); // ★ 재생 성공 시 WakeLock 획득
     }
     function onFail(retry) {
       if (thisCall !== S.callId) return;
@@ -1743,6 +1757,7 @@ function togglePlay() {
     S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
+    releaseWakeLock(); // ★ 사용자 정지 시 WakeLock 해제
     RLog.stop('사용자 정지 (일시정지 버튼)');
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
@@ -2003,12 +2018,19 @@ let stopCallWatch = () => {};
       clearRetryTimer();
       stopCallWatch(); // 통화감지 폴링 중단
       stopWatchdog();
-      S._watchdogPaused = S.playing; // 재생 중이었으면 복귀 시 워치독 재시작
+      // ★ _voiceTimer(initVoiceInputReconnect)도 백그라운드에서 반드시 중단
+      if (typeof stopVoiceInputTimer === 'function') stopVoiceInputTimer();
+
+      // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
+      S._watchdogPaused = S.playing || S.loading;
 
       // ★ 로딩/재연결 중이면 HLS 인스턴스 즉시 정리 (백그라운드 manifest 요청 중단)
       // 이미 재생 성공 중인 경우는 오디오를 유지해 백그라운드 재생 허용
       if (S.loading) {
         if (S.hls) { S.hls.destroy(); S.hls = null; }
+        // ★ pause() 전에 wasPlaying 먼저 보존 — pause 이벤트 핸들러보다 선행 보장
+        S.wasPlaying = true;
+        S.userPaused = true; // pause 이벤트가 외부 중단으로 오판하지 않도록
         audio.pause(); audio.src = '';
         S.loading = false;
         S.retryCount = 0;
@@ -2143,6 +2165,8 @@ window.addEventListener('offline', () => {
   function stopVoiceTimer() {
     if (_voiceTimer) { clearInterval(_voiceTimer); _voiceTimer = null; }
   }
+  // ★ 백그라운드 진입 시 visibilitychange가 외부에서 타이머 중단 가능하도록 전역 노출
+  window.stopVoiceInputTimer = stopVoiceTimer;
 
   // ★ 핵심 재연결 함수 — 호출 시 즉시 재연결 or AudioContext resume 위임
   function doReconnect(reason) {
@@ -2166,13 +2190,16 @@ window.addEventListener('offline', () => {
   // ① pause 이벤트 — userPaused 여부와 무관하게 wasPlaying 강제 보존
   //    기존 pause 핸들러가 userPaused=true일 때 wasPlaying을 세팅하지 않는 문제를 여기서 보완
   audio.addEventListener('pause', () => {
-    // 외부 중단(통화/음성입력)으로 인한 pause인지 판단:
-    // S.playing=true 였고, userPaused가 아직 소비되지 않은 상태가 아닐 때
     if (!S.current) return;
+    // ★ userPaused(내부 의도적 pause)는 wasPlaying 건드리지 않고 스킵
+    if (S.userPaused) return;
     // playing이었거나, 로딩 중에 OS가 pause를 걸었을 때 wasPlaying 보존
     if (S.playing || S.loading) {
       S.wasPlaying = true;
     }
+    // ★ 백그라운드(hidden) 상태에서는 폴링 타이머 시작 차단
+    // hidden 진입 자체가 이미 모든 타이머를 중단했고 포그라운드 복귀 시 재연결 담당
+    if (document.visibilityState === 'hidden') return;
     // pause 후 폴링 시작 — 음성입력/통화 종료 감지 (주 감지 실패 대비 폴백)
     stopVoiceTimer();
     let tick = 0;
@@ -2235,10 +2262,14 @@ function handleVolume(val) {
 function updateMediaSession() {
   if (!('mediaSession' in navigator) || !S.current) return;
 
+  // ★ artwork 필수 — Android가 알림바 미디어 컨트롤을 표시하고
+  // 백그라운드 오디오를 포그라운드 서비스로 승격해 OS 종료 방지
+  const _aw = [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }];
   navigator.mediaSession.metadata = new MediaMetadata({
     title:  S.current.name,
     artist: `${S.current.freq} · ${S.current.genre}`,
-    album:  'KOREA FM 라디오'
+    album:  'KOREA FM 라디오',
+    artwork: _aw
   });
 
   navigator.mediaSession.setActionHandler('play', () => {
@@ -2270,6 +2301,43 @@ function updateMediaSession() {
   navigator.mediaSession.playbackState =
     (S.playing || S.loading) ? 'playing' : 'paused';
 }
+
+/* ════════════════════════════════════════
+   Screen Wake Lock
+   Android Chrome 84+ 지원 — OS가 오디오 탭을 종료하지 못하도록 잠금
+════════════════════════════════════════ */
+let _wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (_wakeLock && !_wakeLock.released) return;
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => {
+      _wakeLock = null;
+      // 포그라운드이고 재생 중이면 즉시 재획득
+      if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
+        requestWakeLock();
+      }
+    });
+  } catch(e) {
+    console.warn('[WakeLock] 획득 실패:', e.message);
+  }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock && !_wakeLock.released) {
+    _wakeLock.release().catch(() => {});
+    _wakeLock = null;
+  }
+}
+
+// 포그라운드 복군 시 재생 중이면 WakeLock 재획득
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
+    requestWakeLock();
+  }
+});
 
 /* ══ firebase.js ══ */
 /* ════════════════════════════════════════

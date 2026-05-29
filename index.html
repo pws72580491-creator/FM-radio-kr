@@ -1013,7 +1013,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.3</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.4</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1095,8 +1095,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.3';
+const APP_VERSION = 'v2.6.4';
 const CHANGELOG = [
+  { version: 'v2.6.4', date: '2026-05-30', changes: [
+    '[버그수정] 앱 시작 로그에 버전이 vv2.6.3으로 중복 출력되던 문제 수정 — v${APP_VERSION}에서 ${APP_VERSION}으로 변경',
+    '[버그수정] 백그라운드 진입 로그에 playing=true, wasPlaying=false로 잘못 표시되던 문제 수정 — wasPlaying 보존 처리 후 로그 출력하도록 순서 변경, loading 상태도 로그에 추가',
+  ]},
   { version: 'v2.6.3', date: '2026-05-29', changes: [
     '[버그수정] 라이트 테마에서 로그 시트가 다크 배경으로 보이던 문제 수정',
     '[버그수정] 창을 내리면 재생 중단되는 핑심 원인 5개 수정 — wasPlaying 레이스 컨디션, _voiceTimer 백그라운드 폴링, pause 핸들러 오판 등',
@@ -2004,10 +2008,10 @@ let stopCallWatch = () => {};
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      RLog.info('앱 백그라운드 진입', `playing=${S.playing}, wasPlaying=${S.wasPlaying}`);
-
       // ★ 재생/로딩 중이면 wasPlaying 보존 (복귀 시 재연결 트리거)
       if (S.playing || S.loading) S.wasPlaying = true;
+      // ★ 로그는 wasPlaying 보존 후 출력 — 정확한 상태 반영
+      RLog.info('앱 백그라운드 진입', `playing=${S.playing}, loading=${S.loading}, wasPlaying=${S.wasPlaying}`);
 
       // ★ 백그라운드 진입 시 모든 재시도·폴링 즉시 중단
       // → 백그라운드에서 manifestLoadError 루프 완전 차단
@@ -3415,7 +3419,7 @@ if (_lastId) {
 
   // ★ 로그 시스템 초기화 — IDB에서 기존 로그 로드
   RLog.load().then(() => {
-    RLog.info('앱 시작', `v${APP_VERSION}`);
+    RLog.info('앱 시작', `${APP_VERSION}`);
     document.getElementById('versionBadge').textContent = APP_VERSION; // ★ 항상 최신 버전 표시
   });
 })();

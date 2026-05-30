@@ -1013,7 +1013,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.4</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.5</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1095,8 +1095,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.4';
+const APP_VERSION = 'v2.6.5';
 const CHANGELOG = [
+  { version: 'v2.6.5', date: '2026-05-30', changes: [
+    '[버그수정] levelLoadTimeOut 반복 시 복구 불가 상태가 지속되던 문제 수정 — 비치명 네트워크 오류 한계를 10회→3회로 줄이고 초과 시 HLS 인스턴스 재생성으로 새 TCP 연결 강제 복구',
+    '[버그수정] 포그라운드 복귀 시 wasPlaying=false로 재연결이 누락되던 문제 수정 — 백그라운드 진입 시 _hiddenWasActive 플래그 저장, 복귀 시 추가 트리거로 활용',
+  ]},
   { version: 'v2.6.4', date: '2026-05-30', changes: [
     '[버그수정] 앱 시작 로그에 버전이 vv2.6.3으로 중복 출력되던 문제 수정 — v${APP_VERSION}에서 ${APP_VERSION}으로 변경',
     '[버그수정] 백그라운드 진입 로그에 playing=true, wasPlaying=false로 잘못 표시되던 문제 수정 — wasPlaying 보존 처리 후 로그 출력하도록 순서 변경, loading 상태도 로그에 추가',
@@ -1695,15 +1699,16 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             hls.destroy(); onFail(true);
           } else {
             netErrCount++;
-            if (netErrCount > 10) {
-              // ★ 비치명 오류가 10회를 초과하면 복구 불가로 판단해 치명 처리
-              RLog.error('HLS 네트워크 오류(복구 한계 초과)', `${d.details || ''}`);
+            if (netErrCount > 3) {
+              // ★ 비치명 오류 3회 초과 — startLoad 반복은 의미 없음
+              // HLS 인스턴스를 완전히 재생성해 새 TCP 연결로 복구
+              RLog.warn('HLS 네트워크 오류(인스턴스 재생성)', `${d.details || ''} [${netErrCount}회]`);
               if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
               if (S.hls === hls) S.hls = null;
-              hls.destroy(); onFail(true);
+              hls.destroy(); onFail(true); // scheduleRetry → 새 playStation 호출
               return;
             }
-            RLog.warn('HLS 네트워크 오류(복구 시도)', `${d.details || ''} [${netErrCount}/10]`);
+            RLog.warn('HLS 네트워크 오류(복구 시도)', `${d.details || ''} [${netErrCount}/3]`);
             // ★ startLoad를 500ms 디바운스로 제한 — 연속 오류 시 폭주 방지
             if (!netErrTimer) {
               netErrTimer = setTimeout(() => {
@@ -2010,6 +2015,8 @@ let stopCallWatch = () => {};
     if (document.visibilityState === 'hidden') {
       // ★ 재생/로딩 중이면 wasPlaying 보존 (복귀 시 재연결 트리거)
       if (S.playing || S.loading) S.wasPlaying = true;
+      // ★ 백그라운드 진입 시 재생/로딩 상태 저장 — onFail 타이밍 레이스 대비
+      S._hiddenWasActive = S.playing || S.loading || S.wasPlaying;
       // ★ 로그는 wasPlaying 보존 후 출력 — 정확한 상태 반영
       RLog.info('앱 백그라운드 진입', `playing=${S.playing}, loading=${S.loading}, wasPlaying=${S.wasPlaying}`);
 
@@ -2055,15 +2062,17 @@ let stopCallWatch = () => {};
       return;
     }
 
-    // ★ wasPlaying이면 즉시 재연결 (forceRefresh=true — 백그라운드 중 CDN URL 교체 대비)
-    // retryCount·scheduleRetry 잔재와 무관하게 wasPlaying이 최우선 트리거
-    if (S.wasPlaying && S.current) {
+    // ★ wasPlaying 또는 _hiddenWasActive이면 즉시 재연결
+    // _hiddenWasActive: 백그라운드 진입 시 재생 중이었으나 onFail 타이밍으로 wasPlaying이 소실된 케이스 대비
+    if ((S.wasPlaying || S._hiddenWasActive) && S.current && !S.playing && !S.loading) {
       RLog.reconnect('포그라운드 복귀 → 재연결');
       S.wasPlaying = false;
+      S._hiddenWasActive = false;
       S.retryCount = 0;
       clearRetryTimer();
       playStation(S.current, true);
     }
+    S._hiddenWasActive = false; // 복귀 후 항상 초기화
   });
 
   window.addEventListener('online', () => {

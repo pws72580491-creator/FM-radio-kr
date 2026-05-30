@@ -1013,7 +1013,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.5</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.6</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1095,8 +1095,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.5';
+const APP_VERSION = 'v2.6.6';
 const CHANGELOG = [
+  { version: 'v2.6.6', date: '2026-05-30', changes: [
+    '[개선] 통화 종료 후 백그라운드 상태에서도 자동 재생 복구 — AudioContext running 복귀 시 tryReconnect가 백그라운드에서도 소프트/전체 재연결 실행. 포그라운드 복귀 없이도 방송 재개',
+    '[안전] 백그라운드 재연결 허용 시에도 manifestLoadError 루프 차단 유지 — scheduleRetry의 hidden 상태 보호 로직이 루프를 방지',
+  ]},
   { version: 'v2.6.5', date: '2026-05-30', changes: [
     '[버그수정] levelLoadTimeOut 반복 시 복구 불가 상태가 지속되던 문제 수정 — 비치명 네트워크 오류 한계를 10회→3회로 줄이고 초과 시 HLS 인스턴스 재생성으로 새 TCP 연결 강제 복구',
     '[버그수정] 포그라운드 복귀 시 wasPlaying=false로 재연결이 누락되던 문제 수정 — 백그라운드 진입 시 _hiddenWasActive 플래그 저장, 복귀 시 추가 트리거로 활용',
@@ -1839,19 +1843,19 @@ audio.addEventListener('play', () => {
     S.wasPlaying    = true;  // ★ false → true: 재연결 트리거가 wasPlaying을 필요로 함
     S.userPaused    = true;
     audio.pause();
-    // ★ 백그라운드 상태에서는 playStation 호출 금지
-    // wasPlaying=true가 이미 세팅됐으므로 포그라운드 복귀 시 visibilitychange가 재연결
-    if (document.visibilityState === 'hidden') return;
-    // ★ 즉시 재시작 대신 공유 AudioContext resume → statechange 흐름에 위임
-    // AudioContext가 이미 running이면 바로 재연결
+    // ★ AudioContext resume → statechange 흐름에 위임
+    // 백그라운드/포그라운드 모두 동일하게 AudioContext 상태로 판단
     const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
     if (ctx && ctx.state === 'running') {
+      // 포그라운드면 즉시, 백그라운드면 tryReconnect가 처리
       S.wasPlaying = false; S.needReconnect = false;
-      playStation(S.current);
+      if (document.visibilityState !== 'hidden') playStation(S.current);
+      else { S.wasPlaying = true; startWatch(); } // ★ 백그라운드: 통화 감지 폴링 시작
     } else if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {}); // statechange → ensureAudioCtxWatch가 재연결
+      ctx.resume().catch(() => {}); // statechange → tryReconnect 흐름
     } else {
-      playStation(S.current); // 폴백
+      if (document.visibilityState !== 'hidden') playStation(S.current);
+      else { S.wasPlaying = true; } // 포그라운드 복귀 시 visibilitychange가 처리
     }
   }
 });
@@ -1885,11 +1889,15 @@ function ensureAudioCtxWatch() {
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
     if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
-      // ★ 백그라운드 상태에서는 playStation 호출 금지 — visibilitychange가 처리
-      if (document.visibilityState === 'hidden') return;
-      console.info('[AudioCtx] running 복귀 → 재연결');
-      S.wasPlaying = false; S.needReconnect = false;
-      playStation(S.current);
+      console.info('[AudioCtx] running 복귀 → 재연결 시도');
+      // ★ 포그라운드: 즉시 재연결
+      // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
+      if (document.visibilityState !== 'hidden') {
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      } else {
+        tryReconnect(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
+      }
     }
   });
 }
@@ -1913,10 +1921,10 @@ let stopCallWatch = () => {};
 
   function tryReconnect() {
     if (reconnectingCall || !S.current || !S.wasPlaying) return;
-    // ★ 백그라운드에서는 재연결 시도하지 않음 — 포그라운드 복귀 시 visibilitychange가 처리
-    if (document.visibilityState === 'hidden') return;
     // ★ 수동 재생/로딩 중이면 중복 실행 방지
     if (S.playing || S.loading) { S.wasPlaying = false; return; }
+    // ★ 백그라운드에서도 통화 종료 후 재연결 허용
+    // manifestLoadError 루프는 scheduleRetry의 hidden 차단이 이미 보호하고 있음
     reconnectingCall = true;
     S.wasPlaying     = false;
     S.needReconnect  = false;
@@ -1968,13 +1976,9 @@ let stopCallWatch = () => {};
     }
 
     setTimeout(() => {
-      // ★ 백그라운드 진입 시 전체 재연결 취소 — 포그라운드 복귀 시 자동 재연결
-      if (document.visibilityState === 'hidden') {
-        reconnectingCall = false;
-        if (S.current) S.wasPlaying = true;
-        RLog.info('백그라운드 상태 — 전체 재연결 연기 (포그라운드 복귀 시 재연결)');
-        return;
-      }
+      // ★ 백그라운드에서도 통화 종료 후 전체 재연결 허용
+      // scheduleRetry가 hidden 상태에서 wasPlaying=true를 보존하므로 루프 안전
+      RLog.reconnect('통화 종료 → 전체 재연결 실행' + (document.visibilityState === 'hidden' ? ' (백그라운드)' : ''));
       playStation(S.current, true);  // 긴 통화 후 URL 강제 갱신
       setTimeout(() => { reconnectingCall = false; }, 2000);
     }, 1200);

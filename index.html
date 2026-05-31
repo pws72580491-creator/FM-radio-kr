@@ -293,6 +293,17 @@ header {
   color: var(--text); font-size: 15px;
 }
 .sleep-custom-confirm { flex-shrink: 0; padding: 10px 20px; }
+.sleep-no-play-notice {
+  background: rgba(255,200,50,0.12);
+  border: 1px solid rgba(255,200,50,0.35);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  text-align: center;
+}
 .sleep-desc { font-size: 11px; color: var(--muted); line-height: 1.6; text-align: center; }
 
 /* 설치 버튼 */
@@ -1156,6 +1167,10 @@ input[type=range]::-webkit-slider-thumb {
       </div>
       <!-- 타이머 설정 -->
       <div id="sleepSetup" class="sleep-setup">
+        <!-- ★ 재생 중이 아닐 때 안내 — openSleepTimer()에서 표시/숨김 -->
+        <div id="sleepNoPlayNotice" class="sleep-no-play-notice" style="display:none">
+          ⚠️ 현재 재생 중인 채널이 없습니다.<br>타이머를 미리 설정해두면 재생 시작 후 자동으로 작동합니다.
+        </div>
         <div class="sleep-presets">
           <button class="sleep-preset-btn" onclick="setSleepTimer(10)">10분</button>
           <button class="sleep-preset-btn" onclick="setSleepTimer(20)">20분</button>
@@ -1197,7 +1212,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.7.2</div>
+<div id="versionBadge" onclick="openChangelog()">v2.7.4</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1279,12 +1294,37 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.7.2';
+const APP_VERSION = 'v2.7.4';
 const CHANGELOG = [
+  { version: 'v2.7.4', date: '2026-06-01', changes: [
+    '[버그수정] 재생 직후 pause 오발동 → CALL 루프 재발 수정 — S.justStarted 타임스탬프 가드 추가 (onOK 후 1500ms 이내 pause 억제)',
+    '[버그수정] 로그 파일명 날짜 오류 수정 — toISOString(UTC) → 로컬 날짜 기준으로 변경 (한국 새벽 내보내기 시 하루 전 날짜로 찍히던 문제)',
+    '[버그수정] playStation 진입부 renderStations() 누락 교체 완료 — 모든 재생 상태 변화 경로에서 updateActiveCard() 사용',
+  ]},
+  { version: 'v2.7.3', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 시 S.loading 상태에서 callId 미증가 문제 수정 — 진행 중인 playStation 비동기 흐름을 즉시 무력화',
+    '[버그수정] Firebase initializeApp 이중 초기화 경쟁 조건 수정 — 싱글턴 Promise로 중복 실행 차단',
+    '[개선] 재연결 대기 중 UI 상태 명확화 — npStatus에 "↺ 재연결 대기 중 (N/5)" 표시',
+    '[개선] renderStations() 전체 DOM 재빌드 최적화 — 재생 상태 변화 시 updateActiveCard()로 카드 클래스만 토글',
+    '[보안] PIN 저장 방식 SHA-256 해시로 전환 — 기존 평문 계정은 로그인 시 자동 업그레이드',
+    '[개선] Firebase 저장 경로 분리 — 로그인 계정은 accounts/ 경로만 사용, users/ 이중 저장 제거',
+    '[개선] 취침 타이머 — 재생 중이 아닐 때 안내 배너 표시',
+    '[개선] history.pushState 중복 호출 제거 — 스택 누적 방지',
+    '[개선] 커스텀 채널 ID 충돌 방지 루프 추가',
+    '[보안] changelogBody innerHTML에 esc() 적용',
+    '[코드] RLog.clear() 즉시 저장 보장 — persistNow() 분리',
+    '[코드] window.stopVoiceInputTimer 전역 제거 → S._stopVoiceTimer로 이동',
+    '[코드] _autoplayId NaN 처리 명시화 — Number.isFinite() 체크',
+    '[코드] syncViewportHeight() 주석 수정 — 실제 동작과 일치',
+  ]},
   { version: 'v2.7.2', date: '2026-05-31', changes: [
     '[버그수정] 취침 타이머 종료 시 CALL 로그 루프 + 채널 재선택 반복 버그 수정 — togglePlay() 대신 직접 정지 로직 인라인으로 교체 (playing=false 상태에서 togglePlay 호출 시 playStation 분기 진입 문제)',
     '[버그수정] 페이드아웃 중 pause 이벤트 → 통화 감지 오판 수정 — 페이드 시작 전 S.userPaused=true 설정 + 인터벌 내내 유지',
     '[개선] 취침 타이머 버튼을 NOW PLAYING 라벨 끝으로 이동 — 웨이브폼 옆보다 더 자연스러운 배치',
+  ]},
+  { version: 'v2.7.1', date: '2026-05-31', changes: [
+    '[개선] 헤더 버튼 수 최소화로 로그인 닉네임이 잘리지 않도록 레이아웃 개선',
+    '[개선] 취침 타이머 버튼을 헤더에서 Now Playing 웨이브폼 옆으로 1차 이동',
   ]},
   { version: 'v2.7.0', date: '2026-05-30', changes: [
     '[개선] 다크 모드에서 헤더 버튼(취침 타이머·테마·함께 듣기·계정)이 잘 안 보이던 문제 수정 — 반투명 흰색 배경 + 밝은 테두리로 교체, 라이트 모드는 반투명 검정으로 별도 적용',
@@ -1533,6 +1573,7 @@ const AppState = {
     }
   })()),
   wasPlaying:    false,
+  justStarted:   0,      // ★ onOK 직후 pause 오발동 방지용 타임스탬프 (ms)
   needReconnect: false,
   userPaused:    false,
 };
@@ -1656,7 +1697,7 @@ function startWatchdog() {
         RLog.warn('워치독: 스트림 멈춤 감지 → 재연결', `paused=${audio.paused}, cur=${audio.currentTime.toFixed(2)}`);
         stopWatchdog();
         S.playing = false;
-        updateNowPlaying(); renderStations();
+        updateNowPlaying(); updateActiveCard();
         scheduleRetry();
       }
     } else {
@@ -1698,6 +1739,11 @@ const RLog = (() => {
     _persistTimer = setTimeout(async () => {
       try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
     }, 100);
+  }
+  // ★ 즉시 저장 (clear 전용 — 디바운스 없이 완료를 보장)
+  async function persistNow() {
+    if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+    try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
   }
 
   // ★ 현재 핵심 상태 스냅샷 문자열 생성
@@ -1790,7 +1836,7 @@ const RLog = (() => {
     bgFail  : (m, d)    => write('BG_FAIL',   m, d, true),  // 백그라운드 재생 실패
     state   : (m, d)    => write('STATE',     m, d, true),  // 상태 스냅샷
     getAll  : ()        => [..._buf],
-    clear   : async ()  => { _buf = []; await persist(); },
+    clear   : async ()  => { _buf = []; await persistNow(); },
   };
 })();
 
@@ -1875,7 +1921,11 @@ function exportLog() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `radio-log-${new Date().toISOString().slice(0,10)}.txt`;
+  // ★ toISOString()은 UTC 기준 — 한국(UTC+9) 새벽에 내보내면 날짜가 하루 전으로 나오는 버그
+  //    로컬 날짜 기준으로 파일명 생성
+  const _nd = new Date();
+  const _localDate = `${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
+  a.download = `radio-log-${_localDate}.txt`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1898,7 +1948,7 @@ function scheduleRetry() {
 
   S.playing = false;
   S.loading = false; // ★ 영구 로딩 UI 방지
-  updateNowPlaying(); renderStations();
+  updateNowPlaying(); updateActiveCard();
 
   // ★ 백그라운드 상태에서는 재시도 루프 없이 즉시 종료
   // → 포그라운드 복귀 시 visibilitychange에서 자동 재연결
@@ -1948,7 +1998,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
   if (!isRetry) S.retryCount = 0;
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
-  updateNowPlaying(); renderStations();
+  updateNowPlaying(); updateActiveCard();
   RLog.play(`채널 선택: ${s.name}`, `${s.freq} / forceRefresh=${forceRefresh}`);
 
   if (S.hls) { S.hls.destroy(); S.hls = null; }
@@ -1968,6 +2018,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
+      S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
       RLog.play('재생 시작 성공');
       // 백그라운드에서 재생 성공 시 실제 재생 감시 즉시 시작
       if (document.visibilityState === 'hidden') RLog.startBgWatch();
@@ -1978,14 +2029,14 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       // ★ onOK 내 강제 currentTime 점프 제거 — startPosition:-1 로 이미 라이브 엣지 시작 보장
 
       localStorage.setItem('radio_playing', '1');
-      updateNowPlaying(); renderStations(); updateMediaSession();
+      updateNowPlaying(); updateActiveCard(); updateMediaSession();
       startWatchdog();   // 실제 재생 감시 시작
       requestWakeLock(); // ★ 재생 성공 시 WakeLock 획득
     }
     function onFail(retry) {
       if (thisCall !== S.callId) return;
       S.loading = false; S.playing = false;
-      updateNowPlaying(); renderStations(); updateMediaSession();
+      updateNowPlaying(); updateActiveCard(); updateMediaSession();
       RLog.error('재생 실패(onFail)', `retry=${retry}`);
       if (retry) scheduleRetry();
     }
@@ -2074,12 +2125,12 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       audio.play().then(onOK).catch(() => onFail(true));
     } else {
       showError('이 브라우저는 HLS를 지원하지 않습니다.');
-      S.loading = false; updateNowPlaying(); renderStations();
+      S.loading = false; updateNowPlaying(); updateActiveCard();
     }
   }).catch(() => {
     if (thisCall !== S.callId) return;
     S.loading = false; S.playing = false;
-    updateNowPlaying(); renderStations(); updateMediaSession();
+    updateNowPlaying(); updateActiveCard(); updateMediaSession();
     showError('스트림 주소를 가져오지 못했습니다.');
   });
 }
@@ -2095,7 +2146,7 @@ function togglePlay() {
     releaseWakeLock(); // ★ 사용자 정지 시 WakeLock 해제
     RLog.stopBgWatch();
     RLog.stop('사용자 정지 (일시정지 버튼)');
-    updateNowPlaying(); renderStations(); updateMediaSession();
+    updateNowPlaying(); updateActiveCard(); updateMediaSession();
   } else {
     playStation(S.current);
   }
@@ -2150,12 +2201,19 @@ audio.addEventListener('stalled', () => {
 
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; }
+  // ★ 재생 시작 직후 1500ms 이내 pause는 HLS 버퍼링 시작 시 브라우저가
+  //    내부적으로 발화하는 오발동 — CALL로 오판하지 않도록 억제
+  if (S.justStarted && (Date.now() - S.justStarted) < 1500) {
+    RLog.info('pause 이벤트 억제 (재생 직후 오발동)', `elapsed=${Date.now()-S.justStarted}ms`);
+    return;
+  }
   if (S.playing && S.current && !S.loading) {
     RLog.call('통화/음성입력으로 재생 중단 감지');
     S.wasPlaying = true;
     S.needReconnect = true;
     S.playing = false;
-    updateNowPlaying(); renderStations();
+    S.justStarted = 0; // 가드 해제
+    updateNowPlaying(); updateActiveCard();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
     }
@@ -2270,7 +2328,7 @@ let stopCallWatch = () => {};
           reconnectingCall = false;
           S.playing = true; S.loading = false; S.userPaused = false;
           RLog.call('소프트 재연결 성공 ✅');
-          updateNowPlaying(); renderStations(); updateMediaSession();
+          updateNowPlaying(); updateActiveCard(); updateMediaSession();
           startWatchdog();
         }).catch(() => {
           // ★ play() 실패 → 전체 재연결로 폴백
@@ -2359,7 +2417,7 @@ let stopCallWatch = () => {};
       stopCallWatch(); // 통화감지 폴링 중단
       stopWatchdog();
       // ★ _voiceTimer도 백그라운드에서 반드시 중단
-      if (typeof stopVoiceInputTimer === 'function') stopVoiceInputTimer();
+      if (typeof S._stopVoiceTimer === 'function') S._stopVoiceTimer();
 
       // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
       S._watchdogPaused = S.playing || S.loading;
@@ -2374,7 +2432,7 @@ let stopCallWatch = () => {};
         audio.pause(); audio.src = '';
         S.loading = false;
         S.retryCount = 0;
-        updateNowPlaying(); renderStations();
+        updateNowPlaying(); updateActiveCard();
       }
       return;
     }
@@ -2494,7 +2552,7 @@ window.addEventListener('offline', () => {
   if (S.playing) { S.wasPlaying = true; S.playing = false; }
   clearRetryTimer(); stopWatchdog(); // ★ 워치독 즉시 정리
   if (S.hls) S.hls.stopLoad();
-  updateNowPlaying(); renderStations();
+  updateNowPlaying(); updateActiveCard();
   showError('네트워크가 끊겼습니다. 연결을 확인 중...');
 });
 
@@ -2509,7 +2567,8 @@ window.addEventListener('offline', () => {
     if (_voiceTimer) { clearInterval(_voiceTimer); _voiceTimer = null; }
   }
   // ★ 백그라운드 진입 시 외부에서 타이머 중단 가능하도록 전역 노출
-  window.stopVoiceInputTimer = stopVoiceTimer;
+  // ★ window 전역 노출 제거 — S 객체에 저장해 전역 네임스페이스 오염 방지
+  S._stopVoiceTimer = stopVoiceTimer;
 
   // ★ 핵심 재연결 함수 — 호출 시 즉시 재연결 or AudioContext resume 위임
   function doReconnect(reason) {
@@ -2618,10 +2677,11 @@ function updateMediaSession() {
 
   navigator.mediaSession.setActionHandler('pause', () => {
     S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
+    S.justStarted = 0; // 수동 정지 시 가드 즉시 해제
     if (S.hls) S.hls.stopLoad();
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
-    updateNowPlaying(); renderStations();
+    updateNowPlaying(); updateActiveCard();
     navigator.mediaSession.playbackState = 'paused';
   });
 
@@ -2630,7 +2690,7 @@ function updateMediaSession() {
     if (S.hls) S.hls.stopLoad();
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
-    updateNowPlaying(); renderStations();
+    updateNowPlaying(); updateActiveCard();
     navigator.mediaSession.playbackState = 'paused';
   });
 
@@ -2785,6 +2845,9 @@ const SleepTimer = (() => {
     const S     = window.S;
     const audio = window.audio;
     if (audio) audio.volume = _origVol; // 볼륨 원복 (페이드 후)
+    // ★ callId 증가 — 진행 중인 playStation 비동기 흐름(resolveStreamUrl→onOK)을 즉시 무력화
+    // S.loading=true 상태에서 타이머가 종료될 때 onOK가 뒤늦게 실행되는 것을 차단
+    if (S) S.callId = (S.callId || 0) + 1;
     if (S && (S.playing || S.loading)) {
       if (typeof clearRetryTimer === 'function') clearRetryTimer();
       if (typeof stopWatchdog    === 'function') stopWatchdog();
@@ -2798,7 +2861,7 @@ const SleepTimer = (() => {
       try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
       if (typeof releaseWakeLock    === 'function') releaseWakeLock();
       if (typeof updateNowPlaying   === 'function') updateNowPlaying();
-      if (typeof renderStations     === 'function') renderStations();
+      if (typeof updateActiveCard   === 'function') updateActiveCard();
       if (typeof updateMediaSession === 'function') updateMediaSession();
       RLog.stop('취침 타이머 정지');
     }
@@ -2824,6 +2887,9 @@ const SleepTimer = (() => {
 
 function openSleepTimer() {
   SleepTimer.renderSheet();
+  // ★ 재생 중이 아닐 때 안내 배너 표시
+  const notice = document.getElementById('sleepNoPlayNotice');
+  if (notice) notice.style.display = (!S.playing && !S.loading) ? 'block' : 'none';
   document.getElementById('sleepBg').classList.add('show');
 }
 function closeSleepTimer(e) {
@@ -3027,17 +3093,25 @@ let syncMode   = false;
 let myNick     = localStorage.getItem('radio_nick') || '';
 let _fbIgnore  = 0; // ★ boolean → 타임스탬프로 변경: 300ms 이내 이벤트만 무시
 
+// ★ Firebase 초기화 싱글턴 Promise — 동시 다중 호출 시 중복 initializeApp 방지
+let _fbInitPromise = null;
+
 function initFirebase() {
-  if (fbReady) return;
-  try {
-    firebase.initializeApp(FB_CONFIG);
-    fbDb    = firebase.database();
-    fbReady = true;
-    initUserData();
-  } catch(e) {
-    console.warn('Firebase 초기화 실패:', e);
-    restoreFromIDB();
-  }
+  if (_fbInitPromise) return _fbInitPromise;
+  _fbInitPromise = (async () => {
+    if (fbReady) return;
+    try {
+      try { firebase.initializeApp(FB_CONFIG); } catch(e) {} // 이미 초기화된 경우 무시
+      fbDb    = firebase.database();
+      fbReady = true;
+      await initUserData();
+    } catch(e) {
+      console.warn('Firebase 초기화 실패:', e);
+      _fbInitPromise = null; // 실패 시 재시도 허용
+      await restoreFromIDB().catch(() => {});
+    }
+  })();
+  return _fbInitPromise;
 }
 
 /* ════════════════════════════════════════
@@ -3045,6 +3119,8 @@ function initFirebase() {
 ════════════════════════════════════════ */
 async function fbSaveUserData() {
   if (!fbReady || !fbDb) return;
+  // ★ 계정 로그인 중이면 accounts/ 경로만 사용 — users/ 와 이중 저장 방지
+  if (_accountId) return;
   try {
     const uuid = await getUserUUID();
     await fbDb.ref(`users/${uuid}`).set({
@@ -3119,8 +3195,8 @@ let _accTab     = 'login'; // 'login' | 'register'
 async function saveAccountData() {
   if (!_accountId || !fbReady || !fbDb) return;
   try {
+    // ★ pin/pinHashed는 로그인 시 이미 설정됨 — 덮어쓰기 방지 (favorites·custom만 업데이트)
     await fbDb.ref(`accounts/${_accountId}`).update({
-      pin:            _accountPin,
       favorites:      [...S.favorites],
       favLocked:      favLocked,
       customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
@@ -3224,17 +3300,28 @@ function switchAccountTab(tab) {
 }
 
 /* 로그인 또는 회원가입 실행 */
+/* ════════════════════════════════════════
+   PIN 해시 헬퍼 — SHA-256으로 단방향 해시
+   평문 PIN을 로컬/Firebase에 저장하지 않도록
+════════════════════════════════════════ */
+async function hashPin(pin) {
+  if (!pin) return '';
+  try {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    // crypto.subtle 미지원 환경 폴백 (매우 드물지만 안전망)
+    console.warn('[hashPin] crypto.subtle 미지원, 평문 사용:', e);
+    return pin;
+  }
+}
+
 async function doAccountAction() {
   // Firebase가 아직 준비 안 됐으면 직접 초기화 시도
   // (페이지 로드 직후 모달을 빠르게 열었을 때 대비)
   if (!fbReady || !fbDb) {
-    try {
-      try { firebase.initializeApp(FB_CONFIG); } catch(e) {} // 이미 초기화됐으면 무시
-      fbDb    = firebase.database();
-      fbReady = true;
-    } catch(e) {
-      showToast('⚠️ Firebase에 연결할 수 없습니다.'); return;
-    }
+    try { await initFirebase(); } catch(e) {}
+    if (!fbReady || !fbDb) { showToast('⚠️ Firebase에 연결할 수 없습니다.'); return; }
   }
 
   const id  = document.getElementById('acc-id').value.trim().toLowerCase();
@@ -3260,14 +3347,17 @@ async function _doRegister(id, pin) {
     if (snap.exists()) {
       showToast('⚠️ 이미 사용 중인 아이디입니다.'); return;
     }
+    // ★ PIN은 SHA-256 해시로만 저장 — 평문 노출 방지
+    const pinHash = await hashPin(pin);
     await fbDb.ref(`accounts/${id}`).set({
-      pin,
+      pin:            pinHash,
+      pinHashed:      true, // ★ 마이그레이션 구분 플래그
       favorites:      [...S.favorites],
       favLocked:      favLocked,
       customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
       updatedAt:      Date.now(),
     });
-    _setAccount(id, pin);
+    _setAccount(id, pinHash); // 로컬에도 해시값만 저장
     closeAccountModal();
     showToast(`✅ "${id}" 계정이 생성됐습니다`);
   } catch(e) {
@@ -3287,10 +3377,34 @@ async function _doLogin(id, pin) {
       showToast('⚠️ 존재하지 않는 아이디입니다.'); return;
     }
     const data = snap.val();
-    if (data.pin && data.pin !== pin) {
-      showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+
+    // ★ PIN 검증 — 해시 마이그레이션 지원
+    // pinHashed=true: 해시 비교 / 없으면 평문 계정 → 해시로 자동 업그레이드
+    if (data.pin) {
+      const pinHash = await hashPin(pin);
+      if (data.pinHashed) {
+        // 신규 해시 계정: 해시값 비교
+        if (data.pin !== pinHash) {
+          showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+        }
+      } else {
+        // 구형 평문 계정: 평문으로 먼저 비교 후 해시로 업그레이드
+        if (data.pin !== pin) {
+          showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+        }
+        // ★ 로그인 성공 시 자동으로 해시로 업그레이드
+        fbDb.ref(`accounts/${id}`).update({ pin: pinHash, pinHashed: true })
+          .catch(e => console.warn('[계정] PIN 해시 업그레이드 실패:', e));
+        _setAccount(id, pinHash);
+        _restoreFromAccount(data);
+        closeAccountModal();
+        showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
+        return;
+      }
+      _setAccount(id, pinHash);
+    } else {
+      _setAccount(id, '');
     }
-    _setAccount(id, pin);
     _restoreFromAccount(data);
     closeAccountModal();
     showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
@@ -3380,7 +3494,7 @@ document.getElementById('nickInput').addEventListener('keydown', e => {
 });
 
 /* ══ ui.js ══ */
-/* 뷰포트 높이 동기화 — 스크롤 분리 방식으로 변경되어 불필요 (no-op 유지) */
+/* 뷰포트 높이 동기화 — 활성 패널의 콘텐츠 높이를 swipeViewport에 반영해 빈 영역 터치/스크롤 방지 */
 function syncViewportHeight() {
   const vp = document.getElementById('swipeViewport');
   if (!vp) return;
@@ -3453,8 +3567,8 @@ function updateEmptyState() {
    채널 카드
 ════════════════════════════════════════ */
 function createCard(s) {
-  const isActive = S.current && S.current.id === s.id;
-  const isFav    = S.favorites.has(s.id);
+  const isActive  = S.current && S.current.id === s.id;
+  const isFav     = S.favorites.has(s.id);
   const freqShort = s.freq.replace(' MHz','').replace(' ','');
   const div = document.createElement('div');
   div.className = `station-card${isActive ? ' active' : ''}`;
@@ -3487,6 +3601,21 @@ function createCard(s) {
   return div;
 }
 
+/* ★ 활성 카드만 업데이트 — 전체 재빌드 없이 active 클래스만 토글
+   채널 전환·재생 상태 변화 시 이 함수를 사용하고,
+   목록 자체가 바뀔 때(추가/삭제/즐겨찾기 변경)만 renderAllList/updateFavList를 호출 */
+function updateActiveCard() {
+  const allCards = document.querySelectorAll('.station-card');
+  allCards.forEach(card => {
+    const id       = parseInt(card.dataset.id);
+    const isActive = S.current && S.current.id === id;
+    card.classList.toggle('active', isActive);
+    // st-freq 색상 (active면 빨간색, 아니면 muted)
+    const freq = card.querySelector('.st-freq');
+    if (freq) freq.style.color = isActive ? 'var(--red)' : '';
+  });
+}
+
 function renderAllList() {
   const list = document.getElementById('list-all');
   if (!list) return;
@@ -3504,6 +3633,8 @@ function updateFavList() {
   syncViewportHeight(); // ★
 }
 
+/* ★ renderStations: 목록 내용이 바뀔 때만 호출 (전체 재빌드)
+   재생 상태만 바뀔 때는 updateActiveCard()를 사용 */
 function renderStations() {
   renderAllList();
   updateFavList();
@@ -3551,8 +3682,14 @@ function updateNowPlaying() {
     wave.className = 'waveform paused';
     spin.style.display = 'none';
     btnSvg.innerHTML = '<path d="M8 5v14l11-7z"/>';
-    status.className = 'np-status';
-    status.textContent = S.current ? '일시정지' : '재생 중인 채널이 없습니다';
+    // ★ retryCount > 0 이면 재연결 대기 중 — "일시정지"와 구분해서 표시
+    if (S.current && S.retryCount > 0) {
+      status.className = 'np-status error';
+      status.textContent = `↺ 재연결 대기 중 (${S.retryCount}/5)`;
+    } else {
+      status.className = 'np-status';
+      status.textContent = S.current ? '일시정지' : '재생 중인 채널이 없습니다';
+    }
   }
 
   // 슬라이더 색상 갱신
@@ -3682,10 +3819,9 @@ function installApp() {
    뒤로가기 — 항상 백그라운드 유지
 ════════════════════════════════════════ */
 (function initBackHandler() {
-  history.pushState({ page: 'radio' }, '', location.href);
+  // ★ pushState 1번으로 통일 — 2번 중복은 history 스택을 불필요하게 누적시킴
   history.pushState({ page: 'radio' }, '', location.href);
   window.addEventListener('popstate', () => {
-    history.pushState({ page: 'radio' }, '', location.href);
     history.pushState({ page: 'radio' }, '', location.href);
     if (S.playing || S.loading) {
       showToast('🎵 방송이 백그라운드에서 계속 재생됩니다');
@@ -3778,7 +3914,10 @@ function confirmAddStation() {
 
   const custom    = loadCustomStations();
   // ★ Date.now() + 랜덤값 조합 — 빠른 연속 추가나 장기 사용 시에도 ID 충돌 방지
-  const newId      = 1000000 + Math.floor(Math.random() * 900000);
+  // ★ ID 충돌 방지 — 생성된 ID가 기존 STATIONS에 없을 때까지 재시도
+  let newId;
+  do { newId = 1000000 + Math.floor(Math.random() * 900000); }
+  while (STATIONS.find(x => x.id === newId));
   const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
 
   custom.push(newStation);
@@ -3821,7 +3960,7 @@ function openChangelog() {
         <span class="changelog-date">${entry.date}</span>
       </div>
       <div class="changelog-list">
-        ${entry.changes.map(c => `<div class="changelog-item">${c}</div>`).join('')}
+        ${entry.changes.map(c => `<div class="changelog-item">${esc(c)}</div>`).join('')}
       </div>`;
     body.appendChild(div);
   });
@@ -3902,8 +4041,9 @@ updateFavList();
 
 // 2. 마지막 방송국 즉시 복원
 // PWA 바로가기(?autoplay=id) 우선, 없으면 마지막 채널 복원
-const _autoplayId = parseInt(new URLSearchParams(location.search).get('autoplay'));
-const _lastId = _autoplayId || parseInt(localStorage.getItem('radio_last'));
+const _autoplayRaw = parseInt(new URLSearchParams(location.search).get('autoplay'));
+const _autoplayId  = Number.isFinite(_autoplayRaw) && _autoplayRaw > 0 ? _autoplayRaw : null;
+const _lastId      = _autoplayId || parseInt(localStorage.getItem('radio_last')) || null;
 if (_lastId) {
   S.current = STATIONS.find(s => s.id === _lastId) || null;
   if (S.current) {
@@ -3923,16 +4063,8 @@ if (_lastId) {
 
 // 3. Firebase/IndexedDB 복원 — 백그라운드
 (async function initData() {
-  // ★ Firebase를 최우선으로 초기화 — 사용자가 즉시 계정 모달을 열어도 동작하도록
-  try {
-    if (!fbReady) {
-      firebase.initializeApp(FB_CONFIG);
-      fbDb    = firebase.database();
-      fbReady = true;
-    }
-  } catch(e) {
-    console.warn('Firebase 사전 초기화 실패:', e);
-  }
+  // ★ Firebase를 최우선으로 초기화 — 싱글턴 Promise로 중복 실행 차단
+  await initFirebase().catch(e => console.warn('Firebase 사전 초기화 실패:', e));
 
   // ★ localStorage가 비어있으면(인터넷 기록 삭제 등) 반드시 IndexedDB 먼저 복원
   const localFavs   = localStorage.getItem('radio_favs');

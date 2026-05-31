@@ -85,6 +85,12 @@
 [data-theme="light"] .log-entry.INFO .log-tag      { color: #0a9e8f; }
 [data-theme="light"] .log-entry.RECONNECT .log-tag { color: #6d28d9; }
 [data-theme="light"] .log-entry.ERROR .log-tag     { color: #dc2626; }
+[data-theme="light"] .log-entry.CALL .log-tag      { color: #b45309; }
+[data-theme="light"] .log-entry.NET .log-tag       { color: #0369a1; }
+[data-theme="light"] .log-entry.BG_PLAY .log-tag   { color: #059669; }
+[data-theme="light"] .log-entry.BG_FAIL .log-tag   { color: #dc2626; }
+[data-theme="light"] .log-entry.STATE .log-tag     { color: #64748b; }
+[data-theme="light"] .log-entry.BG_FAIL            { background: rgba(220,38,38,0.05); }
 
 html, body {
   height: 100%;
@@ -568,14 +574,28 @@ input[type=range]::-webkit-slider-thumb {
   flex: 1; overflow-y: auto; padding: 10px 16px;
   font-family: var(--mono); font-size: 11px; line-height: 1.7;
 }
+/* 로그 필터바 */
+.log-filter-bar { display:flex; gap:4px; flex-wrap:wrap; padding:8px 16px 6px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.log-filter-btn { font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--border); background:var(--bg2); color:var(--muted); cursor:pointer; white-space:nowrap; }
+.log-filter-btn.log-filter-active { background:var(--red); color:#fff; border-color:var(--red); }
+.log-filter-count { margin-left:3px; opacity:.7; }
+/* 로그 스냅샷 줄 */
+.log-snap { font-size:9px; color:var(--muted); padding:1px 0 3px 4px; word-break:break-all; line-height:1.4; opacity:.8; }
 .log-entry { padding: 4px 0; border-bottom: 1px solid var(--border); }
 .log-entry .log-time { color: var(--muted); margin-right: 6px; }
-.log-entry.ERROR   .log-tag { color: #ff6b6b; }
-.log-entry.WARN    .log-tag { color: var(--amber); }
-.log-entry.INFO    .log-tag { color: #4ecdc4; }
-.log-entry.PLAY    .log-tag { color: #00c864; }
-.log-entry.STOP    .log-tag { color: var(--red); }
+.log-entry.ERROR    .log-tag { color: #ff6b6b; }
+.log-entry.WARN     .log-tag { color: var(--amber); }
+.log-entry.INFO     .log-tag { color: #4ecdc4; }
+.log-entry.PLAY     .log-tag { color: #00c864; }
+.log-entry.STOP     .log-tag { color: var(--red); }
 .log-entry.RECONNECT .log-tag { color: #a78bfa; }
+.log-entry.CALL     .log-tag { color: #f59e0b; }   /* 통화 — 주황 */
+.log-entry.NET      .log-tag { color: #38bdf8; }   /* 네트워크 — 하늘 */
+.log-entry.BG_PLAY  .log-tag { color: #34d399; }   /* 백그라운드 재생 확인 — 연두 */
+.log-entry.BG_FAIL  .log-tag { color: #f87171; }   /* 백그라운드 재생 실패 — 빨강 */
+.log-entry.STATE    .log-tag { color: #94a3b8; }   /* 상태 스냅샷 — 회색 */
+/* 백그라운드 재생 실패는 행 전체 강조 */
+.log-entry.BG_FAIL { background: rgba(248,113,113,0.06); }
 .log-msg { color: var(--text); word-break: break-all; }
 .log-empty { color: var(--muted); text-align: center; padding: 40px 0; font-size: 12px; }
 
@@ -1017,12 +1037,13 @@ input[type=range]::-webkit-slider-thumb {
         <button class="log-close" onclick="closeLog()">✕</button>
       </div>
     </div>
+    <div id="logFilterBar" class="log-filter-bar"></div>
     <div class="log-body" id="logBody"></div>
   </div>
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.7</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.8</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1104,8 +1125,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.7';
+const APP_VERSION = 'v2.6.8';
 const CHANGELOG = [
+  { version: 'v2.6.8', date: '2026-05-30', changes: [
+    '[개선] 로그 시스템 전면 강화 — CALL(통화)/NET(네트워크)/BG_PLAY(백그라운드 재생 확인)/BG_FAIL(백그라운드 재생 실패)/STATE(상태 스냅샷) 레벨 추가',
+    '[개선] 모든 주요 로그에 핵심 상태 스냅샷 자동 첨부 — playing/loading/wasPlaying/hidden/audio.paused/hls/ctx/retry/net 실시간 기록',
+    '[개선] 백그라운드 실제 재생 감시 — 3초마다 currentTime 변화 체크, 실제 소리 재생 여부를 BG_PLAY/BG_FAIL로 기록',
+    '[개선] 로그 뷰어에 레벨별 필터 버튼 추가 — 원하는 레벨만 선택해서 확인 가능',
+    '[개선] 로그 내보내기 파일에 헤더 + 스냅샷 들여쓰기 추가로 가독성 향상',
+    '[개선] 로그 최대 보관 수 500→1000개로 확대',
+  ]},
   { version: 'v2.6.7', date: '2026-05-30', changes: [
     '[신기능] 테마 자동 전환 모드 추가 — 버튼 클릭 시 다크→라이트→자동 3단계 순환. 자동 모드는 시스템 설정(prefers-color-scheme) 우선, 없으면 시간대(오전 6시~오후 6시 라이트)로 자동 전환',
     '[개선] 자동 모드에서 매 분마다 시간대 체크 및 시스템 설정 변경 실시간 감지',
@@ -1478,11 +1507,12 @@ function stopWatchdog() {
    중단 원인 추적을 위해 주요 이벤트를 IndexedDB에 저장
 ════════════════════════════════════════ */
 const LOG_DB_KEY  = 'radio_play_log';
-const LOG_MAX     = 500; // 최대 500개 유지
+const LOG_MAX     = 1000; // 최대 1000개 유지 (상세 로깅 대응)
 
 const RLog = (() => {
-  let _buf = [];   // 메모리 버퍼
+  let _buf = [];
   let _loaded = false;
+  let _bgWatchTimer = null; // 백그라운드 실제 재생 감시 타이머
 
   // IDB에서 기존 로그 로드
   async function load() {
@@ -1493,42 +1523,106 @@ const RLog = (() => {
     _loaded = true;
   }
 
-  // IDB에 저장
-  async function persist() {
-    try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
+  // IDB에 저장 (디바운스 — 100ms 내 연속 write는 한 번만 저장)
+  let _persistTimer = null;
+  function persist() {
+    if (_persistTimer) clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(async () => {
+      try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
+    }, 100);
+  }
+
+  // ★ 현재 핵심 상태 스냅샷 문자열 생성
+  function _snap(extra = '') {
+    const S = window.S || {};
+    const audio = window.audio || {};
+    const hidden = document.visibilityState === 'hidden';
+    const ctx = window._sharedAudioCtx;
+    const parts = [
+      `playing=${S.playing||false}`,
+      `loading=${S.loading||false}`,
+      `wasPlaying=${S.wasPlaying||false}`,
+      `hidden=${hidden}`,
+      `audio.paused=${audio.paused ?? '?'}`,
+      `audio.src=${audio.src ? '있음' : '없음'}`,
+      `hls=${S.hls ? '활성' : '없음'}`,
+      `ctx=${ctx ? ctx.state : '없음'}`,
+      `retry=${S.retryCount||0}`,
+      `net=${navigator.onLine ? 'online' : 'OFFLINE'}`,
+    ];
+    if (extra) parts.push(extra);
+    return parts.join(' | ');
   }
 
   // 로그 기록
-  function write(level, msg, detail = '') {
+  function write(level, msg, detail = '', snap = false) {
     const now  = new Date();
     const time = now.toLocaleTimeString('ko-KR', { hour12: false })
                  + '.' + String(now.getMilliseconds()).padStart(3,'0');
     const date = now.toLocaleDateString('ko-KR');
-    const entry = { level, time, date, msg, detail,
+    // snap=true 이면 detail에 상태 스냅샷 자동 추가
+    const fullDetail = snap ? (detail ? detail + ' ║ ' + _snap() : _snap()) : detail;
+    const entry = { level, time, date, msg,
+      detail: fullDetail,
       station: window.S?.current?.name || '-',
       ts: now.getTime() };
-    _buf.unshift(entry);             // 최신이 위
+    _buf.unshift(entry);
     if (_buf.length > LOG_MAX) _buf.pop();
     persist();
-    // 에러·경고 발생 시 로그 버튼 강조
-    if (level === 'ERROR' || level === 'WARN' || level === 'STOP') {
+    if (level === 'ERROR' || level === 'WARN' || level === 'STOP' || level === 'BG_FAIL') {
       document.getElementById('logBtn')?.classList.add('has-error');
     }
-    // 콘솔에도 출력
-    const fn = level === 'ERROR' ? console.error : level === 'WARN' ? console.warn : console.info;
-    fn(`[RLog][${level}] ${msg}`, detail || '');
+    const fn = level === 'ERROR' || level === 'BG_FAIL' ? console.error
+             : level === 'WARN' ? console.warn : console.info;
+    fn(`[RLog][${level}] ${msg}`, fullDetail || '');
+  }
+
+  // ★ 백그라운드 실제 재생 감시 시작
+  // 백그라운드 진입 후 3초마다 실제로 오디오가 재생 중인지 확인
+  function startBgWatch() {
+    stopBgWatch();
+    let tick = 0;
+    let lastTime = window.audio?.currentTime ?? -1;
+    _bgWatchTimer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') { stopBgWatch(); return; }
+      const audio = window.audio;
+      if (!audio || !window.S?.playing) { stopBgWatch(); return; }
+      tick++;
+      const curTime = audio.currentTime;
+      const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
+      lastTime = curTime;
+      if (tick === 1) return; // 첫 tick은 기준값 수집만
+      if (progressing) {
+        write('BG_PLAY', `백그라운드 실제 재생 확인 [${tick}]`, `currentTime=${curTime.toFixed(2)}`);
+      } else {
+        write('BG_FAIL', `백그라운드 재생 정지 감지 [${tick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
+      }
+    }, 3000);
+  }
+
+  function stopBgWatch() {
+    if (_bgWatchTimer) { clearInterval(_bgWatchTimer); _bgWatchTimer = null; }
   }
 
   return {
     load,
-    info    : (m, d) => write('INFO',      m, d),
-    play    : (m, d) => write('PLAY',      m, d),
-    stop    : (m, d) => write('STOP',      m, d),
-    warn    : (m, d) => write('WARN',      m, d),
-    error   : (m, d) => write('ERROR',     m, d),
-    reconnect:(m,d)  => write('RECONNECT', m, d),
-    getAll  : ()     => [..._buf],
-    clear   : async () => { _buf = []; await persist(); },
+    snap    : _snap,
+    startBgWatch,
+    stopBgWatch,
+    info    : (m, d)    => write('INFO',      m, d),
+    infoS   : (m, d)    => write('INFO',      m, d, true),  // 스냅샷 포함
+    play    : (m, d)    => write('PLAY',      m, d, true),  // 재생 관련은 항상 스냅샷
+    stop    : (m, d)    => write('STOP',      m, d, true),
+    warn    : (m, d)    => write('WARN',      m, d, true),
+    error   : (m, d)    => write('ERROR',     m, d, true),
+    reconnect:(m, d)    => write('RECONNECT', m, d, true),
+    call    : (m, d)    => write('CALL',      m, d, true),  // 통화 감지/종료
+    net     : (m, d)    => write('NET',       m, d, true),  // 네트워크 상태
+    bgPlay  : (m, d)    => write('BG_PLAY',   m, d),        // 백그라운드 재생 확인
+    bgFail  : (m, d)    => write('BG_FAIL',   m, d, true),  // 백그라운드 재생 실패
+    state   : (m, d)    => write('STATE',     m, d, true),  // 상태 스냅샷
+    getAll  : ()        => [..._buf],
+    clear   : async ()  => { _buf = []; await persist(); },
   };
 })();
 
@@ -1542,26 +1636,74 @@ function closeLog(e) {
   if (e && e.target !== document.getElementById('logBg')) return;
   document.getElementById('logBg').classList.remove('show');
 }
+// 현재 로그 필터 상태
+let _logFilter = 'ALL';
+const _LOG_FILTERS = ['ALL','PLAY','STOP','ERROR','WARN','RECONNECT','CALL','NET','BG_PLAY','BG_FAIL','INFO','STATE'];
+
 function renderLogUI() {
-  const logs = RLog.getAll();
+  const allLogs = RLog.getAll();
+  const logs = _logFilter === 'ALL' ? allLogs : allLogs.filter(e => e.level === _logFilter);
   const body = document.getElementById('logBody');
+
+  // 필터 버튼 렌더
+  const filterBar = document.getElementById('logFilterBar');
+  if (filterBar) {
+    filterBar.innerHTML = _LOG_FILTERS.map(f => {
+      const counts = f === 'ALL' ? allLogs.length : allLogs.filter(e => e.level === f).length;
+      const active = f === _logFilter ? 'log-filter-active' : '';
+      return `<button class="log-filter-btn ${active}" onclick="setLogFilter('${f}')">${f}<span class="log-filter-count">${counts}</span></button>`;
+    }).join('');
+  }
+
   if (!logs.length) {
     body.innerHTML = '<div class="log-empty">기록된 로그가 없습니다.</div>';
     return;
   }
-  body.innerHTML = logs.map(e => `
-    <div class="log-entry ${e.level}">
+  body.innerHTML = logs.map(e => {
+    // 스냅샷 detail이 있으면 ║ 기준으로 분리해서 두 줄로 표시
+    let msgHtml = '';
+    if (e.detail && e.detail.includes(' ║ ')) {
+      const [userDetail, snap] = e.detail.split(' ║ ');
+      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${userDetail ? ' — ' + userDetail : ''}</span>`
+              + `<div class="log-snap">${snap}</div>`;
+    } else {
+      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${e.detail ? ' — ' + e.detail : ''}</span>`;
+    }
+    return `<div class="log-entry ${e.level}">
       <span class="log-time">${e.date} ${e.time}</span>
       <span class="log-tag">[${e.level}]</span>
-      <span class="log-msg"> [${e.station}] ${e.msg}${e.detail ? ' — ' + e.detail : ''}</span>
-    </div>`).join('');
+      ${msgHtml}
+    </div>`;
+  }).join('');
+}
+
+function setLogFilter(f) {
+  _logFilter = f;
+  renderLogUI();
 }
 function exportLog() {
   const logs = RLog.getAll();
-  const lines = logs.map(e =>
-    `${e.date} ${e.time} [${e.level}] [${e.station}] ${e.msg}${e.detail ? ' — '+e.detail : ''}`
-  ).join('\n');
-  const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+  const header = [
+    `KOREA FM 라디오 — 재생 로그`,
+    `내보내기: ${new Date().toLocaleString('ko-KR')}`,
+    `총 ${logs.length}개 항목`,
+    '═'.repeat(80),
+    ''
+  ].join('\n');
+  const lines = logs.map(e => {
+    let line = `${e.date} ${e.time}  [${e.level.padEnd(9)}] [${e.station}] ${e.msg}`;
+    if (e.detail) {
+      if (e.detail.includes(' ║ ')) {
+        const [userDetail, snap] = e.detail.split(' ║ ');
+        if (userDetail) line += ' — ' + userDetail;
+        line += '\n' + ' '.repeat(34) + '↳ ' + snap;
+      } else {
+        line += ' — ' + e.detail;
+      }
+    }
+    return line;
+  }).join('\n');
+  const blob = new Blob([header + lines], { type: 'text/plain;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
@@ -1659,6 +1801,8 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       S.playing    = true; S.loading = false; S.retryCount = 0;
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
       RLog.play('재생 시작 성공');
+      // 백그라운드에서 재생 성공 시 실제 재생 감시 즉시 시작
+      if (document.visibilityState === 'hidden') RLog.startBgWatch();
 
       // ★ 재생 시작 시 라이브 엣지 강제 동기화
       // HLS.js가 backBufferLength:0 + startPosition:-1 을 적용했지만
@@ -1781,6 +1925,7 @@ function togglePlay() {
     audio.pause(); S.playing = false;
     localStorage.setItem('radio_playing', '0');
     releaseWakeLock(); // ★ 사용자 정지 시 WakeLock 해제
+    RLog.stopBgWatch();
     RLog.stop('사용자 정지 (일시정지 버튼)');
     updateNowPlaying(); renderStations(); updateMediaSession();
   } else {
@@ -1838,7 +1983,7 @@ audio.addEventListener('stalled', () => {
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; }
   if (S.playing && S.current && !S.loading) {
-    RLog.stop('외부 원인으로 재생 중단 (OS/통화/음성입력)');
+    RLog.call('통화/음성입력으로 재생 중단 감지');
     S.wasPlaying = true;
     S.needReconnect = true;
     S.playing = false;
@@ -1903,7 +2048,7 @@ function ensureAudioCtxWatch() {
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
     if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
-      console.info('[AudioCtx] running 복귀 → 재연결 시도');
+      RLog.call('AudioContext running 복귀 (통화 종료 감지)');
       // ★ 포그라운드: 즉시 재연결
       // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
       if (document.visibilityState !== 'hidden') {
@@ -1949,20 +2094,20 @@ let stopCallWatch = () => {};
     // ★ 소프트 재연결 먼저 시도 — HLS가 살아있으면 play()만 재호출
     // 알림음·짧은 인터럽트는 HLS 스트림이 유효하므로 전체 재연결(2~3초 침묵) 불필요
     if (S.hls && audio.src) {
-      RLog.reconnect('인터럽트 종료 → play() 재시도 (소프트 재연결)');
+      RLog.call('통화/인터럽트 종료 → play() 소프트 재연결 시도');
       S.userPaused = true; // pause 핸들러 오발동 방지
       setTimeout(() => {
         audio.play().then(() => {
           // ★ 소프트 재연결 성공 — HLS 인스턴스 재사용, 끊김 최소화
           reconnectingCall = false;
           S.playing = true; S.loading = false; S.userPaused = false;
-          RLog.play('소프트 재연결 성공 (play() 재시도)');
+          RLog.call('소프트 재연결 성공 ✅');
           updateNowPlaying(); renderStations(); updateMediaSession();
           startWatchdog();
         }).catch(() => {
           // ★ play() 실패 → 전체 재연결로 폴백
           reconnectingCall = false;
-          RLog.reconnect('소프트 재연결 실패 → 전체 재연결');
+          RLog.call('소프트 재연결 실패 → 전체 재연결 전환');
           _fullReconnect();
         });
       }, 600); // 인터럽트 해제까지 최소 대기
@@ -1970,7 +2115,7 @@ let stopCallWatch = () => {};
     }
 
     // HLS가 없거나 src가 비어있으면 바로 전체 재연결
-    RLog.reconnect('통화/음성입력 종료 → 전체 재연결');
+    RLog.call('통화/음성입력 종료 → 전체 재연결 준비');
     _fullReconnect();
   }
 
@@ -1992,7 +2137,7 @@ let stopCallWatch = () => {};
     setTimeout(() => {
       // ★ 백그라운드에서도 통화 종료 후 전체 재연결 허용
       // scheduleRetry가 hidden 상태에서 wasPlaying=true를 보존하므로 루프 안전
-      RLog.reconnect('통화 종료 → 전체 재연결 실행' + (document.visibilityState === 'hidden' ? ' (백그라운드)' : ''));
+      RLog.call('통화 종료 → 전체 재연결 실행' + (document.visibilityState === 'hidden' ? ' (백그라운드에서 재생 복구)' : ' (포그라운드)'));
       playStation(S.current, true);  // 긴 통화 후 URL 강제 갱신
       setTimeout(() => { reconnectingCall = false; }, 2000);
     }, 1200);
@@ -2036,7 +2181,9 @@ let stopCallWatch = () => {};
       // ★ 백그라운드 진입 시 재생/로딩 상태 저장 — onFail 타이밍 레이스 대비
       S._hiddenWasActive = S.playing || S.loading || S.wasPlaying;
       // ★ 로그는 wasPlaying 보존 후 출력 — 정확한 상태 반영
-      RLog.info('앱 백그라운드 진입', `playing=${S.playing}, loading=${S.loading}, wasPlaying=${S.wasPlaying}`);
+      RLog.infoS('앱 백그라운드 진입');
+      // ★ 백그라운드 실제 재생 감시 시작 (3초마다 currentTime 변화 체크)
+      if (S.playing) RLog.startBgWatch();
 
       // ★ 백그라운드 진입 시 모든 재시도·폴링 즉시 중단
       // → 백그라운드에서 manifestLoadError 루프 완전 차단
@@ -2065,7 +2212,8 @@ let stopCallWatch = () => {};
     }
 
     // ★ 포그라운드 복귀
-    RLog.info('앱 포그라운드 복귀', `playing=${S.playing}, wasPlaying=${S.wasPlaying}`);
+    RLog.stopBgWatch(); // 포그라운드 복귀 — 백그라운드 감시 중단
+    RLog.infoS('앱 포그라운드 복귀');
 
     // 1) 워치독 재시작
     if (S._watchdogPaused && S.playing && !S.loading) {
@@ -2097,7 +2245,7 @@ let stopCallWatch = () => {};
     if (!S.current) return;
     // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
     if (S.wasPlaying || S.playing) {
-      RLog.reconnect('네트워크 온라인 복귀 → 재연결 시도');
+      RLog.net('네트워크 온라인 복귀 → 재연결 시도');
       setTimeout(() => {
         stopWatchdog(); clearRetryTimer();
         S.wasPlaying = false; S.needReconnect = false;
@@ -2170,11 +2318,11 @@ window.addEventListener('offline', () => {
 
   // ★ 백그라운드 진입 직후 500ms 이내 offline은 OS 절전 오감지로 무시
   if (_bgHiddenAt && Date.now() - _bgHiddenAt < 500) {
-    RLog.warn('offline 이벤트 무시 (백그라운드 진입 직후 OS 절전 오감지)');
+    RLog.net('offline 이벤트 무시 (백그라운드 진입 직후 OS 절전 오감지)');
     return;
   }
 
-  RLog.error('네트워크 오프라인 감지 — 방송 중단');
+  RLog.net('네트워크 오프라인 감지 — 방송 중단');
   if (S.playing) { S.wasPlaying = true; S.playing = false; }
   clearRetryTimer(); stopWatchdog(); // ★ 워치독 즉시 정리
   if (S.hls) S.hls.stopLoad();

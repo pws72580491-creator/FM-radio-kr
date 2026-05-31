@@ -153,14 +153,20 @@ header {
   display: flex; align-items: center; gap: 5px;
   padding: 5px 11px;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--muted);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
   font-size: 11px;
   font-family: var(--kr);
   cursor: pointer;
   transition: all .2s;
   white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+[data-theme="light"] #syncBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+  color: var(--muted);
 }
 #syncBtn.on {
   background: rgba(0,200,100,0.12);
@@ -178,19 +184,116 @@ header {
   animation: blink 1.4s ease-in-out infinite;
 }
 
-/* 테마 버튼 */
+/* 테마 버튼 — 헤더 */
 #themeBtn {
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--panel);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 17px;
   display: flex; align-items: center; justify-content: center;
-  transition: transform .2s;
+  transition: transform .2s, background .2s;
   flex-shrink: 0;
+  backdrop-filter: blur(4px);
 }
-#themeBtn:hover { transform: rotate(20deg); }
+#themeBtn:hover { transform: rotate(20deg); background: rgba(255,255,255,0.18); }
+[data-theme="light"] #themeBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+}
+[data-theme="light"] #themeBtn:hover { background: rgba(0,0,0,0.12); }
+
+/* 취침 타이머 버튼 — Now Playing 라벨 끝 */
+.waveform-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 12px 0 4px;
+}
+#sleepBtn {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, background .2s, border-color .2s;
+  backdrop-filter: blur(4px);
+}
+#sleepBtn:hover { transform: scale(1.12); background: rgba(255,255,255,0.22); }
+#sleepBtn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  animation: sleep-pulse 2s infinite;
+}
+@keyframes sleep-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(233,69,96,0); }
+}
+
+/* 취침 타이머 시트 */
+.sleep-bg {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.sleep-bg.show { opacity: 1; pointer-events: all; }
+.sleep-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 0 calc(var(--sab) + 20px);
+  width: min(520px,100%);
+  display: flex; flex-direction: column;
+}
+.sleep-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sleep-title { font-size: 15px; font-weight: 700; letter-spacing: .05em; color: var(--text); }
+.sleep-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+/* 활성 카운트다운 */
+.sleep-active { text-align: center; padding: 10px 0; }
+.sleep-countdown {
+  font-size: 56px; font-weight: 800; letter-spacing: .04em;
+  color: var(--red); font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.sleep-countdown-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.sleep-active-btns { margin-top: 20px; display: flex; justify-content: center; }
+
+/* 프리셋 버튼 */
+.sleep-presets {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+}
+.sleep-preset-btn {
+  padding: 12px 8px; border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.sleep-preset-btn:hover, .sleep-preset-btn:active {
+  background: var(--red); color: #fff; border-color: var(--red);
+}
+.sleep-cancel-btn { background: var(--bg3); color: var(--red); border-color: var(--red); padding: 12px 32px; }
+.sleep-cancel-btn:hover { background: var(--red); color: #fff; }
+
+/* 직접 입력 */
+.sleep-custom { display: flex; flex-direction: column; gap: 8px; }
+.sleep-custom-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.sleep-custom-row { display: flex; gap: 8px; }
+.sleep-input {
+  flex: 1; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 15px;
+}
+.sleep-custom-confirm { flex-shrink: 0; padding: 10px 20px; }
+.sleep-desc { font-size: 11px; color: var(--muted); line-height: 1.6; text-align: center; }
 
 /* 설치 버튼 */
 #installBtn {
@@ -251,7 +354,7 @@ header {
 .waveform {
   display: flex; align-items: flex-end;
   gap: 3px; height: 36px;
-  margin-bottom: 18px;
+  flex: 1;
 }
 .wave-bar {
   width: 4px; background: var(--red);
@@ -701,10 +804,17 @@ input[type=range]::-webkit-slider-thumb {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; font-family: var(--mono);
   padding: 4px 10px; border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--bg2); color: var(--muted);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
   cursor: pointer; transition: all .2s;
   letter-spacing: .5px; white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+[data-theme="light"] #accountBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+  color: var(--muted);
 }
 #accountBtn.logged-in {
   border-color: var(--red); color: var(--red);
@@ -893,17 +1003,22 @@ input[type=range]::-webkit-slider-thumb {
 
   <!-- Now Playing -->
   <div class="now-playing" id="nowPlaying">
-    <div class="np-label">▶ NOW PLAYING</div>
+    <div class="np-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>▶ NOW PLAYING</span>
+      <button id="sleepBtn" onclick="openSleepTimer()" aria-label="취침 타이머" title="취침 타이머">⏱</button>
+    </div>
     <div class="np-station" id="npStation">채널을 선택하세요</div>
     <div class="np-freq"    id="npFreq">—</div>
 
-    <div class="waveform paused" id="waveform">
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
-      <div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="waveform-row">
+      <div class="waveform paused" id="waveform">
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
     </div>
 
     <div class="controls">
@@ -1023,6 +1138,45 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 </div>
 
+<!-- 취침 타이머 시트 -->
+<div class="sleep-bg" id="sleepBg" onclick="closeSleepTimer(event)">
+  <div class="sleep-sheet" id="sleepSheet">
+    <div class="sleep-header">
+      <span class="sleep-title">⏱ 취침 타이머</span>
+      <button class="log-close" onclick="closeSleepTimer()">✕</button>
+    </div>
+    <div class="sleep-body">
+      <!-- 활성 타이머 표시 -->
+      <div id="sleepActive" class="sleep-active" style="display:none">
+        <div class="sleep-countdown" id="sleepCountdown">00:00</div>
+        <div class="sleep-countdown-label">후 자동 정지</div>
+        <div class="sleep-active-btns">
+          <button class="sleep-preset-btn sleep-cancel-btn" onclick="cancelSleepTimer()">⏹ 타이머 취소</button>
+        </div>
+      </div>
+      <!-- 타이머 설정 -->
+      <div id="sleepSetup" class="sleep-setup">
+        <div class="sleep-presets">
+          <button class="sleep-preset-btn" onclick="setSleepTimer(10)">10분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(20)">20분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(30)">30분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(60)">1시간</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(90)">1시간 30분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(120)">2시간</button>
+        </div>
+        <div class="sleep-custom">
+          <span class="sleep-custom-label">직접 입력</span>
+          <div class="sleep-custom-row">
+            <input type="number" id="sleepCustomMin" min="1" max="480" placeholder="분" class="sleep-input">
+            <button class="sleep-preset-btn sleep-custom-confirm" onclick="setSleepTimerCustom()">설정</button>
+          </div>
+        </div>
+        <div class="sleep-desc">⏰ 타이머 종료 시 볼륨이 서서히 줄어든 후 자동으로 정지됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 로그 버튼 -->
 <button id="logBtn" onclick="openLog()" title="재생 로그">📋</button>
 
@@ -1043,7 +1197,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.8</div>
+<div id="versionBadge" onclick="openChangelog()">v2.7.2</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1125,8 +1279,22 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.8';
+const APP_VERSION = 'v2.7.2';
 const CHANGELOG = [
+  { version: 'v2.7.2', date: '2026-05-31', changes: [
+    '[버그수정] 취침 타이머 종료 시 CALL 로그 루프 + 채널 재선택 반복 버그 수정 — togglePlay() 대신 직접 정지 로직 인라인으로 교체 (playing=false 상태에서 togglePlay 호출 시 playStation 분기 진입 문제)',
+    '[버그수정] 페이드아웃 중 pause 이벤트 → 통화 감지 오판 수정 — 페이드 시작 전 S.userPaused=true 설정 + 인터벌 내내 유지',
+    '[개선] 취침 타이머 버튼을 NOW PLAYING 라벨 끝으로 이동 — 웨이브폼 옆보다 더 자연스러운 배치',
+  ]},
+  { version: 'v2.7.0', date: '2026-05-30', changes: [
+    '[개선] 다크 모드에서 헤더 버튼(취침 타이머·테마·함께 듣기·계정)이 잘 안 보이던 문제 수정 — 반투명 흰색 배경 + 밝은 테두리로 교체, 라이트 모드는 반투명 검정으로 별도 적용',
+  ]},
+  { version: 'v2.6.9', date: '2026-05-30', changes: [
+    '[신기능] 취침 타이머 추가 — 헤더 ⏱ 버튼으로 설정. 10/20/30분·1시간·1.5시간·2시간 프리셋 + 직접 입력(1~480분)',
+    '[개선] 타이머 종료 30초 전부터 볼륨 서서히 감소 후 자동 정지 (페이드아웃)',
+    '[개선] 타이머 활성 시 헤더 버튼 빨간색 + 펄스 애니메이션으로 표시, 남은 시간 툴팁 표시',
+    '[개선] 취침 타이머 동작 로그 기록',
+  ]},
   { version: 'v2.6.8', date: '2026-05-30', changes: [
     '[개선] 로그 시스템 전면 강화 — CALL(통화)/NET(네트워크)/BG_PLAY(백그라운드 재생 확인)/BG_FAIL(백그라운드 재생 실패)/STATE(상태 스냅샷) 레벨 추가',
     '[개선] 모든 주요 로그에 핵심 상태 스냅샷 자동 첨부 — playing/loading/wasPlaying/hidden/audio.paused/hls/ctx/retry/net 실시간 기록',
@@ -2508,6 +2676,176 @@ document.addEventListener('visibilitychange', () => {
     requestWakeLock();
   }
 });
+
+/* ════════════════════════════════════════
+   취침 타이머
+════════════════════════════════════════ */
+const SleepTimer = (() => {
+  let _endTime   = 0;      // 종료 시각 (timestamp)
+  let _ticker    = null;   // 1초 인터벌
+  let _fadeTimer = null;   // 페이드아웃 인터벌
+  let _origVol   = 1;      // 페이드 전 원래 볼륨
+
+  // 남은 초
+  function remaining() {
+    return Math.max(0, Math.round((_endTime - Date.now()) / 1000));
+  }
+
+  // MM:SS 포맷
+  function fmt(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  // UI 업데이트
+  function _updateUI() {
+    const rem  = remaining();
+    const el   = document.getElementById('sleepCountdown');
+    if (el) el.textContent = fmt(rem);
+    // 헤더 버튼에 남은 시간 표시 (1분 미만이면 초 표시)
+    const btn  = document.getElementById('sleepBtn');
+    if (btn && _ticker) {
+      btn.title = `취침 타이머 — ${fmt(rem)} 남음`;
+    }
+  }
+
+  // 볼륨 페이드아웃 후 정지 (30초에 걸쳐 0으로)
+  function _fadeAndStop() {
+    const audio = window.audio;
+    if (!audio) { stop(true); return; }
+    _origVol = audio.volume;
+    const steps    = 60;   // 30초 × 2steps/sec
+    const stepVol  = _origVol / steps;
+    let   count    = 0;
+    // ★ 페이드 중 pause 이벤트 → CALL 루프 방지
+    // volume 조작이 브라우저에 따라 pause를 유발할 수 있으므로 userPaused 플래그 선점
+    if (window.S) window.S.userPaused = true;
+    RLog.info('취침 타이머 — 볼륨 페이드아웃 시작 (30초)');
+    _fadeTimer = setInterval(() => {
+      count++;
+      audio.volume = Math.max(0, _origVol - stepVol * count);
+      // ★ 페이드 인터벌 내내 userPaused 유지 (매 tick마다 재확인)
+      if (window.S) window.S.userPaused = true;
+      if (count >= steps) {
+        clearInterval(_fadeTimer); _fadeTimer = null;
+        audio.volume = _origVol; // 볼륨 원복
+        stop(true);              // 실제 정지
+      }
+    }, 500);
+  }
+
+  // 타이머 시작 (minutes: 분)
+  function start(minutes) {
+    clear();
+    _endTime = Date.now() + minutes * 60 * 1000;
+    RLog.info(`취침 타이머 설정 — ${minutes}분 후 자동 정지`);
+    // 헤더 버튼 활성화
+    document.getElementById('sleepBtn')?.classList.add('active');
+    // 1초마다 카운트다운 갱신
+    _ticker = setInterval(() => {
+      const rem = remaining();
+      _updateUI();
+      // 30초 남으면 페이드 시작
+      if (rem === 30 && !_fadeTimer) _fadeAndStop();
+      // 0초 도달 (페이드 없이 즉시 정지 폴백)
+      if (rem <= 0 && !_fadeTimer) stop(true);
+    }, 1000);
+    _updateUI();
+    _renderSheet();
+  }
+
+  // 타이머 취소
+  function cancel() {
+    if (!_ticker) return;
+    clear();
+    RLog.info('취침 타이머 취소');
+    _renderSheet();
+    showToast('⏱ 취침 타이머가 취소됐습니다.');
+  }
+
+  // 내부 정리
+  function clear() {
+    if (_ticker)    { clearInterval(_ticker);    _ticker    = null; }
+    if (_fadeTimer) { clearInterval(_fadeTimer); _fadeTimer = null; }
+    _endTime = 0;
+    document.getElementById('sleepBtn')?.classList.remove('active');
+    const btn = document.getElementById('sleepBtn');
+    if (btn) btn.title = '취침 타이머';
+  }
+
+  // 재생 정지 실행
+  function stop(withToast) {
+    clear();
+    // ★ togglePlay() 호출 금지 — S.playing=false 상태에서 호출하면
+    //    else 분기(playStation)로 진입해 재생이 다시 시작되는 버그 발생
+    // 대신 정지에 필요한 동작만 직접 인라인으로 실행
+    const S     = window.S;
+    const audio = window.audio;
+    if (audio) audio.volume = _origVol; // 볼륨 원복 (페이드 후)
+    if (S && (S.playing || S.loading)) {
+      if (typeof clearRetryTimer === 'function') clearRetryTimer();
+      if (typeof stopWatchdog    === 'function') stopWatchdog();
+      if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
+      S.userPaused    = true;
+      S.wasPlaying    = false;
+      S.needReconnect = false;
+      if (audio) { try { audio.pause(); } catch(e) {} }
+      S.playing = false;
+      S.loading = false;
+      try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
+      if (typeof releaseWakeLock    === 'function') releaseWakeLock();
+      if (typeof updateNowPlaying   === 'function') updateNowPlaying();
+      if (typeof renderStations     === 'function') renderStations();
+      if (typeof updateMediaSession === 'function') updateMediaSession();
+      RLog.stop('취침 타이머 정지');
+    }
+    if (withToast) {
+      showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.');
+      RLog.info('취침 타이머 종료 — 재생 정지');
+    }
+    _renderSheet();
+  }
+
+  // 시트 UI 렌더 (활성/설정 전환)
+  function _renderSheet() {
+    const active = !!_ticker;
+    const elActive = document.getElementById('sleepActive');
+    const elSetup  = document.getElementById('sleepSetup');
+    if (elActive) elActive.style.display = active ? 'block' : 'none';
+    if (elSetup)  elSetup.style.display  = active ? 'none'  : 'block';
+    if (active) _updateUI();
+  }
+
+  return { start, cancel, isActive: () => !!_ticker, renderSheet: _renderSheet };
+})();
+
+function openSleepTimer() {
+  SleepTimer.renderSheet();
+  document.getElementById('sleepBg').classList.add('show');
+}
+function closeSleepTimer(e) {
+  if (e && e.target !== document.getElementById('sleepBg')) return;
+  document.getElementById('sleepBg').classList.remove('show');
+}
+function setSleepTimer(min) {
+  SleepTimer.start(min);
+  closeSleepTimer();
+  showToast(`⏱ ${min >= 60 ? min/60 + '시간' : min + '분'} 후 자동 정지`);
+}
+function setSleepTimerCustom() {
+  const val = parseInt(document.getElementById('sleepCustomMin')?.value);
+  if (!val || val < 1 || val > 480) {
+    showToast('⚠️ 1~480분 사이로 입력해주세요.'); return;
+  }
+  setSleepTimer(val);
+}
+function cancelSleepTimer() {
+  SleepTimer.cancel();
+  closeSleepTimer();
+}
 
 /* ══ firebase.js ══ */
 /* ════════════════════════════════════════

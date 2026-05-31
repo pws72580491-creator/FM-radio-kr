@@ -23,8 +23,17 @@
 <!-- FOUC 방지 (테마 깜빡임 차단) -->
 <script>
 (function(){
-  var t = localStorage.getItem('radio_theme');
-  if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+  var t = localStorage.getItem('radio_theme') || 'auto';
+  if (t === 'light') {
+    document.documentElement.setAttribute('data-theme','light');
+  } else if (t === 'auto') {
+    // 자동: 시스템 설정 우선, 없으면 시간대(6시~18시 라이트)
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var h = new Date().getHours();
+    var isDay = h >= 6 && h < 18;
+    var autoLight = prefersDark ? false : isDay;
+    if (autoLight) document.documentElement.setAttribute('data-theme','light');
+  }  // dark는 기본값이므로 setAttribute 불필요
 })();
 </script>
 
@@ -856,7 +865,7 @@ input[type=range]::-webkit-slider-thumb {
       <button id="syncBtn" onclick="toggleSync()" aria-label="함께 듣기">
         <span class="sync-dot"></span>함께 듣기
       </button>
-      <button id="themeBtn" onclick="toggleTheme()" aria-label="테마 전환">🌙</button>
+      <button id="themeBtn" onclick="toggleTheme()" aria-label="테마 전환" title="테마 전환 (다크 → 라이트 → 자동)">🌙</button>
       <button id="accountBtn" onclick="openAccountModal()" aria-label="계정">👤</button>
       <button id="installBtn" onclick="installApp()">📲 홈 화면 추가</button>
     </div>
@@ -1013,7 +1022,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.6.6</div>
+<div id="versionBadge" onclick="openChangelog()">v2.6.7</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1095,8 +1104,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.6.6';
+const APP_VERSION = 'v2.6.7';
 const CHANGELOG = [
+  { version: 'v2.6.7', date: '2026-05-30', changes: [
+    '[신기능] 테마 자동 전환 모드 추가 — 버튼 클릭 시 다크→라이트→자동 3단계 순환. 자동 모드는 시스템 설정(prefers-color-scheme) 우선, 없으면 시간대(오전 6시~오후 6시 라이트)로 자동 전환',
+    '[개선] 자동 모드에서 매 분마다 시간대 체크 및 시스템 설정 변경 실시간 감지',
+    '[개선] 테마 전환 시 meta theme-color 동기화 및 토스트 알림 표시',
+  ]},
   { version: 'v2.6.6', date: '2026-05-30', changes: [
     '[개선] 통화 종료 후 백그라운드 상태에서도 자동 재생 복구 — AudioContext running 복귀 시 tryReconnect가 백그라운드에서도 소프트/전체 재연결 실행. 포그라운드 복귀 없이도 방송 재개',
     '[안전] 백그라운드 재연결 허용 시에도 manifestLoadError 루프 차단 유지 — scheduleRetry의 hidden 상태 보호 로직이 루프를 방지',
@@ -3073,20 +3087,74 @@ function showToast(msg) {
 /* ════════════════════════════════════════
    테마
 ════════════════════════════════════════ */
-function toggleTheme() {
-  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-  applyTheme(next); localStorage.setItem('radio_theme', next);
+/* ════════════════════════════════════════
+   테마 관리 — 다크 / 라이트 / 자동 3단계
+════════════════════════════════════════ */
+let _autoThemeTimer = null; // 자동 모드 시간대 체크 인터벌
+
+function _getAutoTheme() {
+  // 시스템 설정 우선 반영
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (prefersDark) return 'dark';
+  // 시스템 설정이 라이트이거나 설정 없으면 시간대로 판단 (6시~18시 라이트)
+  const h = new Date().getHours();
+  return (h >= 6 && h < 18) ? 'light' : 'dark';
 }
-function applyTheme(theme) {
+
+function _applyThemeClass(theme) {
+  // theme: 'dark' | 'light' (실제 적용값)
   if (theme === 'light') {
-    document.documentElement.dataset.theme = 'light';
-    document.getElementById('themeBtn').textContent = '☀️';
+    document.documentElement.setAttribute('data-theme', 'light');
   } else {
-    delete document.documentElement.dataset.theme;
-    document.getElementById('themeBtn').textContent = '🌙';
+    document.documentElement.removeAttribute('data-theme');
+  }
+  // meta theme-color도 동기화
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#0d0d1a';
+}
+
+function applyTheme(mode) {
+  // mode: 'dark' | 'light' | 'auto'
+  const btn = document.getElementById('themeBtn');
+  if (_autoThemeTimer) { clearInterval(_autoThemeTimer); _autoThemeTimer = null; }
+
+  if (mode === 'auto') {
+    btn.textContent = '🔄';
+    btn.title = '자동 모드 (시스템 설정 / 시간대 연동) — 클릭 시 다크로';
+    _applyThemeClass(_getAutoTheme());
+    // 매 분마다 시간대 체크 (일출/일몰 경계 자동 전환)
+    _autoThemeTimer = setInterval(() => {
+      _applyThemeClass(_getAutoTheme());
+    }, 60 * 1000);
+    // 시스템 설정 변경 실시간 감지
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = () => {
+      if (localStorage.getItem('radio_theme') === 'auto') _applyThemeClass(_getAutoTheme());
+    };
+  } else if (mode === 'light') {
+    btn.textContent = '☀️';
+    btn.title = '라이트 모드 — 클릭 시 자동으로';
+    _applyThemeClass('light');
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = null;
+  } else {
+    btn.textContent = '🌙';
+    btn.title = '다크 모드 — 클릭 시 라이트로';
+    _applyThemeClass('dark');
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = null;
   }
 }
-applyTheme(localStorage.getItem('radio_theme') || 'dark');
+
+function toggleTheme() {
+  // 다크 → 라이트 → 자동 → 다크 순환
+  const cur = localStorage.getItem('radio_theme') || 'auto';
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'auto' : 'dark';
+  localStorage.setItem('radio_theme', next);
+  applyTheme(next);
+  const label = next === 'dark' ? '다크 모드' : next === 'light' ? '라이트 모드' : '자동 모드';
+  showToast(`${next === 'dark' ? '🌙' : next === 'light' ? '☀️' : '🔄'} ${label}`);
+}
+
+// 앱 시작 시 저장된 모드 적용 (기본값: auto)
+applyTheme(localStorage.getItem('radio_theme') || 'auto');
 
 /* ════════════════════════════════════════
    PWA

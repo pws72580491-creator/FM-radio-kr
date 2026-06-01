@@ -1212,7 +1212,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.7.4</div>
+<div id="versionBadge" onclick="openChangelog()">v2.7.5</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1294,8 +1294,44 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.7.4';
+const APP_VERSION = 'v2.8.1';
 const CHANGELOG = [
+  { version: 'v2.8.1', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 정지 순서 교정 — audio.pause() 전에 모든 플래그(wasPlaying/userPaused/playing 등) 먼저 세팅, localStorage도 pause() 전에 기록해 bfcache 레이스 방지',
+    '[버그수정] audio.src=\'\' 를 setTimeout 50ms 뒤에 실행 — emptied 이벤트로 인한 추가 pause 발화 방지',
+    '[버그수정] 페이드아웃이 백그라운드 setInterval throttle로 30초보다 길어지는 문제 — step 카운트 대신 절대 시각(fadeEndAt) 기준으로 볼륨 비율 계산',
+  ]},
+  { version: 'v2.8.0', date: '2026-06-01', changes: [
+    '[버그수정] 자동 테마 시간 전환 안 됨 — 다크모드 고정 기기(LG 등)에서 prefers-color-scheme:dark가 항상 true라 시간대 로직이 실행 안 되던 문제. 라이트 명시 선택 시에만 라이트 우선, 나머지는 시간대(6시~18시 라이트) 판단으로 변경',
+    '[버그수정] 취침 타이머 종료 후 재생 계속 — stop()에서 stopCallWatch() 추가 및 wasPlaying=false를 가장 먼저 세팅. reconnectingCall 3초 타이머 제거(wasPlaying=false가 이미 tryReconnect 진입 차단)',
+    '[버그수정] 백그라운드에서 통화 감지 폴링이 pause 이벤트에 반응 — initCallReconnect의 pause 리스너에 hidden 체크 추가',
+    '[버그수정] 버전 배지가 Firebase 초기화 완료 전까지 이전 버전 표시 — versionBadge를 스크립트 최상단에서 즉시 업데이트',
+    '[개선] bfcache 복원 대응 — pageshow(persisted=true) 이벤트에서 재생 상태 복원 (Android 탭 메모리 해제 후 복귀 시 자동 재생 재개)',
+  ]},
+  { version: 'v2.7.9', date: '2026-06-01', changes: [
+    '[버그수정] 화면 잠금 시 재생 중단 — pause 핸들러에 visibilityState hidden 체크 추가. 백그라운드에서 OS가 발화하는 pause 이벤트를 통화 감지로 오판하던 핵심 원인 수정',
+    '[버그수정] 다른 앱 전환 시 재생 중단 — visibilitychange hidden 분기에서 S.playing=true인 오디오는 절대 pause/src 초기화하지 않도록 조건을 S.loading && !S.playing으로 강화',
+    '[버그수정] resumeOnGesture 이중 실행 — _gestureUsed 플래그로 touchstart+click 동시 등록 시 두 번째 호출 차단, capture 단계 등록으로 안정화',
+  ]},
+  { version: 'v2.7.8', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 후 포그라운드 복귀 시 불필요한 재연결 — stop()에서 S._hiddenWasActive=false 초기화 추가, visibilitychange 재연결 조건을 wasPlaying||_hiddenWasActive에서 wasPlaying 단독으로 강화',
+    '[버그수정] 로그 상태값 항상 false로 표시 — RLog.stop()을 상태 초기화 전에 먼저 호출하도록 순서 수정',
+  ]},
+  { version: 'v2.7.7', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 카운트다운 미표시 — _renderSheet()에서 display:block 적용 후 requestAnimationFrame으로 _updateUI() 호출 (display:none 상태에서 textContent 업데이트 시 렌더링 누락 문제 해결)',
+    '[버그수정] 취침 타이머 종료 후 재생 계속 — stop()에서 S.playing/S.loading 조건 제거, 항상 audio.pause()+audio.src 초기화+hls.destroy() 실행 (HLS 버퍼링 중 상태 불일치로 정지 로직 자체가 실행 안 되던 문제 해결)',
+  ]},
+  { version: 'v2.7.6', date: '2026-06-01', changes: [
+    '[버그수정] 통화/음성입력 없는데 CALL로 오감지 — audio.src가 비어있는 상태(재생 중 아님)에서 발생한 pause 이벤트를 무시하도록 가드 추가',
+    '[버그수정] 취침 타이머 카운트다운 숫자 표시 안 됨 — 시트 열릴 때 50ms 후 강제 렌더 갱신 추가, _updateUI에서 el.style.display 명시 보장',
+    '[버그수정] 취침 타이머 종료 후 계속 재생 — stop() 실행 시 reconnectingCall=true를 3초 유지해 initCallReconnect의 tryReconnect 자동 재시작 차단',
+  ]},
+  { version: 'v2.7.5', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 페이드 시작 조건 rem===30 → rem<=30 — setInterval 부정확으로 30을 건너뛰면 페이드 미시작 문제 해결',
+    '[버그수정] 타이머 stop() 시 justStarted 가드 즉시 해제 — pause 핸들러 억제가 audio.pause()를 막는 문제 해결',
+    '[버그수정] callId 증가를 S.playing||S.loading 조건 내부로 이동 — 불필요한 증가로 인한 onOK 무력화 방지',
+    '[개선] 자동재생 차단(브라우저 정책) 시 로그 기록 추가 — 재생 실패 원인 추적 가능',
+  ]},
   { version: 'v2.7.4', date: '2026-06-01', changes: [
     '[버그수정] 재생 직후 pause 오발동 → CALL 루프 재발 수정 — S.justStarted 타임스탬프 가드 추가 (onOK 후 1500ms 이내 pause 억제)',
     '[버그수정] 로그 파일명 날짜 오류 수정 — toISOString(UTC) → 로컬 날짜 기준으로 변경 (한국 새벽 내보내기 시 하루 전 날짜로 찍히던 문제)',
@@ -2060,6 +2096,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         hls.startLoad(-1);
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
+          RLog.warn('자동재생 차단 (브라우저 정책) — 화면 탭 필요');
           showToast('▶ 화면을 탭하면 재생됩니다');
           onFail(false);
         });
@@ -2122,7 +2159,10 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
       audio.src = url; audio.volume = S.volume;
-      audio.play().then(onOK).catch(() => onFail(true));
+      audio.play().then(onOK).catch(e => {
+        RLog.warn('네이티브 HLS play() 실패', e?.message || '');
+        onFail(true);
+      });
     } else {
       showError('이 브라우저는 HLS를 지원하지 않습니다.');
       S.loading = false; updateNowPlaying(); updateActiveCard();
@@ -2205,6 +2245,23 @@ audio.addEventListener('pause', () => {
   //    내부적으로 발화하는 오발동 — CALL로 오판하지 않도록 억제
   if (S.justStarted && (Date.now() - S.justStarted) < 1500) {
     RLog.info('pause 이벤트 억제 (재생 직후 오발동)', `elapsed=${Date.now()-S.justStarted}ms`);
+    return;
+  }
+  // ★ audio.src가 없는 상태에서의 pause는 재생 중이 아님 — 무시
+  if (!audio.src || audio.src === '' || audio.src === location.href) {
+    RLog.info('pause 이벤트 무시 (audio.src 없음 — 재생 중 아님)');
+    return;
+  }
+  // ★ 백그라운드(화면 잠금·앱 전환) 상태에서 OS가 발화하는 pause는 통화 감지 대상이 아님
+  // → 화면을 내리면 OS가 audio.pause()를 호출해 이 핸들러가 트리거되어 재생이 끊기는 핵심 원인
+  if (document.visibilityState === 'hidden') {
+    RLog.info('pause 이벤트 무시 (백그라운드 — OS 발화)');
+    // 백그라운드에서 pause됐지만 재생 중이었다면 wasPlaying 보존
+    if (S.playing && S.current) {
+      S.wasPlaying = true;
+      S.playing    = false;
+      updateNowPlaying(); updateActiveCard();
+    }
     return;
   }
   if (S.playing && S.current && !S.loading) {
@@ -2393,6 +2450,8 @@ let stopCallWatch = () => {};
   stopCallWatch = stopWatch; // ★ playStation에서 인터벌 경쟁 차단용으로 외부 노출
 
   audio.addEventListener('pause', () => {
+    // ★ 백그라운드 상태나 wasPlaying=false(취침 타이머 정지 등)면 통화 감지 불필요
+    if (document.visibilityState === 'hidden') return;
     setTimeout(() => {
       if (S.wasPlaying && S.current && !reconnectingCall) startWatch();
     }, 500);
@@ -2411,22 +2470,19 @@ let stopCallWatch = () => {};
       // ★ 백그라운드 실제 재생 감시 시작 (3초마다 currentTime 변화 체크)
       if (S.playing) RLog.startBgWatch();
 
-      // ★ 백그라운드 진입 시 모든 재시도·폴링 즉시 중단
-      // → 백그라운드에서 manifestLoadError 루프 완전 차단
+      // ★ 백그라운드 진입 시 재시도·폴링 중단 (manifest 루프 방지)
       clearRetryTimer();
-      stopCallWatch(); // 통화감지 폴링 중단
+      stopCallWatch();
       stopWatchdog();
-      // ★ _voiceTimer도 백그라운드에서 반드시 중단
       if (typeof S._stopVoiceTimer === 'function') S._stopVoiceTimer();
 
       // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
       S._watchdogPaused = S.playing || S.loading;
 
-      // ★ 로딩/재연결 중이면 HLS 인스턴스 즉시 정리 (백그라운드 manifest 요청 중단)
-      // 이미 재생 성공 중인 경우는 오디오를 유지해 백그라운드 재생 허용
-      if (S.loading) {
+      // ★ 로딩 중(아직 재생 안 된 상태)일 때만 HLS 정리 — 이미 재생 성공 중인 audio는 절대 건드리지 않음
+      // → S.playing=true인 상태에서 pause()/src='' 하면 백그라운드 오디오가 즉시 끊김
+      if (S.loading && !S.playing) {
         if (S.hls) { S.hls.destroy(); S.hls = null; }
-        // ★ pause() 전에 wasPlaying 먼저 보존
         S.wasPlaying = true;
         S.userPaused = true;
         audio.pause(); audio.src = '';
@@ -2454,9 +2510,9 @@ let stopCallWatch = () => {};
       return;
     }
 
-    // ★ wasPlaying 또는 _hiddenWasActive이면 즉시 재연결
-    // _hiddenWasActive: 백그라운드 진입 시 재생 중이었으나 onFail 타이밍으로 wasPlaying이 소실된 케이스 대비
-    if ((S.wasPlaying || S._hiddenWasActive) && S.current && !S.playing && !S.loading) {
+    // ★ wasPlaying이면 즉시 재연결
+    // _hiddenWasActive는 단독 트리거로 사용하지 않음 — wasPlaying 소실 대비 보조 조건
+    if (S.wasPlaying && S.current && !S.playing && !S.loading) {
       RLog.reconnect('포그라운드 복귀 → 재연결');
       S.wasPlaying = false;
       S._hiddenWasActive = false;
@@ -2764,7 +2820,10 @@ const SleepTimer = (() => {
   function _updateUI() {
     const rem  = remaining();
     const el   = document.getElementById('sleepCountdown');
-    if (el) el.textContent = fmt(rem);
+    if (el) {
+      el.textContent = fmt(rem);
+      el.style.display = 'block'; // ★ 명시적 표시 보장
+    }
     // 헤더 버튼에 남은 시간 표시 (1분 미만이면 초 표시)
     const btn  = document.getElementById('sleepBtn');
     if (btn && _ticker) {
@@ -2777,22 +2836,20 @@ const SleepTimer = (() => {
     const audio = window.audio;
     if (!audio) { stop(true); return; }
     _origVol = audio.volume;
-    const steps    = 60;   // 30초 × 2steps/sec
-    const stepVol  = _origVol / steps;
-    let   count    = 0;
-    // ★ 페이드 중 pause 이벤트 → CALL 루프 방지
-    // volume 조작이 브라우저에 따라 pause를 유발할 수 있으므로 userPaused 플래그 선점
+    // ★ 페이드 종료 절대 시각 기준 — setInterval throttle로 steps 카운트가 틀어지는 문제 방지
+    const fadeEndAt  = Date.now() + 30 * 1000;
+    const startVol   = _origVol;
     if (window.S) window.S.userPaused = true;
     RLog.info('취침 타이머 — 볼륨 페이드아웃 시작 (30초)');
     _fadeTimer = setInterval(() => {
-      count++;
-      audio.volume = Math.max(0, _origVol - stepVol * count);
-      // ★ 페이드 인터벌 내내 userPaused 유지 (매 tick마다 재확인)
+      const elapsed = Date.now();
+      const ratio   = Math.min(1, (elapsed - (fadeEndAt - 30000)) / 30000);
+      audio.volume  = Math.max(0, startVol * (1 - ratio));
       if (window.S) window.S.userPaused = true;
-      if (count >= steps) {
+      if (elapsed >= fadeEndAt || audio.volume === 0) {
         clearInterval(_fadeTimer); _fadeTimer = null;
-        audio.volume = _origVol; // 볼륨 원복
-        stop(true);              // 실제 정지
+        audio.volume = startVol; // 볼륨 원복
+        stop(true);
       }
     }, 500);
   }
@@ -2809,7 +2866,7 @@ const SleepTimer = (() => {
       const rem = remaining();
       _updateUI();
       // 30초 남으면 페이드 시작
-      if (rem === 30 && !_fadeTimer) _fadeAndStop();
+      if (rem <= 30 && rem > 0 && !_fadeTimer) _fadeAndStop(); // ★ ===30 → <=30 (setInterval 부정확으로 30을 건너뛸 수 있음)
       // 0초 도달 (페이드 없이 즉시 정지 폴백)
       if (rem <= 0 && !_fadeTimer) stop(true);
     }, 1000);
@@ -2839,32 +2896,46 @@ const SleepTimer = (() => {
   // 재생 정지 실행
   function stop(withToast) {
     clear();
-    // ★ togglePlay() 호출 금지 — S.playing=false 상태에서 호출하면
-    //    else 분기(playStation)로 진입해 재생이 다시 시작되는 버그 발생
-    // 대신 정지에 필요한 동작만 직접 인라인으로 실행
     const S     = window.S;
     const audio = window.audio;
-    if (audio) audio.volume = _origVol; // 볼륨 원복 (페이드 후)
-    // ★ callId 증가 — 진행 중인 playStation 비동기 흐름(resolveStreamUrl→onOK)을 즉시 무력화
-    // S.loading=true 상태에서 타이머가 종료될 때 onOK가 뒤늦게 실행되는 것을 차단
+    if (S) S.justStarted = 0;
+    if (audio) audio.volume = _origVol;
+    // ★ callId 증가로 진행 중인 playStation 비동기 흐름 즉시 무력화
     if (S) S.callId = (S.callId || 0) + 1;
-    if (S && (S.playing || S.loading)) {
-      if (typeof clearRetryTimer === 'function') clearRetryTimer();
-      if (typeof stopWatchdog    === 'function') stopWatchdog();
-      if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
-      S.userPaused    = true;
-      S.wasPlaying    = false;
-      S.needReconnect = false;
-      if (audio) { try { audio.pause(); } catch(e) {} }
-      S.playing = false;
-      S.loading = false;
-      try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
-      if (typeof releaseWakeLock    === 'function') releaseWakeLock();
-      if (typeof updateNowPlaying   === 'function') updateNowPlaying();
-      if (typeof updateActiveCard   === 'function') updateActiveCard();
-      if (typeof updateMediaSession === 'function') updateMediaSession();
+
+    if (typeof clearRetryTimer === 'function') clearRetryTimer();
+    if (typeof stopWatchdog    === 'function') stopWatchdog();
+    if (typeof stopCallWatch   === 'function') stopCallWatch();
+
+    if (S) {
       RLog.stop('취침 타이머 정지');
+      // ★ 순서 중요: audio.pause() 전에 모든 플래그 먼저 세팅
+      // → pause 이벤트 핸들러들이 플래그를 보고 즉시 return하도록
+      S.wasPlaying       = false;
+      S.userPaused       = true;
+      S.needReconnect    = false;
+      S.playing          = false;
+      S.loading          = false;
+      S._hiddenWasActive = false;
+      window.reconnectingCall = false;
     }
+    // ★ localStorage도 audio.pause() 전에 — bfcache 복원 타이밍 레이스 방지
+    try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
+
+    if (S && S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
+    if (audio) {
+      try {
+        audio.pause();
+        // ★ src 초기화는 pause() 완전 처리 후 — emptied 이벤트로 인한 추가 pause 방지
+        setTimeout(() => { try { if (audio.src) audio.src = ''; } catch(e) {} }, 50);
+      } catch(e) {}
+    }
+
+    if (typeof releaseWakeLock    === 'function') releaseWakeLock();
+    if (typeof updateNowPlaying   === 'function') updateNowPlaying();
+    if (typeof updateActiveCard   === 'function') updateActiveCard();
+    if (typeof updateMediaSession === 'function') updateMediaSession();
+
     if (withToast) {
       showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.');
       RLog.info('취침 타이머 종료 — 재생 정지');
@@ -2877,9 +2948,13 @@ const SleepTimer = (() => {
     const active = !!_ticker;
     const elActive = document.getElementById('sleepActive');
     const elSetup  = document.getElementById('sleepSetup');
+    // ★ display를 먼저 적용한 후 _updateUI() 호출 — 숨겨진 상태에서 textContent 업데이트 시 렌더링 안 됨 방지
     if (elActive) elActive.style.display = active ? 'block' : 'none';
     if (elSetup)  elSetup.style.display  = active ? 'none'  : 'block';
-    if (active) _updateUI();
+    if (active) {
+      // ★ display 변경 후 브라우저 레이아웃 플러시를 기다린 뒤 텍스트 갱신
+      requestAnimationFrame(() => _updateUI());
+    }
   }
 
   return { start, cancel, isActive: () => !!_ticker, renderSheet: _renderSheet };
@@ -2891,6 +2966,8 @@ function openSleepTimer() {
   const notice = document.getElementById('sleepNoPlayNotice');
   if (notice) notice.style.display = (!S.playing && !S.loading) ? 'block' : 'none';
   document.getElementById('sleepBg').classList.add('show');
+  // ★ 시트가 화면에 나타난 후 카운트다운 강제 갱신 (CSS 전환 전 렌더링 누락 방지)
+  setTimeout(() => SleepTimer.renderSheet(), 50);
 }
 function closeSleepTimer(e) {
   if (e && e.target !== document.getElementById('sleepBg')) return;
@@ -3716,10 +3793,10 @@ function showToast(msg) {
 let _autoThemeTimer = null; // 자동 모드 시간대 체크 인터벌
 
 function _getAutoTheme() {
-  // 시스템 설정 우선 반영
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  if (prefersDark) return 'dark';
-  // 시스템 설정이 라이트이거나 설정 없으면 시간대로 판단 (6시~18시 라이트)
+  // ★ 시스템이 명시적으로 라이트를 선택한 경우만 라이트 우선
+  // 다크 설정인 경우에는 시간대(6시~18시)로 판단 — 항상 다크 설정인 기기 대응
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  if (prefersLight) return 'light';
   const h = new Date().getHours();
   return (h >= 6 && h < 18) ? 'light' : 'dark';
 }
@@ -4050,13 +4127,16 @@ if (_lastId) {
     updateNowPlaying(); renderStations();
     if (localStorage.getItem('radio_playing') === '1') {
       playStation(S.current);
+      let _gestureUsed = false;
       const resumeOnGesture = () => {
+        if (_gestureUsed) return;
+        _gestureUsed = true;
+        document.removeEventListener('touchstart', resumeOnGesture, true);
+        document.removeEventListener('click',      resumeOnGesture, true);
         if (!S.playing && !S.loading && S.current) playStation(S.current);
-        document.removeEventListener('touchstart', resumeOnGesture);
-        document.removeEventListener('click', resumeOnGesture);
       };
-      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true });
-      document.addEventListener('click', resumeOnGesture, { once: true, passive: true }); // ★ passive 추가
+      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true, capture: true });
+      document.addEventListener('click',      resumeOnGesture, { once: true, passive: true, capture: true });
     }
   }
 }
@@ -4119,9 +4199,27 @@ if (_lastId) {
   // ★ 로그 시스템 초기화 — IDB에서 기존 로그 로드
   RLog.load().then(() => {
     RLog.info('앱 시작', `${APP_VERSION}`);
-    document.getElementById('versionBadge').textContent = APP_VERSION; // ★ 항상 최신 버전 표시
   });
 })();
+
+// ★ versionBadge 즉시 표시 — Firebase 초기화 대기 없이 앱 시작 즉시 반영
+document.getElementById('versionBadge').textContent = APP_VERSION;
+
+/* ════════════════════════════════════════
+   bfcache 복원 (백 버튼·탭 복귀)
+   Android Chrome이 탭을 메모리에서 내렸다가 복원할 때
+   visibilitychange 없이 pageshow(persisted=true)만 발생
+════════════════════════════════════════ */
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return; // 일반 페이지 로드는 무시
+  RLog.info('bfcache 복원 — 재생 상태 확인');
+  // ★ bfcache에서 복원된 경우 오디오 상태가 frozen 상태일 수 있음
+  // wasPlaying이었다면 재연결 시도
+  if (S.current && (S.wasPlaying || localStorage.getItem('radio_playing') === '1')) {
+    S.wasPlaying = false;
+    setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current); }, 300);
+  }
+});
 
 </script>
 

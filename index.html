@@ -1294,8 +1294,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.1';
+const APP_VERSION = 'v2.8.2';
 const CHANGELOG = [
+  { version: 'v2.8.2', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 후 계속 재생 — S.sleepStopped 전용 플래그 도입. pause/play 핸들러, tryReconnect, AudioContext statechange, doReconnect(블루투스/음성), visibilitychange, pageshow(bfcache) 등 모든 자동 재연결 경로에 차단 가드 추가',
+    '[버그수정] 취침 타이머 토스트 미표시 — stop() 전체를 try-catch로 보호, 토스트 호출을 try 블록 밖으로 이동해 내부 예외와 무관하게 항상 표시',
+    '[버그수정] stop()에서 예외 발생 시 sleepStopped 설정 누락 — 플래그 설정을 try 블록 진입 전 가장 먼저 실행',
+  ]},
   { version: 'v2.8.1', date: '2026-06-01', changes: [
     '[버그수정] 취침 타이머 정지 순서 교정 — audio.pause() 전에 모든 플래그(wasPlaying/userPaused/playing 등) 먼저 세팅, localStorage도 pause() 전에 기록해 bfcache 레이스 방지',
     '[버그수정] audio.src=\'\' 를 setTimeout 50ms 뒤에 실행 — emptied 이벤트로 인한 추가 pause 발화 방지',
@@ -1612,6 +1617,7 @@ const AppState = {
   justStarted:   0,      // ★ onOK 직후 pause 오발동 방지용 타임스탬프 (ms)
   needReconnect: false,
   userPaused:    false,
+  sleepStopped:  false,  // ★ 취침 타이머 종료 후 모든 자동 재연결 차단 플래그
 };
 
 const S = AppState;
@@ -2021,6 +2027,7 @@ function retryPlay() {
 function playStation(s, forceRefresh = false, isRetry = false) {
   const thisCall = ++S.callId;
   S.needReconnect = false;
+  S.sleepStopped  = false; // ★ 수동 재생 시 취침 타이머 차단 해제
   // ★ 수동 채널 전환 시에만 wasPlaying 초기화
   // 재시도/재연결(isRetry=true) 경로에서는 덮어쓰지 않음
   if (!isRetry) S.wasPlaying = false;
@@ -2241,6 +2248,7 @@ audio.addEventListener('stalled', () => {
 
 audio.addEventListener('pause', () => {
   if (S.userPaused) { S.userPaused = false; return; }
+  if (S.sleepStopped) { RLog.info('pause 이벤트 무시 (취침 타이머 종료 상태)'); return; }
   // ★ 재생 시작 직후 1500ms 이내 pause는 HLS 버퍼링 시작 시 브라우저가
   //    내부적으로 발화하는 오발동 — CALL로 오판하지 않도록 억제
   if (S.justStarted && (Date.now() - S.justStarted) < 1500) {
@@ -2278,7 +2286,13 @@ audio.addEventListener('pause', () => {
 });
 
 audio.addEventListener('play', () => {
-  // ★ 통화/음성입력 중 OS가 잠깐 play를 시도할 때 오발동 차단
+  // ★ 취침 타이머 종료 후 OS/HLS가 자동으로 재생을 복구하는 경우 차단
+  if (S.sleepStopped) {
+    S.userPaused = true;
+    audio.pause();
+    RLog.info('자동 재연결 차단 (취침 타이머 종료)');
+    return;
+  }
   // needReconnect: 통화/음성입력으로 인한 외부 중단 상태
   if (S.needReconnect && S.current && !reconnectingCall) {
     S.needReconnect = false;
@@ -2331,6 +2345,7 @@ function ensureAudioCtxWatch() {
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
     if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+      if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 AudioContext 복귀로 재생 재시작 차단
       RLog.call('AudioContext running 복귀 (통화 종료 감지)');
       // ★ 포그라운드: 즉시 재연결
       // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
@@ -2363,6 +2378,7 @@ let stopCallWatch = () => {};
 
   function tryReconnect() {
     if (reconnectingCall || !S.current || !S.wasPlaying) return;
+    if (S.sleepStopped) { RLog.info('tryReconnect 차단 (취침 타이머 종료)'); return; }
     // ★ 수동 재생/로딩 중이면 중복 실행 방지
     if (S.playing || S.loading) { S.wasPlaying = false; return; }
     // ★ 백그라운드에서도 통화 종료 후 재연결 허용
@@ -2450,8 +2466,8 @@ let stopCallWatch = () => {};
   stopCallWatch = stopWatch; // ★ playStation에서 인터벌 경쟁 차단용으로 외부 노출
 
   audio.addEventListener('pause', () => {
-    // ★ 백그라운드 상태나 wasPlaying=false(취침 타이머 정지 등)면 통화 감지 불필요
     if (document.visibilityState === 'hidden') return;
+    if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 통화 감지 폴링 차단
     setTimeout(() => {
       if (S.wasPlaying && S.current && !reconnectingCall) startWatch();
     }, 500);
@@ -2513,6 +2529,7 @@ let stopCallWatch = () => {};
     // ★ wasPlaying이면 즉시 재연결
     // _hiddenWasActive는 단독 트리거로 사용하지 않음 — wasPlaying 소실 대비 보조 조건
     if (S.wasPlaying && S.current && !S.playing && !S.loading) {
+      if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
       RLog.reconnect('포그라운드 복귀 → 재연결');
       S.wasPlaying = false;
       S._hiddenWasActive = false;
@@ -2628,6 +2645,7 @@ window.addEventListener('offline', () => {
 
   // ★ 핵심 재연결 함수 — 호출 시 즉시 재연결 or AudioContext resume 위임
   function doReconnect(reason) {
+    if (S.sleepStopped) { RLog.info(`doReconnect 차단 (취침 타이머 종료) — ${reason}`); return; }
     if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
     stopVoiceTimer();
     console.info('[VoiceInput]', reason, '→ 재연결');
@@ -2649,8 +2667,8 @@ window.addEventListener('offline', () => {
   //    기존 pause 핸들러가 userPaused=true일 때 wasPlaying을 세팅하지 않는 문제를 여기서 보완
   audio.addEventListener('pause', () => {
     if (!S.current) return;
-    // ★ userPaused(내부 의도적 pause)는 스킵
     if (S.userPaused) return;
+    if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 wasPlaying 보존 차단
     // playing이었거나, 로딩 중에 OS가 pause를 걸었을 때 wasPlaying 보존
     if (S.playing || S.loading) {
       S.wasPlaying = true;
@@ -2898,49 +2916,56 @@ const SleepTimer = (() => {
     clear();
     const S     = window.S;
     const audio = window.audio;
-    if (S) S.justStarted = 0;
-    if (audio) audio.volume = _origVol;
-    // ★ callId 증가로 진행 중인 playStation 비동기 흐름 즉시 무력화
-    if (S) S.callId = (S.callId || 0) + 1;
 
-    if (typeof clearRetryTimer === 'function') clearRetryTimer();
-    if (typeof stopWatchdog    === 'function') stopWatchdog();
-    if (typeof stopCallWatch   === 'function') stopCallWatch();
+    // ★ sleepStopped 플래그 즉시 설정 — 이후 모든 자동 재연결 경로 원천 차단
+    if (S) S.sleepStopped = true;
 
-    if (S) {
-      RLog.stop('취침 타이머 정지');
-      // ★ 순서 중요: audio.pause() 전에 모든 플래그 먼저 세팅
-      // → pause 이벤트 핸들러들이 플래그를 보고 즉시 return하도록
-      S.wasPlaying       = false;
-      S.userPaused       = true;
-      S.needReconnect    = false;
-      S.playing          = false;
-      S.loading          = false;
-      S._hiddenWasActive = false;
-      window.reconnectingCall = false;
-    }
-    // ★ localStorage도 audio.pause() 전에 — bfcache 복원 타이밍 레이스 방지
-    try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
+    try {
+      if (S) S.justStarted = 0;
+      if (audio) audio.volume = _origVol;
+      if (S) S.callId = (S.callId || 0) + 1;
 
-    if (S && S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
-    if (audio) {
-      try {
-        audio.pause();
-        // ★ src 초기화는 pause() 완전 처리 후 — emptied 이벤트로 인한 추가 pause 방지
+      if (typeof clearRetryTimer === 'function') clearRetryTimer();
+      if (typeof stopWatchdog    === 'function') stopWatchdog();
+      if (typeof stopCallWatch   === 'function') stopCallWatch();
+
+      if (S) {
+        RLog.stop('취침 타이머 정지');
+        S.wasPlaying       = false;
+        S.userPaused       = true;
+        S.needReconnect    = false;
+        S.playing          = false;
+        S.loading          = false;
+        S._hiddenWasActive = false;
+        window.reconnectingCall = false;
+      }
+
+      // ★ localStorage 먼저 — bfcache 복원 레이스 방지
+      try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
+
+      if (S && S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
+
+      if (audio) {
+        try { audio.pause(); } catch(e) {}
+        // src 초기화는 50ms 후 — emptied 이벤트 추가 pause 방지
         setTimeout(() => { try { if (audio.src) audio.src = ''; } catch(e) {} }, 50);
-      } catch(e) {}
+      }
+
+      if (typeof releaseWakeLock    === 'function') releaseWakeLock();
+      if (typeof updateNowPlaying   === 'function') updateNowPlaying();
+      if (typeof updateActiveCard   === 'function') updateActiveCard();
+      if (typeof updateMediaSession === 'function') updateMediaSession();
+    } catch(err) {
+      RLog.info('취침 타이머 stop() 예외', String(err));
     }
 
-    if (typeof releaseWakeLock    === 'function') releaseWakeLock();
-    if (typeof updateNowPlaying   === 'function') updateNowPlaying();
-    if (typeof updateActiveCard   === 'function') updateActiveCard();
-    if (typeof updateMediaSession === 'function') updateMediaSession();
-
+    // ★ 토스트는 try 블록 밖 — 예외 발생 여부와 무관하게 항상 표시
     if (withToast) {
-      showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.');
       RLog.info('취침 타이머 종료 — 재생 정지');
+      try { showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.'); } catch(e) {}
     }
-    _renderSheet();
+
+    try { _renderSheet(); } catch(e) {}
   }
 
   // 시트 UI 렌더 (활성/설정 전환)
@@ -4211,10 +4236,9 @@ document.getElementById('versionBadge').textContent = APP_VERSION;
    visibilitychange 없이 pageshow(persisted=true)만 발생
 ════════════════════════════════════════ */
 window.addEventListener('pageshow', (e) => {
-  if (!e.persisted) return; // 일반 페이지 로드는 무시
+  if (!e.persisted) return;
   RLog.info('bfcache 복원 — 재생 상태 확인');
-  // ★ bfcache에서 복원된 경우 오디오 상태가 frozen 상태일 수 있음
-  // wasPlaying이었다면 재연결 시도
+  if (S.sleepStopped) { RLog.info('bfcache 복원 재연결 차단 (취침 타이머 종료)'); return; }
   if (S.current && (S.wasPlaying || localStorage.getItem('radio_playing') === '1')) {
     S.wasPlaying = false;
     setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current); }, 300);

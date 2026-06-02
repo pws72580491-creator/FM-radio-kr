@@ -1,0 +1,4251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>KOREA FM 라디오</title>
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0d0d1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FM 라디오">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAG/ElEQVR4nO3bXW8UVRjA8WfbbXeHUA2BoCkqRjGkIYr4WhAhUmxClMYrP4DRG6+9MfED6JUfAe+88kIImFQgYNJKYkoQTEgNCYiAJkKBCzu77b54oWsWsjOd3Tkz55x5/r/L7s72hD7/Obs7Q2lsbLwtgFJDthcA2EQAUI0AoBoBQDUCgGoEANUIAKoRAFQjAKhGAFCNAKAaAUA1AoBqBADVyrYXYNKVyWnbS1Bj27lZ20swouTr/wdg2N3jYxReBcDQ+8OXGLwIgMH3l+shOB0Ag18crobgZAAMfnG5FoJTATD4ergSgjPXARh+XVz5e1vfAVz5h4A9NncDqzsAww8Ru3NgLQCGH91szYOVABh+9GJjLnIPgOFHnLznI9cAGH4kkeec5BYAw49+5DUvuQTA8GMQecxN5gEw/Egj6/nJNACGHyZkOUfO3AoB2JBZAJz9YVJW85RJAAw/spDFXPEWCKoZD4CzP7Jker7YAaCa0QA4+yMPJueMHQCqGQuAsz/yZGre2AGgmpEAOPvDBhNzxw4A1QgAqqUOgLc/sCnt/LEDQDUCgGoEANUIAKqlCoAPwHBBmjlkB4BqBADVCACqEQBUIwCoRgBQjQCgGgFANQKAagQA1QgAqhEAVCMAqEYAUI0AoBoBQDUCgGoEANUIAKoRAFQjAKhGAFCNAKAaAUA1AoBqBADVCACqEQBUIwCoRgBQjQCgGgFANQKAagQA1QgAqpVtLyBLw+ObZeNXX+Tyu1YvLsrdTz43vp4kr7uW0rpANn39pZSCSuJjmjf+lDsffJrq9/qAHcBxIy9sl/LWLaleo/r2nr6GXxMC8EAwcyDd8YfTHV9kBOCB6sHBz+CjL05I+alxwysqDgLwQCmoSvXgnoGODWamDK+mWAjAE8Hh/gd5aNMGqezZlcFqioMAPFF+eouMPL+9r2OCd98SGeJPHKfQX4Mm1fjtpix99JntZawpmDkgq5cWkz25PCzBof3ZLqgAOD14pPrGyzK04ZFkz33zlcTP1YwAfNLHWZ0Pv8kQgIPajUbkY0ne15efeVJGdjwX/fqr0a+vDQE4qP7DT5GPDW3aIJXd8d/sxJ79G01ZmT8/6NIKhwAcVJ87L6079yIfj7uyW1q/TqpTu2Nee0GaS/fTLK9QCMBFzZaEJ85EPjy6a0KGn3i852PB9F4pVUYjj10+ejrt6gqFABwVHj8r0mj2frBU+vezQNKf/6dx7Wbyr1GV4DqAiJS3bpHNs0cGPt7ELcsPay3dk/rcglT2v9bz8WB6r/x95Btp11f+/9noSzsidwYRkfDoKaNrLAJ2AIctH4t+u1Jav06qByYf+FncXaPt5VBqp+aNra0oCMBhqxcXpXHtZuTj3R+Ghx/bKJXXd0Y+t/b9vLTDutH1FQEBOC48Fv22pbxtq4xMPCsiIsE78dcHwpjdRDMCcFzt5Ly0l8PIx4OZKSmNlKV6aF/kc1YuXJbG9VtZLM97BOC4dliX2sno9+6Vfa9KMDMlQ4+ORT6Hs380AvBAGPPdfWmkLOs/fD/y8dbtu1Lnym8kvgYV92+Hbly/JSs/X5bRnRO9nzAc897/+BmRZiubhRUAO4An4naBSI2mhN+dNb+YAiEAT9Tnz0vr9t2+jqnNLUiL+35iEYAvmi0JT/R3Ng+/5crvWgjAI+GJM9H3Bz2kcfWGrP7ya7YLKgAC8Ehr6b7U5hYSPZf7fpIhAM8k+TDcXg6ldvrHHFbjPwLwzOqlRWlcvRH7nNrsHPf9JEQAHlrrym7cXaR4EAF4qHYq+v6glQuXpfn7HzmvyF9cCfZQO6zLX+99bHsZhcAOANUIAKoRAFQjAKhGAFCNAKBaaWxsvD3owVcmp02uBRjYtnOzAx3HDgDVCACqEQBUIwCoRgBQjQCgGgFANQKAagQA1QgAqhEAVCMAqEYAUI0AoBoBQLVUAQx6DzZgUpo5ZAeAagQA1QgAqhEAVEsdAB+EYVPa+WMHgGoEANWMBMDbINhgYu7YAaCasQDYBZAnU/PGDgDVjAbALoA8mJwzdgCoZjwAdgFkyfR8sQNAtUwCYBdAFrKYq8x2ACKASVnNE2+BoFqmAbALwIQs5yjzHYAIkEbW85PLWyAiwCDymJvcPgMQAfqR17zk+iGYCJBEnnOS+7dARIA4ec+Hla9BiQC92JgLa9cBiADdbM2D1QthRAARu3NQGhsbb1v77V2uTE7bXgJy5sIJ0JlbIVz4x0B+XPl7O7MDdGM3KC5XBr/DyQA6CKE4XBv8DqcD6CAEf7k6+B1eBNBBCP5wffA7vAqgGzG4x5eh7+ZtAL0QRX58HPZeChUA0C9nrgMANhAAVCMAqEYAUI0AoBoBQDUCgGoEANUIAKoRAFQjAKhGAFCNAKDaP1nisVDbimb9AAAAAElFTkSuQmCC">
+<meta name="msapplication-TileColor" content="#0d0d1a">
+<meta name="msapplication-TileImage" content="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJAAAACQCAYAAADnRuK4AAAFT0lEQVR4nO3dzWscdRzH8e9kk002TYx9UDEoUgkUKiJK1IoPtU85NCqNBw/ePRQ9eZUivXn0Jh78A0SwWnwoUVtplcQerBYUra2EaiklNa0SsnnY7HgQxWZ2zc58Zn6/mfH9unV2u/vr/t75zmw2pMHg4HBoQEJdvheAYiMgSAgIEgKChIAgISBICAgSAoKEgCAhIEi6fS+glfM7xnwvIbdGpid9L+EGQR4+CyOY5HwH5S0gokmfj5icB0Q42XMZkrOACMc9FyE5eRdGPH64eN0zD4h4/Mr69c/sFEY4+ZPFKS2TCUQ8+ZTFvqQeEPHkW9r7k2pAxFMMae5TagERT7GktV98mApJKgExfYopjX2TAyKeYlP3TwqIeMpB2UeugSBJHBDTp1yS7icTCJJEATF9yinJvjKBICEgSGIHxOmr3OLuLxMIEgKChIAgiRUQ1z//D3H2mQkECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkBAQJAUFCQJAQECQEBAkBQUJAkBAQJAQECQFBQkCQEBAkufxvv9fqfXzUhg69mNrjhSsNmx1/QXqu+bfesYW3P4r1vEOvHLTenQ+te7+rz79szavXYj22L0yghGrP7DGrdP7ydW3ZaL2PjWa4Ij8IKKHKLZtiBdF/YG+s4IqifP8ih/on9nV0v6C3arX9OzNejR8EJOjZPmI927aue7++sUctGNjgYEXuFeIiej1zB1+1xoWLXp67NjFmK6+92f4OQWD9BzqbVEXEBBL1PfGgdW2+ue3t1dF7rXLn7e4W5BgBxRCuNKIHuytWe3p327/T/2x0+rR8nIIioBhWZ361xsylyPHa+C4Lqj2R4913DVv1gXsix5dOTGeyPh8IKKb6kcnIsa6hAevb/UjkeG1izCwIIscX3o0+RlERUEyLn01Z8/f5yPHamrf0XTcNWN+eaFTL3/5gjZ9/yWx9rhFQTOHyitU/PBE53r31Dqvev/2fP9fGn7Sgtxq5X6sJVmSleBu/6Y3Dse4/99Jha5ybSfx89aPHbcNz+826Kzccr03ss+Uz37e9sF69PGtLU98kft48YgIl0Jy7bosnT0eO9z58n1WGb/3rrf2WjZHb6+99YhaGLpboDAEl1PJCOAis/8DeyPWQmVm4ULf6sVMOVuYWASXUODdjK9/9FDne99Qu69l2d+R4/dgpC+uLLpbmFAEJWk2hoLvFZWUYWv39Tx2syL1SXET7+ixs6cuvbfXKb1a5bfN/32/qjK1ennW0KreYQIpm0+pH158sZfrG4VoEJKp/fNLCxaW2tzcuXLSVsz86XJFbBCQK5xdscfKLtreXefqYEVAqFo60/v5O89oftvT5Vx5W5A4BpWD10hVbPn02crz+wfFS/ehGK6V4F5YH1w+97nsJXjCBICEgSAgIEgKChIAgCQYHhzv+AZXzO8ayXAtyZGS6s2+AMoEgISBICAgSAoKEgCAhIEgICBICgoSAICEgSAgIEgKCJFZAnX7AhmKLs89MIEgICBICgiR2QFwHlVvc/WUCQUJAkCQKiNNYOSXZVyYQJIkDYgqVS9L9ZAJBIgXEFCoHZR/lCURExabuXyqnMCIqpjT2jWsgSFILiClULGntV6oTiIiKIc19Sv0URkT5lvb+ZHINRET5lMW+xPr9QEnwO4X8y/ILOvN3YUwjv7J+/Z28jSciP1y87pmfwtbilJY9l1+wzgP6GyGlz8ek9xbQvxFTcr4vD3IR0FoE1Z7vYNbKZUAoDj5MhYSAICEgSAgIEgKChIAgISBICAgSAoLkTweNRhQ11VWeAAAAAElFTkSuQmCC">
+
+<!-- 폰트 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<!-- FOUC 방지 (테마 깜빡임 차단) -->
+<script>
+(function(){
+  var t = localStorage.getItem('radio_theme') || 'auto';
+  if (t === 'light') {
+    document.documentElement.setAttribute('data-theme','light');
+  } else if (t === 'auto') {
+    // 자동: 시스템 설정 우선, 없으면 시간대(6시~18시 라이트)
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var h = new Date().getHours();
+    var isDay = h >= 6 && h < 18;
+    var autoLight = prefersDark ? false : isDay;
+    if (autoLight) document.documentElement.setAttribute('data-theme','light');
+  }  // dark는 기본값이므로 setAttribute 불필요
+})();
+</script>
+
+<style>
+/* ══ 리셋 & 변수 ══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0d1a;
+  --bg2:       #131327;
+  --bg3:       #1a1a35;
+  --panel:     #1e1e3a;
+  --border:    rgba(255,255,255,0.07);
+  --red:       #e94560;
+  --red-glow:  rgba(233,69,96,0.35);
+  --amber:     #f5a623;
+  --text:      #e8e8f0;
+  --muted:     #7070a0;
+  --np-end:    #21213f;
+  --hdr-bg:    rgba(13,13,26,0.92);
+  --tab-bdr:   rgba(255,255,255,0.15);
+  --err-bg:    #2a1010;
+  --err-bdr:   #5a2020;
+  --err-txt:   #ee8888;
+  --mono:      'Orbitron', monospace;
+  --kr:        'Noto Sans KR', sans-serif;
+  --sat:       env(safe-area-inset-top,    0px);
+  --sab:       env(safe-area-inset-bottom, 0px);
+}
+
+[data-theme="light"] {
+  --bg:       #f0f0f5;
+  --bg2:      #e4e4ee;
+  --bg3:      #d8d8e8;
+  --panel:    #ffffff;
+  --border:   rgba(0,0,0,0.08);
+  --red-glow: rgba(233,69,96,0.2);
+  --text:     #1a1a2e;
+  --muted:    #7070a0;
+  --np-end:   #eaeaf8;
+  --hdr-bg:   rgba(240,240,245,0.92);
+  --tab-bdr:  rgba(0,0,0,0.12);
+  --err-bg:   #fff0f0;
+  --err-bdr:  #f0c0c0;
+  --err-txt:  #c0392b;
+}
+[data-theme="light"] .station-card:hover { background: #fff; }
+[data-theme="light"] input[type=range]   { background: var(--bg3); }
+[data-theme="light"] .log-entry.INFO .log-tag      { color: #0a9e8f; }
+[data-theme="light"] .log-entry.RECONNECT .log-tag { color: #6d28d9; }
+[data-theme="light"] .log-entry.ERROR .log-tag     { color: #dc2626; }
+[data-theme="light"] .log-entry.CALL .log-tag      { color: #b45309; }
+[data-theme="light"] .log-entry.NET .log-tag       { color: #0369a1; }
+[data-theme="light"] .log-entry.BG_PLAY .log-tag   { color: #059669; }
+[data-theme="light"] .log-entry.BG_FAIL .log-tag   { color: #dc2626; }
+[data-theme="light"] .log-entry.STATE .log-tag     { color: #64748b; }
+[data-theme="light"] .log-entry.BG_FAIL            { background: rgba(220,38,38,0.05); }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--kr);
+  overflow: hidden; /* ★ 전체 페이지 스크롤 제거 */
+}
+
+/* ══ 레이아웃 ══ */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;       /* ★ 뷰포트 꽉 채우기 */
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: var(--sat);
+  overflow: hidden;     /* ★ 앱 자체 스크롤 없음 */
+}
+
+/* ══ 헤더 ══ */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 13px;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--hdr-bg);
+}
+
+.logo { display: flex; align-items: center; gap: 10px; }
+
+.logo-icon {
+  width: 34px; height: 34px;
+  background: var(--red);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 900;
+  box-shadow: 0 0 16px var(--red-glow);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-family: var(--mono);
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px;
+}
+.logo-text span { color: var(--red); }
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+/* 함께 듣기 버튼 */
+#syncBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
+  font-size: 11px;
+  font-family: var(--kr);
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+[data-theme="light"] #syncBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+  color: var(--muted);
+}
+#syncBtn.on {
+  background: rgba(0,200,100,0.12);
+  border-color: rgba(0,200,100,0.4);
+  color: #00c864;
+}
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+#syncBtn.on .sync-dot {
+  box-shadow: 0 0 6px #00c864;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+/* 테마 버튼 — 헤더 */
+#themeBtn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
+  cursor: pointer;
+  font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, background .2s;
+  flex-shrink: 0;
+  backdrop-filter: blur(4px);
+}
+#themeBtn:hover { transform: rotate(20deg); background: rgba(255,255,255,0.18); }
+[data-theme="light"] #themeBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+}
+[data-theme="light"] #themeBtn:hover { background: rgba(0,0,0,0.12); }
+
+/* 취침 타이머 버튼 — Now Playing 라벨 끝 */
+.waveform-row {
+  display: flex; align-items: center; gap: 12px;
+  margin: 12px 0 4px;
+}
+#sleepBtn {
+  width: 28px; height: 28px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, background .2s, border-color .2s;
+  backdrop-filter: blur(4px);
+}
+#sleepBtn:hover { transform: scale(1.12); background: rgba(255,255,255,0.22); }
+#sleepBtn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  animation: sleep-pulse 2s infinite;
+}
+@keyframes sleep-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(233,69,96,0); }
+}
+
+/* 취침 타이머 시트 */
+.sleep-bg {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.sleep-bg.show { opacity: 1; pointer-events: all; }
+.sleep-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 0 calc(var(--sab) + 20px);
+  width: min(520px,100%);
+  display: flex; flex-direction: column;
+}
+.sleep-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sleep-title { font-size: 15px; font-weight: 700; letter-spacing: .05em; color: var(--text); }
+.sleep-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+/* 활성 카운트다운 */
+.sleep-active { text-align: center; padding: 10px 0; }
+.sleep-countdown {
+  font-size: 56px; font-weight: 800; letter-spacing: .04em;
+  color: var(--red); font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.sleep-countdown-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.sleep-active-btns { margin-top: 20px; display: flex; justify-content: center; }
+
+/* 프리셋 버튼 */
+.sleep-presets {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+}
+.sleep-preset-btn {
+  padding: 12px 8px; border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.sleep-preset-btn:hover, .sleep-preset-btn:active {
+  background: var(--red); color: #fff; border-color: var(--red);
+}
+.sleep-cancel-btn { background: var(--bg3); color: var(--red); border-color: var(--red); padding: 12px 32px; }
+.sleep-cancel-btn:hover { background: var(--red); color: #fff; }
+
+/* 직접 입력 */
+.sleep-custom { display: flex; flex-direction: column; gap: 8px; }
+.sleep-custom-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.sleep-custom-row { display: flex; gap: 8px; }
+.sleep-input {
+  flex: 1; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 15px;
+}
+.sleep-custom-confirm { flex-shrink: 0; padding: 10px 20px; }
+.sleep-no-play-notice {
+  background: rgba(255,200,50,0.12);
+  border: 1px solid rgba(255,200,50,0.35);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.sleep-desc { font-size: 11px; color: var(--muted); line-height: 1.6; text-align: center; }
+
+/* 설치 버튼 */
+#installBtn {
+  display: none;
+  align-items: center; gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--amber);
+  font-family: var(--kr);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .2s, color .2s, border-color .2s;
+}
+#installBtn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ══ Now Playing ══ */
+.now-playing {
+  margin: 16px;
+  background: linear-gradient(135deg, var(--panel) 0%, var(--np-end) 100%);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.now-playing::before {
+  content: '';
+  position: absolute; inset: 0;
+  /* ★ 채널 색상은 배경 그라디언트에만 — 재생 버튼은 항상 빨간색 유지 */
+  background: radial-gradient(ellipse at 80% 20%, var(--station-glow, var(--red-glow)) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.np-label {
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--red);
+  font-family: var(--mono); font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.np-station {
+  font-family: var(--mono);
+  font-size: 22px; font-weight: 900;
+  letter-spacing: 1px; line-height: 1.1;
+  margin-bottom: 4px; min-height: 28px;
+}
+
+.np-freq {
+  font-family: var(--mono);
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 16px; min-height: 18px;
+}
+
+/* 파형 */
+.waveform {
+  display: flex; align-items: flex-end;
+  gap: 3px; height: 36px;
+  flex: 1;
+}
+.wave-bar {
+  width: 4px; background: var(--red);
+  border-radius: 2px; opacity: 0.3;
+  transition: opacity .3s;
+}
+.playing .wave-bar { opacity: 1; }
+.paused  .wave-bar { animation-play-state: paused; }
+
+.wave-bar:nth-child(1)  { animation: wave 1.0s ease-in-out infinite; }
+.wave-bar:nth-child(2)  { animation: wave 1.3s ease-in-out infinite 0.1s; }
+.wave-bar:nth-child(3)  { animation: wave 0.8s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(4)  { animation: wave 1.1s ease-in-out infinite 0.05s; }
+.wave-bar:nth-child(5)  { animation: wave 0.9s ease-in-out infinite 0.3s; }
+.wave-bar:nth-child(6)  { animation: wave 1.4s ease-in-out infinite 0.15s; }
+.wave-bar:nth-child(7)  { animation: wave 1.0s ease-in-out infinite 0.25s; }
+.wave-bar:nth-child(8)  { animation: wave 0.7s ease-in-out infinite 0.1s; }
+.wave-bar:nth-child(9)  { animation: wave 1.2s ease-in-out infinite 0.35s; }
+.wave-bar:nth-child(10) { animation: wave 0.9s ease-in-out infinite 0.05s; }
+.wave-bar:nth-child(11) { animation: wave 1.1s ease-in-out infinite 0.2s; }
+.wave-bar:nth-child(12) { animation: wave 0.8s ease-in-out infinite 0.4s; }
+
+@keyframes wave { 0%,100%{height:6px} 50%{height:32px} }
+
+/* 컨트롤 */
+.controls { display: flex; align-items: center; gap: 14px; }
+
+.btn-play {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--red); border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 24px var(--red-glow);
+  transition: transform .15s;
+}
+.btn-play:active { transform: scale(0.93); }
+.btn-play svg { fill: white; width: 22px; height: 22px; }
+
+.volume-wrap { flex: 1; display: flex; align-items: center; gap: 10px; }
+.vol-icon { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%; height: 4px;
+  background: var(--bg3); border-radius: 2px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%; background: var(--red);
+  cursor: pointer; box-shadow: 0 0 8px var(--red-glow);
+}
+
+.np-status {
+  font-size: 11px; color: var(--muted);
+  margin-top: 12px; min-height: 14px;
+  font-family: var(--mono); letter-spacing: 0.5px;
+}
+.np-status.live  { color: var(--red); }
+.np-status.error { color: var(--amber); }
+
+.spinner {
+  display: none;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(233,69,96,0.3);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  flex-shrink: 0;
+}
+.loading .spinner { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══ 탭 ══ */
+.tabs { display: flex; gap: 8px; padding: 10px 16px 4px; }
+.tab-btn {
+  flex: 1; padding: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
+  font-size: 12px; font-family: var(--kr); font-weight: 500;
+  cursor: pointer; transition: all .2s;
+}
+.tab-btn.active {
+  background: var(--panel);
+  border-color: var(--tab-bdr);
+  color: var(--text);
+}
+
+/* ══ 에러 박스 ══ */
+.error-box {
+  margin: 6px 16px;
+  padding: 10px 14px;
+  background: var(--err-bg);
+  border: 1px solid var(--err-bdr);
+  border-radius: 10px;
+  font-size: 11px; color: var(--err-txt);
+  align-items: center;
+  justify-content: space-between; gap: 10px;
+}
+.error-retry-btn {
+  flex-shrink: 0; padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--err-txt);
+  background: transparent; color: var(--err-txt);
+  font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.error-retry-btn:hover { background: var(--err-txt); color: var(--panel); }
+
+/* ══ 채널 목록 ══ */
+.section-label {
+  padding: 6px 20px 4px;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--muted);
+  font-family: var(--mono); text-transform: uppercase;
+}
+
+.swipe-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ══ 채널 스크롤 영역 ══ */
+.channel-scroll-area {
+  flex: 1;              /* ★ 남은 공간 전부 차지 */
+  overflow-y: auto;     /* ★ 채널 목록만 스크롤 */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--sab) + 80px); /* ★ 하단 여백 */
+}
+.swipe-track {
+  display: flex; width: 200%;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  will-change: transform;
+  align-items: flex-start;
+}
+.swipe-panel { width: 50%; flex-shrink: 0; min-width: 0; }
+
+.station-list {
+  display: flex; flex-direction: column;
+  gap: 1px; padding: 0 12px;
+}
+
+.station-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .15s;
+  border: 1px solid transparent;
+  position: relative;
+}
+.station-card:hover { background: var(--panel); }
+.station-card.active {
+  background: var(--panel);
+  border-color: var(--border);
+}
+.station-card.active::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; background: var(--red);
+  border-radius: 0 2px 2px 0;
+}
+
+.st-badge {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  flex-shrink: 0; text-align: center; line-height: 1.2;
+}
+
+.st-info { flex: 1; min-width: 0; }
+.st-name {
+  font-size: 14px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.st-desc {
+  font-size: 11px; color: var(--muted); margin-top: 1px;
+  font-family: var(--mono); letter-spacing: 0.5px;
+}
+
+.st-freq {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  color: var(--muted); flex-shrink: 0;
+}
+.station-card.active .st-freq { color: var(--red); }
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red); box-shadow: 0 0 6px var(--red);
+  animation: blink 1.4s ease-in-out infinite;
+  flex-shrink: 0; opacity: 0;
+}
+.station-card.active .live-dot { opacity: 1; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.s-fav-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%; border: none;
+  background: transparent; font-size: 14px;
+  cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.s-fav-btn:hover { color: var(--amber); transform: scale(1.15); }
+.s-fav-btn.on    { color: var(--amber); }
+
+.fav-empty {
+  display: none;
+  text-align: center; padding: 48px 20px;
+  color: var(--muted);
+}
+
+/* ══ 닉네임 모달 ══ */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+  align-items: center; justify-content: center;
+}
+.modal-bg.show { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: min(340px,90vw);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.modal h3  { font-size: 15px; font-weight: 600; color: var(--text); }
+.modal p   { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.modal input {
+  width: 100%; padding: 10px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text); font-family: var(--kr); font-size: 14px;
+  outline: none;
+}
+.modal input:focus { border-color: #00c864; }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns button {
+  flex: 1; padding: 10px; border-radius: 10px;
+  border: none; font-family: var(--kr); font-size: 13px;
+  cursor: pointer; transition: opacity .15s;
+}
+.modal-btns button:hover { opacity: .85; }
+.btn-cancel  { background: var(--bg3); color: var(--muted); }
+.btn-confirm { background: #00c864; color: #fff; font-weight: 600; }
+
+/* ══ 토스트 ══ */
+#toast {
+  position: fixed;
+  bottom: calc(var(--sab) + 90px);
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--panel);
+  border: 1px solid rgba(0,200,100,0.35);
+  color: var(--text); font-size: 12px; font-family: var(--kr);
+  padding: 9px 18px; border-radius: 20px;
+  white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity .3s, transform .3s;
+  z-index: 200;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══ 로그 뷰어 ══ */
+#logBtn {
+  position: fixed;
+  bottom: calc(var(--sab) + 36px);
+  right: 16px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg3); color: var(--muted);
+  font-size: 16px; line-height: 1;
+  border: 1px solid var(--border); cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 150;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, color .2s;
+}
+#logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
+#logBtn:active { transform: scale(.92); }
+
+.log-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); z-index: 500;
+  align-items: flex-end; justify-content: center;
+}
+.log-bg.show { display: flex; }
+.log-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 0 calc(var(--sab) + 16px);
+  width: min(520px,100%); height: 70vh;
+  display: flex; flex-direction: column;
+}
+.log-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px 12px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.log-title { font-family: var(--mono); font-size: 12px; font-weight: 700;
+  letter-spacing: 2px; color: var(--amber); }
+.log-actions { display: flex; gap: 8px; align-items: center; }
+.log-btn-sm {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+  padding: 4px 10px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg2);
+  color: var(--muted); cursor: pointer;
+}
+.log-btn-sm.danger { border-color: var(--red); color: var(--red); }
+.log-close { background: none; border: none; color: var(--muted);
+  font-size: 18px; cursor: pointer; }
+.log-body {
+  flex: 1; overflow-y: auto; padding: 10px 16px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.7;
+}
+/* 로그 필터바 */
+.log-filter-bar { display:flex; gap:4px; flex-wrap:wrap; padding:8px 16px 6px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.log-filter-btn { font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--border); background:var(--bg2); color:var(--muted); cursor:pointer; white-space:nowrap; }
+.log-filter-btn.log-filter-active { background:var(--red); color:#fff; border-color:var(--red); }
+.log-filter-count { margin-left:3px; opacity:.7; }
+/* 로그 스냅샷 줄 */
+.log-snap { font-size:9px; color:var(--muted); padding:1px 0 3px 4px; word-break:break-all; line-height:1.4; opacity:.8; }
+.log-entry { padding: 4px 0; border-bottom: 1px solid var(--border); }
+.log-entry .log-time { color: var(--muted); margin-right: 6px; }
+.log-entry.ERROR    .log-tag { color: #ff6b6b; }
+.log-entry.WARN     .log-tag { color: var(--amber); }
+.log-entry.INFO     .log-tag { color: #4ecdc4; }
+.log-entry.PLAY     .log-tag { color: #00c864; }
+.log-entry.STOP     .log-tag { color: var(--red); }
+.log-entry.RECONNECT .log-tag { color: #a78bfa; }
+.log-entry.CALL     .log-tag { color: #f59e0b; }   /* 통화 — 주황 */
+.log-entry.NET      .log-tag { color: #38bdf8; }   /* 네트워크 — 하늘 */
+.log-entry.BG_PLAY  .log-tag { color: #34d399; }   /* 백그라운드 재생 확인 — 연두 */
+.log-entry.BG_FAIL  .log-tag { color: #f87171; }   /* 백그라운드 재생 실패 — 빨강 */
+.log-entry.STATE    .log-tag { color: #94a3b8; }   /* 상태 스냅샷 — 회색 */
+/* 백그라운드 재생 실패는 행 전체 강조 */
+.log-entry.BG_FAIL { background: rgba(248,113,113,0.06); }
+.log-msg { color: var(--text); word-break: break-all; }
+.log-empty { color: var(--muted); text-align: center; padding: 40px 0; font-size: 12px; }
+
+/* ══ 스크롤바 ══ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+/* ══ 즐겨찾기 잠금 버튼 ══ */
+#favLockBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 4px 10px; border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg2); color: var(--muted);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .5px;
+}
+#favLockBtn.locked {
+  border-color: var(--red); color: var(--red);
+  background: var(--red-glow);
+}
+#favLockBtn .lock-icon { font-size: 13px; }
+
+/* ══ 방송 추가 버튼 ══ */
+#addStationBtn {
+  position: fixed;
+  bottom: calc(var(--sab) + 36px);
+  left: 16px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 22px; line-height: 1;
+  border: none; cursor: pointer;
+  box-shadow: 0 4px 16px var(--red-glow);
+  z-index: 150;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s, box-shadow .2s;
+}
+#addStationBtn:active { transform: scale(.92); }
+
+/* ══ 방송 추가 시트 ══ */
+.add-station-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.add-station-bg.show { display: flex; }
+.add-station-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(var(--sab) + 24px);
+  width: min(520px,100%); display: flex; flex-direction: column; gap: 14px;
+}
+.add-station-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.add-station-field { display: flex; flex-direction: column; gap: 5px; }
+.add-station-field label {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.add-station-field input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s;
+}
+.add-station-field input:focus { border-color: var(--red); }
+.add-station-actions { display: flex; gap: 10px; margin-top: 4px; }
+.add-station-actions button {
+  flex: 1; padding: 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-add-confirm {
+  background: var(--red); color: #fff; border: none;
+}
+.btn-add-cancel {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.custom-station-badge {
+  font-size: 8px; background: var(--red); color: #fff;
+  padding: 1px 5px; border-radius: 4px;
+  font-family: var(--mono); letter-spacing: .5px;
+  vertical-align: middle; margin-left: 4px;
+}
+/* 사용자 추가 방송국 삭제 버튼 */
+.st-delete-btn {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(231,76,60,.15); color: var(--red);
+  border: none; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.station-card:hover .st-delete-btn,
+.station-card:focus-within .st-delete-btn { opacity: 1; }
+
+/* ══ 계정 버튼 ══ */
+#accountBtn {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 4px 10px; border-radius: 14px;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.75);
+  cursor: pointer; transition: all .2s;
+  letter-spacing: .5px; white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+[data-theme="light"] #accountBtn {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.06);
+  color: var(--muted);
+}
+#accountBtn.logged-in {
+  border-color: var(--red); color: var(--red);
+  background: var(--red-glow);
+}
+#accountBtn .acc-name {
+  max-width: 60px; overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ══ 계정 모달 ══ */
+.account-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.65); z-index: 400;
+  align-items: flex-end; justify-content: center;
+}
+.account-modal-bg.show { display: flex; }
+.account-sheet {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px calc(var(--sab) + 24px);
+  width: min(520px,100%);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.account-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.account-title-text {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.account-tabs {
+  display: flex; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.account-tab {
+  flex: 1; padding: 9px; font-size: 12px; font-weight: 600;
+  background: var(--bg2); color: var(--muted);
+  border: none; cursor: pointer; transition: all .2s;
+  font-family: var(--kr);
+}
+.account-tab.active { background: var(--red); color: #fff; }
+.account-field { display: flex; flex-direction: column; gap: 5px; }
+.account-field label {
+  font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  font-family: var(--mono);
+}
+.account-field input {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .2s;
+}
+.account-field input:focus { border-color: var(--red); }
+.account-hint {
+  font-size: 10px; color: var(--muted); line-height: 1.7;
+  padding: 8px 12px; background: var(--bg2); border-radius: 8px;
+  border-left: 2px solid var(--red);
+}
+.account-actions { display: flex; gap: 10px; }
+.account-actions button {
+  flex: 1; padding: 12px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: opacity .2s; font-family: var(--kr);
+}
+.btn-acc-confirm { background: var(--red); color: #fff; border: none; }
+.btn-acc-cancel  {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-acc-logout  {
+  background: var(--bg3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.account-user-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; background: var(--bg2);
+  border-radius: 12px; border: 1px solid var(--border);
+}
+.account-user-icon { font-size: 24px; }
+.account-user-name {
+  font-size: 14px; font-weight: 700; color: var(--red);
+  font-family: var(--mono);
+}
+.account-user-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ══ 버전 모달 ══ */
+#versionBadge {
+  position: fixed;
+  bottom: calc(var(--sab) + 6px);
+  right: 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px 7px;
+  cursor: pointer;
+  z-index: 150;
+  transition: color .2s, border-color .2s;
+  letter-spacing: 1px;
+}
+#versionBadge:hover { color: var(--red); border-color: var(--red-glow); }
+
+.changelog-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 400;
+  align-items: flex-end;
+  justify-content: center;
+}
+.changelog-bg.show { display: flex; }
+.changelog-sheet {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(var(--sab) + 20px);
+  width: min(520px, 100%);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.changelog-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.changelog-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; color: var(--red);
+}
+.changelog-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--muted); font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.changelog-entry { display: flex; flex-direction: column; gap: 6px; }
+.changelog-ver {
+  display: flex; align-items: center; gap: 8px;
+}
+.changelog-ver-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  background: var(--red); color: #fff;
+  padding: 2px 8px; border-radius: 6px;
+}
+.changelog-ver-badge.old {
+  background: var(--bg3); color: var(--muted);
+}
+.changelog-date {
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+}
+.changelog-list {
+  display: flex; flex-direction: column; gap: 3px;
+  padding-left: 4px;
+}
+.changelog-item {
+  font-size: 11px; color: var(--text); line-height: 1.6;
+  display: flex; gap: 6px;
+}
+.changelog-item::before { content: '·'; color: var(--red); flex-shrink: 0; }
+
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- 헤더 -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">FM</div>
+      <div class="logo-text">KOREA <span>FM</span></div>
+    </div>
+    <div class="header-actions">
+      <button id="syncBtn" onclick="toggleSync()" aria-label="함께 듣기">
+        <span class="sync-dot"></span>함께 듣기
+      </button>
+      <button id="themeBtn" onclick="toggleTheme()" aria-label="테마 전환" title="테마 전환 (다크 → 라이트 → 자동)">🌙</button>
+      <button id="accountBtn" onclick="openAccountModal()" aria-label="계정">👤</button>
+      <button id="installBtn" onclick="installApp()">📲 홈 화면 추가</button>
+    </div>
+  </header>
+
+  <!-- Now Playing -->
+  <div class="now-playing" id="nowPlaying">
+    <div class="np-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>▶ NOW PLAYING</span>
+      <button id="sleepBtn" onclick="openSleepTimer()" aria-label="취침 타이머" title="취침 타이머">⏱</button>
+    </div>
+    <div class="np-station" id="npStation">채널을 선택하세요</div>
+    <div class="np-freq"    id="npFreq">—</div>
+
+    <div class="waveform-row">
+      <div class="waveform paused" id="waveform">
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-play" id="btnPlay" aria-label="재생/일시정지">
+        <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="volume-wrap">
+        <span class="vol-icon">🔈</span>
+        <input type="range" id="volSlider" min="0" max="1" step="0.02" value="0.8" aria-label="볼륨">
+      </div>
+      <div class="spinner" id="spinner"></div>
+    </div>
+
+    <div class="np-status" id="npStatus">재생 중인 채널이 없습니다</div>
+  </div>
+
+  <!-- ★ 채널 스크롤 영역 시작 — 헤더/Now Playing은 고정, 여기서부터 스크롤 -->
+  <div class="channel-scroll-area">
+
+  <!-- 탭 -->
+  <div class="tabs" style="display:flex;align-items:center;gap:8px">
+    <button class="tab-btn active" data-tab="all" style="flex:1">전체 채널</button>
+    <button class="tab-btn" data-tab="fav" style="flex:1">
+      ⭐ 즐겨찾기 <span id="fav-count" style="font-size:10px;opacity:.6"></span>
+    </button>
+    <button id="favLockBtn" onclick="toggleFavLock()" title="즐겨찾기 잠금">
+      <span class="lock-icon">🔓</span>
+    </button>
+  </div>
+
+  <!-- 에러박스 -->
+  <div id="errorBox" class="error-box" style="display:none">
+    <span class="err-msg"></span>
+    <button onclick="retryPlay()" class="error-retry-btn">↺ 재연결</button>
+  </div>
+
+  <!-- 채널 레이블 -->
+  <div class="section-label" id="ch-label">전체 채널</div>
+
+  <!-- 스와이프 패널 -->
+  <div class="swipe-viewport" id="swipeViewport">
+    <div class="swipe-track" id="swipeTrack">
+
+      <!-- 패널 0: 전체 채널 -->
+      <div class="swipe-panel">
+        <div class="station-list" id="list-all"></div>
+      </div>
+
+      <!-- 패널 1: 즐겨찾기 -->
+      <div class="swipe-panel">
+        <div class="station-list" id="list-fav"></div>
+        <div class="fav-empty" id="fav-empty">
+          <div style="font-size:32px;margin-bottom:10px">⭐</div>
+          <div style="font-size:13px;line-height:1.7">
+            즐겨찾기한 채널이 없습니다.<br>채널의 ☆ 버튼을 눌러 추가하세요.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  </div><!-- /.channel-scroll-area -->
+
+</div><!-- /.app -->
+
+<!-- 닉네임 모달 -->
+<div class="modal-bg" id="nickModalBg">
+  <div class="modal">
+    <h3>🔗 함께 듣기</h3>
+    <p>닉네임을 입력하면 채널 변경 시 다른 사람에게 표시됩니다.</p>
+    <input type="text" id="nickInput" placeholder="닉네임 (예: 홍길동)" maxlength="10">
+    <div class="modal-btns">
+      <button class="btn-cancel"  onclick="closeNickModal()">취소</button>
+      <button class="btn-confirm" onclick="confirmSync()">시작</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast"></div>
+
+<!-- 방송 추가 버튼 -->
+<button id="addStationBtn" onclick="openAddStation()" title="방송 추가">＋</button>
+
+<!-- 방송 추가 시트 -->
+<div class="add-station-bg" id="addStationBg" onclick="closeAddStation(event)">
+  <div class="add-station-sheet">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="add-station-title">📻 방송 추가</div>
+      <button class="changelog-close" onclick="closeAddStation()">✕</button>
+    </div>
+    <div class="add-station-field">
+      <label>방송국 이름 *</label>
+      <input id="asi-name" type="text" placeholder="예: OO FM" maxlength="30">
+    </div>
+    <div class="add-station-field">
+      <label>주파수</label>
+      <input id="asi-freq" type="text" placeholder="예: 100.0 MHz">
+    </div>
+    <div class="add-station-field">
+      <label>장르</label>
+      <input id="asi-genre" type="text" placeholder="예: 음악, 뉴스, 교양">
+    </div>
+    <div class="add-station-field">
+      <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
+      <input id="asi-url" type="url" placeholder="https://...m3u8">
+    </div>
+    <div class="add-station-field">
+      <label>색상 (선택)</label>
+      <input id="asi-color" type="color" value="#e74c3c" style="height:36px;padding:2px 6px;cursor:pointer">
+    </div>
+    <div class="add-station-actions">
+      <button class="btn-add-cancel" onclick="closeAddStation()">취소</button>
+      <button class="btn-add-confirm" onclick="confirmAddStation()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 취침 타이머 시트 -->
+<div class="sleep-bg" id="sleepBg" onclick="closeSleepTimer(event)">
+  <div class="sleep-sheet" id="sleepSheet">
+    <div class="sleep-header">
+      <span class="sleep-title">⏱ 취침 타이머</span>
+      <button class="log-close" onclick="closeSleepTimer()">✕</button>
+    </div>
+    <div class="sleep-body">
+      <!-- 활성 타이머 표시 -->
+      <div id="sleepActive" class="sleep-active" style="display:none">
+        <div class="sleep-countdown" id="sleepCountdown">00:00</div>
+        <div class="sleep-countdown-label">후 자동 정지</div>
+        <div class="sleep-active-btns">
+          <button class="sleep-preset-btn sleep-cancel-btn" onclick="cancelSleepTimer()">⏹ 타이머 취소</button>
+        </div>
+      </div>
+      <!-- 타이머 설정 -->
+      <div id="sleepSetup" class="sleep-setup">
+        <!-- ★ 재생 중이 아닐 때 안내 — openSleepTimer()에서 표시/숨김 -->
+        <div id="sleepNoPlayNotice" class="sleep-no-play-notice" style="display:none">
+          ⚠️ 현재 재생 중인 채널이 없습니다.<br>타이머를 미리 설정해두면 재생 시작 후 자동으로 작동합니다.
+        </div>
+        <div class="sleep-presets">
+          <button class="sleep-preset-btn" onclick="setSleepTimer(10)">10분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(20)">20분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(30)">30분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(60)">1시간</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(90)">1시간 30분</button>
+          <button class="sleep-preset-btn" onclick="setSleepTimer(120)">2시간</button>
+        </div>
+        <div class="sleep-custom">
+          <span class="sleep-custom-label">직접 입력</span>
+          <div class="sleep-custom-row">
+            <input type="number" id="sleepCustomMin" min="1" max="480" placeholder="분" class="sleep-input">
+            <button class="sleep-preset-btn sleep-custom-confirm" onclick="setSleepTimerCustom()">설정</button>
+          </div>
+        </div>
+        <div class="sleep-desc">⏰ 타이머 종료 시 볼륨이 서서히 줄어든 후 자동으로 정지됩니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 로그 버튼 -->
+<button id="logBtn" onclick="openLog()" title="재생 로그">📋</button>
+
+<!-- 로그 뷰어 시트 -->
+<div class="log-bg" id="logBg" onclick="closeLog(event)">
+  <div class="log-sheet" id="logSheet">
+    <div class="log-header">
+      <span class="log-title">📋 PLAY LOG</span>
+      <div class="log-actions">
+        <button class="log-btn-sm" onclick="exportLog()">내보내기</button>
+        <button class="log-btn-sm danger" onclick="clearLog()">초기화</button>
+        <button class="log-close" onclick="closeLog()">✕</button>
+      </div>
+    </div>
+    <div id="logFilterBar" class="log-filter-bar"></div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+</div>
+
+<!-- 버전 뱃지 -->
+<div id="versionBadge" onclick="openChangelog()">v2.7.5</div>
+
+<!-- 변경 이력 시트 -->
+<div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
+  <div class="changelog-sheet" id="changelogSheet">
+    <div class="changelog-header">
+      <div class="changelog-title">CHANGELOG</div>
+      <button class="changelog-close" onclick="closeChangelog()">✕</button>
+    </div>
+    <div id="changelogBody"></div>
+  </div>
+</div>
+
+<!-- 계정 모달 -->
+<div class="account-modal-bg" id="accountModalBg" onclick="closeAccountModal(event)">
+  <div class="account-sheet">
+    <div class="account-title-row">
+      <div class="account-title-text">🔐 계정</div>
+      <button class="changelog-close" onclick="closeAccountModal()">✕</button>
+    </div>
+
+    <!-- 로그아웃 상태: 로그인/회원가입 폼 -->
+    <div id="accFormWrap" style="display:flex;flex-direction:column;gap:14px">
+      <div class="account-tabs">
+        <button class="account-tab active" id="accTabLogin"    onclick="switchAccountTab('login')">로그인</button>
+        <button class="account-tab"        id="accTabRegister" onclick="switchAccountTab('register')">회원가입</button>
+      </div>
+      <div class="account-field">
+        <label>아이디 (3~12자, 영문/숫자/한글)</label>
+        <input id="acc-id" type="text" placeholder="예: radio123" maxlength="12"
+               autocomplete="username" onkeydown="if(event.key==='Enter')doAccountAction()">
+      </div>
+      <div class="account-field">
+        <label>PIN 번호 (숫자 4자리 · 선택)</label>
+        <input id="acc-pin" type="password" placeholder="없으면 비워두세요" maxlength="4"
+               inputmode="numeric" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')doAccountAction()">
+      </div>
+      <div class="account-hint" id="accHint">
+        아이디를 기억해두면 인터넷 기록을 삭제해도<br>어느 기기에서든 즐겨찾기를 복원할 수 있습니다.
+      </div>
+      <div class="account-actions">
+        <button class="btn-acc-cancel"  onclick="closeAccountModal()">취소</button>
+        <button class="btn-acc-confirm" id="accConfirmBtn" onclick="doAccountAction()">로그인</button>
+      </div>
+    </div>
+
+    <!-- 로그인 상태: 사용자 정보 -->
+    <div id="accLoggedWrap" style="display:none;flex-direction:column;gap:14px">
+      <div class="account-user-card">
+        <div class="account-user-icon">👤</div>
+        <div>
+          <div class="account-user-name" id="accUserName"></div>
+          <div class="account-user-sub">즐겨찾기가 클라우드에 자동 동기화됩니다</div>
+        </div>
+      </div>
+      <div class="account-actions">
+        <button class="btn-acc-cancel" onclick="closeAccountModal()">닫기</button>
+        <button class="btn-acc-logout" onclick="doLogout()">로그아웃</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 오디오 -->
+<audio id="audioEl" style="display:none" playsinline webkit-playsinline x-webkit-airplay="allow" preload="none"></audio>
+
+<!-- 외부 라이브러리 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<script>
+
+/* SW registered via sw.js */
+
+/* ══ state.js ══ */
+'use strict';
+
+/* ════════════════════════════════════════
+   버전 정보
+════════════════════════════════════════ */
+const APP_VERSION = 'v2.8.2';
+const CHANGELOG = [
+  { version: 'v2.8.2', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 후 계속 재생 — S.sleepStopped 전용 플래그 도입. pause/play 핸들러, tryReconnect, AudioContext statechange, doReconnect(블루투스/음성), visibilitychange, pageshow(bfcache) 등 모든 자동 재연결 경로에 차단 가드 추가',
+    '[버그수정] 취침 타이머 토스트 미표시 — stop() 전체를 try-catch로 보호, 토스트 호출을 try 블록 밖으로 이동해 내부 예외와 무관하게 항상 표시',
+    '[버그수정] stop()에서 예외 발생 시 sleepStopped 설정 누락 — 플래그 설정을 try 블록 진입 전 가장 먼저 실행',
+  ]},
+  { version: 'v2.8.1', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 정지 순서 교정 — audio.pause() 전에 모든 플래그(wasPlaying/userPaused/playing 등) 먼저 세팅, localStorage도 pause() 전에 기록해 bfcache 레이스 방지',
+    '[버그수정] audio.src=\'\' 를 setTimeout 50ms 뒤에 실행 — emptied 이벤트로 인한 추가 pause 발화 방지',
+    '[버그수정] 페이드아웃이 백그라운드 setInterval throttle로 30초보다 길어지는 문제 — step 카운트 대신 절대 시각(fadeEndAt) 기준으로 볼륨 비율 계산',
+  ]},
+  { version: 'v2.8.0', date: '2026-06-01', changes: [
+    '[버그수정] 자동 테마 시간 전환 안 됨 — 다크모드 고정 기기(LG 등)에서 prefers-color-scheme:dark가 항상 true라 시간대 로직이 실행 안 되던 문제. 라이트 명시 선택 시에만 라이트 우선, 나머지는 시간대(6시~18시 라이트) 판단으로 변경',
+    '[버그수정] 취침 타이머 종료 후 재생 계속 — stop()에서 stopCallWatch() 추가 및 wasPlaying=false를 가장 먼저 세팅. reconnectingCall 3초 타이머 제거(wasPlaying=false가 이미 tryReconnect 진입 차단)',
+    '[버그수정] 백그라운드에서 통화 감지 폴링이 pause 이벤트에 반응 — initCallReconnect의 pause 리스너에 hidden 체크 추가',
+    '[버그수정] 버전 배지가 Firebase 초기화 완료 전까지 이전 버전 표시 — versionBadge를 스크립트 최상단에서 즉시 업데이트',
+    '[개선] bfcache 복원 대응 — pageshow(persisted=true) 이벤트에서 재생 상태 복원 (Android 탭 메모리 해제 후 복귀 시 자동 재생 재개)',
+  ]},
+  { version: 'v2.7.9', date: '2026-06-01', changes: [
+    '[버그수정] 화면 잠금 시 재생 중단 — pause 핸들러에 visibilityState hidden 체크 추가. 백그라운드에서 OS가 발화하는 pause 이벤트를 통화 감지로 오판하던 핵심 원인 수정',
+    '[버그수정] 다른 앱 전환 시 재생 중단 — visibilitychange hidden 분기에서 S.playing=true인 오디오는 절대 pause/src 초기화하지 않도록 조건을 S.loading && !S.playing으로 강화',
+    '[버그수정] resumeOnGesture 이중 실행 — _gestureUsed 플래그로 touchstart+click 동시 등록 시 두 번째 호출 차단, capture 단계 등록으로 안정화',
+  ]},
+  { version: 'v2.7.8', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 후 포그라운드 복귀 시 불필요한 재연결 — stop()에서 S._hiddenWasActive=false 초기화 추가, visibilitychange 재연결 조건을 wasPlaying||_hiddenWasActive에서 wasPlaying 단독으로 강화',
+    '[버그수정] 로그 상태값 항상 false로 표시 — RLog.stop()을 상태 초기화 전에 먼저 호출하도록 순서 수정',
+  ]},
+  { version: 'v2.7.7', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 카운트다운 미표시 — _renderSheet()에서 display:block 적용 후 requestAnimationFrame으로 _updateUI() 호출 (display:none 상태에서 textContent 업데이트 시 렌더링 누락 문제 해결)',
+    '[버그수정] 취침 타이머 종료 후 재생 계속 — stop()에서 S.playing/S.loading 조건 제거, 항상 audio.pause()+audio.src 초기화+hls.destroy() 실행 (HLS 버퍼링 중 상태 불일치로 정지 로직 자체가 실행 안 되던 문제 해결)',
+  ]},
+  { version: 'v2.7.6', date: '2026-06-01', changes: [
+    '[버그수정] 통화/음성입력 없는데 CALL로 오감지 — audio.src가 비어있는 상태(재생 중 아님)에서 발생한 pause 이벤트를 무시하도록 가드 추가',
+    '[버그수정] 취침 타이머 카운트다운 숫자 표시 안 됨 — 시트 열릴 때 50ms 후 강제 렌더 갱신 추가, _updateUI에서 el.style.display 명시 보장',
+    '[버그수정] 취침 타이머 종료 후 계속 재생 — stop() 실행 시 reconnectingCall=true를 3초 유지해 initCallReconnect의 tryReconnect 자동 재시작 차단',
+  ]},
+  { version: 'v2.7.5', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 페이드 시작 조건 rem===30 → rem<=30 — setInterval 부정확으로 30을 건너뛰면 페이드 미시작 문제 해결',
+    '[버그수정] 타이머 stop() 시 justStarted 가드 즉시 해제 — pause 핸들러 억제가 audio.pause()를 막는 문제 해결',
+    '[버그수정] callId 증가를 S.playing||S.loading 조건 내부로 이동 — 불필요한 증가로 인한 onOK 무력화 방지',
+    '[개선] 자동재생 차단(브라우저 정책) 시 로그 기록 추가 — 재생 실패 원인 추적 가능',
+  ]},
+  { version: 'v2.7.4', date: '2026-06-01', changes: [
+    '[버그수정] 재생 직후 pause 오발동 → CALL 루프 재발 수정 — S.justStarted 타임스탬프 가드 추가 (onOK 후 1500ms 이내 pause 억제)',
+    '[버그수정] 로그 파일명 날짜 오류 수정 — toISOString(UTC) → 로컬 날짜 기준으로 변경 (한국 새벽 내보내기 시 하루 전 날짜로 찍히던 문제)',
+    '[버그수정] playStation 진입부 renderStations() 누락 교체 완료 — 모든 재생 상태 변화 경로에서 updateActiveCard() 사용',
+  ]},
+  { version: 'v2.7.3', date: '2026-06-01', changes: [
+    '[버그수정] 취침 타이머 종료 시 S.loading 상태에서 callId 미증가 문제 수정 — 진행 중인 playStation 비동기 흐름을 즉시 무력화',
+    '[버그수정] Firebase initializeApp 이중 초기화 경쟁 조건 수정 — 싱글턴 Promise로 중복 실행 차단',
+    '[개선] 재연결 대기 중 UI 상태 명확화 — npStatus에 "↺ 재연결 대기 중 (N/5)" 표시',
+    '[개선] renderStations() 전체 DOM 재빌드 최적화 — 재생 상태 변화 시 updateActiveCard()로 카드 클래스만 토글',
+    '[보안] PIN 저장 방식 SHA-256 해시로 전환 — 기존 평문 계정은 로그인 시 자동 업그레이드',
+    '[개선] Firebase 저장 경로 분리 — 로그인 계정은 accounts/ 경로만 사용, users/ 이중 저장 제거',
+    '[개선] 취침 타이머 — 재생 중이 아닐 때 안내 배너 표시',
+    '[개선] history.pushState 중복 호출 제거 — 스택 누적 방지',
+    '[개선] 커스텀 채널 ID 충돌 방지 루프 추가',
+    '[보안] changelogBody innerHTML에 esc() 적용',
+    '[코드] RLog.clear() 즉시 저장 보장 — persistNow() 분리',
+    '[코드] window.stopVoiceInputTimer 전역 제거 → S._stopVoiceTimer로 이동',
+    '[코드] _autoplayId NaN 처리 명시화 — Number.isFinite() 체크',
+    '[코드] syncViewportHeight() 주석 수정 — 실제 동작과 일치',
+  ]},
+  { version: 'v2.7.2', date: '2026-05-31', changes: [
+    '[버그수정] 취침 타이머 종료 시 CALL 로그 루프 + 채널 재선택 반복 버그 수정 — togglePlay() 대신 직접 정지 로직 인라인으로 교체 (playing=false 상태에서 togglePlay 호출 시 playStation 분기 진입 문제)',
+    '[버그수정] 페이드아웃 중 pause 이벤트 → 통화 감지 오판 수정 — 페이드 시작 전 S.userPaused=true 설정 + 인터벌 내내 유지',
+    '[개선] 취침 타이머 버튼을 NOW PLAYING 라벨 끝으로 이동 — 웨이브폼 옆보다 더 자연스러운 배치',
+  ]},
+  { version: 'v2.7.1', date: '2026-05-31', changes: [
+    '[개선] 헤더 버튼 수 최소화로 로그인 닉네임이 잘리지 않도록 레이아웃 개선',
+    '[개선] 취침 타이머 버튼을 헤더에서 Now Playing 웨이브폼 옆으로 1차 이동',
+  ]},
+  { version: 'v2.7.0', date: '2026-05-30', changes: [
+    '[개선] 다크 모드에서 헤더 버튼(취침 타이머·테마·함께 듣기·계정)이 잘 안 보이던 문제 수정 — 반투명 흰색 배경 + 밝은 테두리로 교체, 라이트 모드는 반투명 검정으로 별도 적용',
+  ]},
+  { version: 'v2.6.9', date: '2026-05-30', changes: [
+    '[신기능] 취침 타이머 추가 — 헤더 ⏱ 버튼으로 설정. 10/20/30분·1시간·1.5시간·2시간 프리셋 + 직접 입력(1~480분)',
+    '[개선] 타이머 종료 30초 전부터 볼륨 서서히 감소 후 자동 정지 (페이드아웃)',
+    '[개선] 타이머 활성 시 헤더 버튼 빨간색 + 펄스 애니메이션으로 표시, 남은 시간 툴팁 표시',
+    '[개선] 취침 타이머 동작 로그 기록',
+  ]},
+  { version: 'v2.6.8', date: '2026-05-30', changes: [
+    '[개선] 로그 시스템 전면 강화 — CALL(통화)/NET(네트워크)/BG_PLAY(백그라운드 재생 확인)/BG_FAIL(백그라운드 재생 실패)/STATE(상태 스냅샷) 레벨 추가',
+    '[개선] 모든 주요 로그에 핵심 상태 스냅샷 자동 첨부 — playing/loading/wasPlaying/hidden/audio.paused/hls/ctx/retry/net 실시간 기록',
+    '[개선] 백그라운드 실제 재생 감시 — 3초마다 currentTime 변화 체크, 실제 소리 재생 여부를 BG_PLAY/BG_FAIL로 기록',
+    '[개선] 로그 뷰어에 레벨별 필터 버튼 추가 — 원하는 레벨만 선택해서 확인 가능',
+    '[개선] 로그 내보내기 파일에 헤더 + 스냅샷 들여쓰기 추가로 가독성 향상',
+    '[개선] 로그 최대 보관 수 500→1000개로 확대',
+  ]},
+  { version: 'v2.6.7', date: '2026-05-30', changes: [
+    '[신기능] 테마 자동 전환 모드 추가 — 버튼 클릭 시 다크→라이트→자동 3단계 순환. 자동 모드는 시스템 설정(prefers-color-scheme) 우선, 없으면 시간대(오전 6시~오후 6시 라이트)로 자동 전환',
+    '[개선] 자동 모드에서 매 분마다 시간대 체크 및 시스템 설정 변경 실시간 감지',
+    '[개선] 테마 전환 시 meta theme-color 동기화 및 토스트 알림 표시',
+  ]},
+  { version: 'v2.6.6', date: '2026-05-30', changes: [
+    '[개선] 통화 종료 후 백그라운드 상태에서도 자동 재생 복구 — AudioContext running 복귀 시 tryReconnect가 백그라운드에서도 소프트/전체 재연결 실행. 포그라운드 복귀 없이도 방송 재개',
+    '[안전] 백그라운드 재연결 허용 시에도 manifestLoadError 루프 차단 유지 — scheduleRetry의 hidden 상태 보호 로직이 루프를 방지',
+  ]},
+  { version: 'v2.6.5', date: '2026-05-30', changes: [
+    '[버그수정] levelLoadTimeOut 반복 시 복구 불가 상태가 지속되던 문제 수정 — 비치명 네트워크 오류 한계를 10회→3회로 줄이고 초과 시 HLS 인스턴스 재생성으로 새 TCP 연결 강제 복구',
+    '[버그수정] 포그라운드 복귀 시 wasPlaying=false로 재연결이 누락되던 문제 수정 — 백그라운드 진입 시 _hiddenWasActive 플래그 저장, 복귀 시 추가 트리거로 활용',
+  ]},
+  { version: 'v2.6.4', date: '2026-05-30', changes: [
+    '[버그수정] 앱 시작 로그에 버전이 vv2.6.3으로 중복 출력되던 문제 수정 — v${APP_VERSION}에서 ${APP_VERSION}으로 변경',
+    '[버그수정] 백그라운드 진입 로그에 playing=true, wasPlaying=false로 잘못 표시되던 문제 수정 — wasPlaying 보존 처리 후 로그 출력하도록 순서 변경, loading 상태도 로그에 추가',
+  ]},
+  { version: 'v2.6.3', date: '2026-05-29', changes: [
+    '[버그수정] 라이트 테마에서 로그 시트가 다크 배경으로 보이던 문제 수정',
+    '[버그수정] 창을 내리면 재생 중단되는 핑심 원인 5개 수정 — wasPlaying 레이스 컨디션, _voiceTimer 백그라운드 폴링, pause 핸들러 오판 등',
+    '[개선] MediaMetadata artwork 추가 — Android 알림바 미디어 콘트롤 표시, OS 백그라운드 오디오 유지',
+    '[개선] Screen WakeLock API 추가 — 재생 시 획득, 정지 시 해제',
+    '[개선] audio webkit-playsinline, x-webkit-airplay 속성 추가',
+  ]},
+  { version: 'v2.6.2', date: '2026-05-28', changes: [
+    '[버그수정] 백그라운드 중 외부 인터럽트(통화/음성입력) 후 OS play 이벤트 오발동으로 playStation이 백그라운드에서 실행되어 manifestLoadError 발생하는 문제 수정 — play 핸들러의 needReconnect 분기에 visibilityState hidden 체크 추가',
+    '[버그수정] AudioContext statechange 핸들러에서도 동일한 백그라운드 playStation 호출 차단 — hidden 상태에서 running 복귀 이벤트 수신 시 visibilitychange에 위임',
+  ]},
+  { version: 'v2.6.1', date: '2026-05-28', changes: [
+    '[버그수정] 백그라운드에서 manifestLoadError 반복 루프 완전 차단 — scheduleRetry가 hidden 상태를 감지해 재시도 없이 wasPlaying 보존 후 즉시 종료',
+    '[버그수정] 창을 내리면 방송 중단되는 문제 수정 — 로딩 중 백그라운드 진입 시 HLS 즉시 정리, 포그라운드 복귀 시 forceRefresh=true로 재연결',
+    '[버그수정] tryReconnect·_fullReconnect 백그라운드 실행 차단 — visibilityState hidden 체크 추가',
+    '[개선] 포그라운드 복귀 재연결 단순화 — wasPlaying=true면 retryCount 무관하게 즉시 재연결',
+    '[개선] 백그라운드 진입 시 모든 타이머(재시도·워치독·통화감지 폴링) 일괄 중단',
+  ]},
+  { version: 'v2.6.0', date: '2026-05-28', changes: [
+    '[개선] 소프트 재연결 도입 — OS 인터럽트 후 HLS 유효 시 play() 재시도로 끊김 최소화',
+    '[개선] 전체 재연결은 소프트 재연결 실패 시에만 — 알림음 등 짧은 중단 시 2~3초 침묵 제거',
+  ]},
+  { version: 'v2.5.9', date: '2026-05-28', changes: [
+    '[버그수정] 재생 중 순간 끊김 수정 — LEVEL_LOADED 강제 currentTime 점프 제거 (주원인)',
+    '[버그수정] 재생 시작 시 끊김 수정 — onOK() 내 currentTime 강제 점프 제거',
+    '[개선] backBufferLength 0→1 — 세그먼트 경계 미세 끊김 완화',
+  ]},
+  { version: 'v2.5.8', date: '2026-05-28', changes: [
+    '[버그수정] retryCount 항상 1회차 고정 수정 — playStation(isRetry=true)로 지수 백오프·5회 제한 정상 작동',
+    '[버그수정] 백그라운드에서 manifestLoadError 루프 수정 — 백그라운드 진입 시 retryTimer 중단',
+    '[버그수정] 포그라운드 복귀 시 retryCount 보존 재개 — 진행 중인 재시도 횟수 유지',
+  ]},
+  { version: 'v2.5.7', date: '2026-05-28', changes: [
+    '[버그수정] bufferStalledError 반복 루프 수정 — recoverMediaError() 후 audio.play() 재호출 누락 해결',
+    '[버그수정] 워치독 오판 방지 — HLS 복구 중 paused 상태에서 play() 재시도 후 stallTick 증가',
+    '[버그수정] HLS 비치명 네트워크 오류 runaway 루프 수정 — 500ms 디바운스 + 10회 한계 추가',
+    '[개선] 버퍼 설정 완화 — maxBufferLength 5→10s, liveSyncDurationCount 1→2 (Joy4U stall 방지)',
+  ]},
+  { version: 'v2.5.6', date: '2026-05-28', changes: [
+    '[버그수정] 로그 분석 기반 수정 — bufferStalledError 반복 발생 원인 해결 (maxBufferLength 2→5초)',
+    '[버그수정] 백그라운드 진입 직후 500ms 이내 offline 이벤트 무시 — OS 절전으로 인한 오감지 방지',
+    '[버그수정] 포그라운드 복귀 시 playStation 중복 실행 방지 — reconnectingCall 락 체크 추가',
+  ]},
+  { version: 'v2.5.5', date: '2026-05-27', changes: [
+    '[기능] 재생 로그 시스템 추가 — IndexedDB에 최대 500개 이벤트 저장',
+    '[기능] 로그 뷰어 UI 추가 — 화면 우하단 📋 버튼으로 확인, 오류 발생 시 황색 강조',
+    '[기능] 로그 내보내기 — 날짜별 .txt 파일 다운로드',
+    '[기능] 재생 중단 원인 14곳 로깅 — 채널 선택/재생 성공/실패/사용자 정지/외부 중단/워치독/HLS 오류/네트워크/백그라운드 진입·복귀/재연결',
+  ]},
+  { version: 'v2.5.4', date: '2026-05-27', changes: [
+    '[버그수정] 앱 백그라운드 진입 시 방송 중단 수정 — 워치독이 OS의 currentTime 갱신 지연을 멈춤으로 오인하던 문제 해결',
+    '[버그수정] visibilitychange hidden 시 워치독 일시정지, visible 복귀 시 자동 재시작',
+    '[버그수정] 포그라운드 워치독 판정 기준 4초→8초 (4틱×2초) — 잠깐의 버퍼 지연으로 인한 오작동 방지',
+    '[버그수정] visibilitychange 이중 등록 방지 — initVoiceInputReconnect 중복 재연결 차단',
+  ]},
+  { version: 'v2.5.3', date: '2026-05-27', changes: [
+    '[개선] 버퍼 최소화 — maxBufferLength 10→2초, maxMaxBufferLength 20→4초, backBufferLength 0 추가',
+    '[개선] 항상 라이브 현재 시점 재생 — startPosition:-1, liveSyncDurationCount:1, liveMaxLatencyDurationCount:2',
+    '[개선] MANIFEST_PARSED 후 hls.startLoad(-1) 명시 호출 — 라이브 엣지에서 강제 시작',
+    '[개선] LEVEL_LOADED 이벤트에서 8초 이상 뒤처지면 라이브 엣지로 강제 점프',
+    '[개선] onOK 재생 시작 시 5초 이상 뒤처지면 라이브 엣지로 즉시 동기화',
+    '[개선] liveDurationInfinity:true — 라이브 스트림 duration 무한 유지',
+  ]},
+  { version: 'v2.5.2', date: '2026-05-27', changes: [
+    '[개선] tryReconnect: 1200ms 대기 전 기존 스트림 즉시 정리 — 대기 중 HLS ERROR 발생 및 불필요한 네트워크 사용 차단',
+    '[개선] tryReconnect: S.userPaused·S.playing 선행 초기화 — audio.pause() 호출 시 pause 핸들러 오발동 방지',
+  ]},
+  { version: 'v2.5.1', date: '2026-05-27', changes: [
+    '[버그수정] 음성입력 후 재생 미복원 핵심 원인 수정 — userPaused 상태에서도 wasPlaying 강제 보존',
+    '[버그수정] initVoiceInputReconnect 전면 재작성 — 2초 폴링+AudioCtx 복합 감지로 교체',
+    '[버그수정] window.focus 제거 (Android WebView 미발생) → visibilitychange+pageshow로 교체',
+    '[버그수정] SpeechRecognition 후킹 제거 (삼성 IME 미작동) → 폴링 폴백으로 대체',
+    '[버그수정] scheduleRetry 5회 실패 시 S.loading 초기화 누락 → 영구 로딩 UI 방지',
+    '[버그수정] startWatchdog에서 S.userPaused 체크 제거 — 외부 인터럽트도 감지하도록 수정',
+    '[버그수정] resumeOnGesture click 이벤트 once+passive 옵션 누락 수정',
+    '[개선] initNetworkSwitchDetect 조건식 연산자 우선순위 명확화',
+    '[개선] Firebase 복원 시 불필요한 IDB 재저장 루프 제거',
+  ]},
+  { version: 'v2.5.0', date: '2026-05-27', changes: [
+    '[버그수정] 통화 종료·음성입력 후 재생이 재개되지 않는 문제 수정',
+    '[버그수정] 공유 AudioContext 싱글턴 도입 — 앱 시작 시 즉시 statechange 감지 시작',
+    '[버그수정] startWatch 인터벌에서 매번 새 AudioContext 생성하던 로직 제거 (suspended 고착 원인)',
+    '[버그수정] 음성입력(마이크) 종료 후 재생 복원 모듈 추가 — window focus·SpeechRecognition.end 후킹·audio pause 복합 감지',
+    '[버그수정] HLS.js stalled 이벤트에서 외부 scheduleRetry 차단 — HLS 자체 복구와 충돌 제거',
+    '[버그수정] scheduleRetry 호출 즉시 S.playing = false 처리 — LIVE 오표시 수정',
+    '[버그수정] onOK()에서 S.userPaused 초기화 — 일시정지 후 재생 시 워치독 비활성화 수정',
+    '[버그수정] deleteCustomStation 후 즐겨찾기 탭 미갱신 수정 — updateFavList() 누락 보완',
+    '[버그수정] AudioContext 이중 등록 방지 — click+touchstart 동시 발생 시 watchAudioCtxState 중복 실행 차단',
+    '[개선] _streamCache 30분 만료 처리 — 극동방송 CDN URL 교체 후 자동 재요청',
+    '[개선] 커스텀 채널 ID 충돌 방지 — Date.now() % 100000 → random(900000) 방식으로 변경',
+    '[개선] saveCustomStations IDB 저장 오류 무시 방지 — .catch() 추가',
+    '[개선] openDB() 싱글턴 패턴 적용 — 매 호출마다 새 IndexedDB 연결 생성 방지',
+    '[개선] _fbIgnore 타임스탬프 방식으로 교체 — 함께 듣기 경쟁 조건 해소',
+    '[개선] 네트워크 전환 감지 로그 순서 수정 — 갱신 전 상태를 정확히 출력',
+    '[개선] HLS.js 버퍼 최적화 — maxBufferLength 30→10, liveSyncDurationCount 3→2',
+  ]},
+  { version: 'v2.4.0', date: '2026-05-25', changes: [
+    '계정 시스템 추가 — 아이디/PIN으로 회원가입 후 즐겨찾기를 Firebase에 영구 저장',
+    '로그인 시 어느 기기에서든 즐겨찾기·잠금·커스텀채널 즉시 복원',
+    'UUID 쿠키 백업 — 인터넷 기록 삭제 후에도 UUID 유지 (IDB → 쿠키 → 신규 순 복원)',
+    'initData() 복원 조건 개선 — radio_fav_locked 누락 시에도 IndexedDB 복원 실행',
+    'Firebase 초기화 순서 변경 — restoreFromIDB() 이전에 선행 초기화하여 즉시 계정 연동 가능',
+    '화면 분리 — Now Playing 카드 고정, 채널 목록만 독립 스크롤',
+  ]},
+  { version: 'v2.3.2', date: '2026-05-20', changes: [
+    '캐시 버스팅 추가 — forceRefresh 시 모든 채널 URL에 타임스탬프 파라미터 부여 (_t=)',
+    'stalled 이벤트 감지 추가 — native 재생 환경에서 데이터 수신 중단 즉시 재연결',
+  ]},
+  { version: 'v2.3.1', date: '2026-05-20', changes: [
+    '통화 중 OS play 이벤트 오발동 차단 — reconnectingCall 플래그 추가',
+    'tryReconnect 중복 호출 경쟁 조건 수정 — reconnecting 5초 락 → 2초로 단축',
+    'offline 시 워치독 즉시 정리 — stopWatchdog() 누락 수정',
+    '데이터 전환(WiFi↔LTE) 재연결 안정화',
+  ]},
+  { version: 'v2.3.0', date: '2026-05-17', changes: [
+    '재생 버튼 색상 고정 — 채널 색상 변경과 무관하게 항상 빨간색 유지',
+    '즐겨찾기 탭 빈 여백 제거 — 마지막 항목 이후 빈 공간 없이 정확히 맞춤 (syncViewportHeight)',
+    '채널 추가·삭제 시 즐겨찾기 탭 높이 자동 갱신',
+  ]},
+  { version: 'v2.2.2', date: '2026-05-17', changes: [
+    'PWA 단일 파일 완성 — manifest·아이콘·SW 모두 index.html 한 파일에 인라인',
+    'Service Worker Blob URL 등록 방식 적용 — 외부 sw.js 불필요',
+    'manifest data URI + 아이콘 base64 인라인 — 파일 1개로 설치형 PWA 동작',
+    'SW 업데이트 감지 토스트 — 새 버전 배포 시 자동 안내',
+  ]},
+  { version: 'v2.2.1', date: '2026-05-17', changes: [
+    '즐겨찾기 초기화 방지 강화 — saveFav() saveProtected() 적용으로 localStorage + IndexedDB 동시 저장 보장',
+    '앱 시작 시 localStorage 비어있으면 IndexedDB 즉시 복원 (Firebase 대기 없이)',
+    '즐겨찾기 저장 시 Firebase 백업 누락 수정',
+  ]},
+  { version: 'v2.2.0', date: '2026-05-17', changes: [
+    '통화 중 재생 정지 후 UI 재생 중 표시 불일치 수정 — 워치독 타이머 도입',
+    '워치독: audio.currentTime 2초마다 감시, 8초 이상 멈추면 UI 동기화 + 자동 재연결',
+    '긴 통화 후 재연결 시 스트림 URL 강제 갱신 (forceRefresh: true) — 낡은 캐시 방지',
+    'HLS 에러 핸들러 버그 수정 — 이전 채널 에러가 새 채널 HLS를 파괴하는 문제 해결',
+    '채널 전환 시 S.wasPlaying 초기화 — 오작동 재연결 방지',
+    '극동방송(서울·창원) 스트림 URL 직접 연결 복구 — Vercel 프록시 제거',
+    'streamApi 폴백 추가 — 직접 URL 실패 시 febc.net API에서 최신 주소 획득',
+  ]},
+  { version: 'v2.1.2', date: '2025-05-10', changes: [
+    'Vercel Serverless Function 프록시로 극동방송 Mixed Content 해결',
+    '서울/창원 극동방송 → /api/febc 프록시 경로로 교체',
+  ]},
+  { version: 'v2.1.1', date: '2025-05-09', changes: [
+    '뒤로가기 두 번째에서 종료되는 문제 수정 — 히스토리 스택 2개 유지',
+  ]},
+  { version: 'v2.1.0', date: '2025-05-09', changes: [
+    '뒤로가기 — 재생/정지 관계없이 항상 백그라운드 유지',
+  ]},
+  { version: 'v2.0.0', date: '2025-05-09', changes: [
+    'CHANGELOG 중복 제거 및 전체 점검',
+    'MediaSession play·pause 핸들러 이중 등록 제거',
+    'viewport 확대 방지 추가 (user-scalable=no, maximum-scale=1)',
+    'WiFi↔데이터 전환 후 재연결 안정화',
+  ]},
+  { version: 'v1.9.0', date: '2025-05-06', changes: [
+    'UUID 기반 사용자 식별 — IndexedDB 저장 (인터넷 기록 삭제 후에도 유지)',
+    'Firebase에 즐겨찾기·잠금·커스텀채널 자동 백업 및 복원',
+  ]},
+  { version: 'v1.8.0', date: '2025-05-04', changes: [
+    '즐겨찾기 잠금 기능 추가',
+    '방송 추가 기능 추가 — 앱 내에서 커스텀 채널 추가/삭제',
+  ]},
+  { version: 'v1.7.0', date: '2025-04-19', changes: [
+    'WiFi ↔ 데이터 전환 시 방송 자동 재연결',
+    '통화 종료 후 자동 재연결 — visibilitychange·online·AudioContext 3중 감지',
+    '즐겨찾기 초기화 방지 — localStorage 파싱 실패 시 안전한 폴백',
+  ]},
+  { version: 'v1.6.0', date: '2025-04-19', changes: [
+    'AppState 객체 도입 — 전역 상태 변수 통합 관리',
+    '업데이트 토스트 — 앱 실행 시 새 버전 자동 안내',
+    'HLS 에러 핸들러 개선 — 에러 타입별 분기 처리',
+  ]},
+  { version: 'v1.0.0', date: '2025-01-01', changes: ['최초 배포'] },
+];
+
+/* ════════════════════════════════════════
+   유틸
+════════════════════════════════════════ */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+/* ════════════════════════════════════════
+   앱 상태
+════════════════════════════════════════ */
+const AppState = {
+  current:       null,
+  playing:       false,
+  loading:       false,
+  volume:        0.8,
+  hls:           null,
+  retryTimer:    null,
+  watchdogTimer: null,
+  retryCount:    0,
+  callId:        0,
+  activeTab:     'all',
+  favorites:     new Set((() => {
+    try {
+      // localStorage 우선. 없으면 빈 Set — IndexedDB 복원은 initData()에서 비동기 처리
+      const saved = localStorage.getItem('radio_favs');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch(e) {
+      console.warn('즐겨찾기 불러오기 실패, 초기화됩니다:', e);
+      return [];
+    }
+  })()),
+  wasPlaying:    false,
+  justStarted:   0,      // ★ onOK 직후 pause 오발동 방지용 타임스탬프 (ms)
+  needReconnect: false,
+  userPaused:    false,
+  sleepStopped:  false,  // ★ 취침 타이머 종료 후 모든 자동 재연결 차단 플래그
+};
+
+const S = AppState;
+
+// 즐겨찾기 잠금 상태 (toggleFav TDZ 방지를 위해 상태 블록에 선언)
+let favLocked = localStorage.getItem('radio_fav_locked') === '1';
+
+/* ══ stations.js ══ */
+/* ════════════════════════════════════════
+   채널 데이터
+════════════════════════════════════════ */
+const P = 'https://radio.bsod.kr/stream/';
+const STATIONS = [
+  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
+  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },
+  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98', stream:P+'?stn=kbs&ch=2fm'     },
+  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212', stream:P+'?stn=kbs&ch=1fm'     },
+  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b', stream:P+'?stn=mbc&ch=sfm'     },
+  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c', stream:P+'?stn=mbc&ch=fm4u'    },
+  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400', stream:P+'?stn=sbs&ch=lovefm'  },
+  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22', stream:P+'?stn=sbs&ch=powerfm' },
+  { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3', stream:P+'?stn=cbs&ch=mfm'     },
+  { id:10, name:'TBS 교통방송', freq:'95.1 MHz',  genre:'교통/정보',  color:'#17a589', stream:P+'?stn=tbs&ch=fm'      },
+  { id:11, name:'YTN 라디오',   freq:'AM 1305',   genre:'뉴스',       color:'#1a252f', stream:P+'?stn=ytn'            },
+  { id:12, name:'EBS FM',       freq:'104.5 MHz', genre:'교육',       color:'#148f77',
+    stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
+  { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
+    stream:'https://mlive3.febc.net/live5/seoulfm/playlist.m3u8',
+    streamApi:'https://seoul.febc.net/radio/schedule/live/1' },
+  { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
+    stream:'https://mlive3.febc.net/live5/cwlive/playlist.m3u8',
+    streamApi:'https://changwon.febc.net/radio/schedule/live/4' },
+  { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
+  { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
+];
+
+/* ════════════════════════════════════════
+   스트림 URL 결정
+   streamApi 방송(극동방송): 캐시 재사용
+   일반 방송: 바로 stream URL 반환
+════════════════════════════════════════ */
+const _streamCache = {}; // { [id]: { url, ts } }
+const CACHE_TTL_MS  = 30 * 60 * 1000; // ★ 30분 후 만료 — CDN URL 교체 대응
+
+/* ★ 캐시 버스팅 — CDN/프록시 캐시 강제 우회 */
+function bustUrl(url) {
+  const sep = url.includes('?') ? '&' : '?';
+  return url + sep + '_t=' + Date.now();
+}
+
+async function resolveStreamUrl(s, forceRefresh = false) {
+  if (!s.streamApi) {
+    return forceRefresh ? bustUrl(s.stream) : s.stream;
+  }
+  // ★ 캐시 TTL 체크 — 만료됐거나 forceRefresh면 재요청
+  const cached = _streamCache[s.id];
+  if (!forceRefresh && cached && (Date.now() - cached.ts < CACHE_TTL_MS)) {
+    return cached.url;
+  }
+  try {
+    const res  = await fetch(s.streamApi, { cache: 'no-store' });
+    const text = await res.text();
+    const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
+    if (m) {
+      _streamCache[s.id] = { url: m[0], ts: Date.now() }; // ★ url + 타임스탬프 저장
+      return m[0];
+    }
+    console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
+  } catch(e) { console.warn('streamApi 실패:', e); }
+  return forceRefresh ? bustUrl(s.stream) : s.stream;
+}
+
+/* ══ player.js ══ */
+/* ════════════════════════════════════════
+   오디오 엘리먼트
+════════════════════════════════════════ */
+const audio = document.getElementById('audioEl');
+
+/* ════════════════════════════════════════
+   에러 박스
+════════════════════════════════════════ */
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  if (!msg) { box.style.display = 'none'; return; }
+  box.querySelector('.err-msg').textContent = msg;
+  box.style.display = 'flex';
+}
+
+/* ════════════════════════════════════════
+   재생 감시 워치독
+   onOK() 이후 audio.currentTime이 멈추면
+   UI 강제 동기화 + 재연결
+════════════════════════════════════════ */
+function startWatchdog() {
+  stopWatchdog();
+  let lastTime  = audio.currentTime;
+  let stallTick = 0;
+  S.watchdogTimer = setInterval(() => {
+    if (!S.playing || S.loading) { stopWatchdog(); return; }
+
+    // ★ 백그라운드 상태에서는 OS가 currentTime 갱신을 지연시킬 수 있음
+    // → hidden 상태에서는 오작동 판정을 완전히 건너뜀
+    if (document.visibilityState === 'hidden') {
+      lastTime  = audio.currentTime; // 기준값 갱신 (복귀 후 오작동 방지)
+      stallTick = 0;
+      return;
+    }
+
+    const cur = audio.currentTime;
+    if (audio.paused || cur === lastTime) {
+      // ★ HLS 모드에서 audio.paused 상태는 recoverMediaError() 복구 중일 수 있음
+      // → paused이면 바로 stallTick 누적 전에 play() 재시도 (1회만)
+      if (audio.paused && S.hls && stallTick === 0) {
+        audio.play().catch(() => {});
+      }
+      stallTick++;
+      // ★ 포그라운드 기준 8초(4틱×2초), 백그라운드는 위에서 스킵
+      if (stallTick >= 4) {
+        RLog.warn('워치독: 스트림 멈춤 감지 → 재연결', `paused=${audio.paused}, cur=${audio.currentTime.toFixed(2)}`);
+        stopWatchdog();
+        S.playing = false;
+        updateNowPlaying(); updateActiveCard();
+        scheduleRetry();
+      }
+    } else {
+      stallTick = 0;
+      lastTime  = cur;
+    }
+  }, 2000);
+}
+
+function stopWatchdog() {
+  if (S.watchdogTimer) { clearInterval(S.watchdogTimer); S.watchdogTimer = null; }
+}
+
+/* ════════════════════════════════════════
+   재생 로그 시스템
+   중단 원인 추적을 위해 주요 이벤트를 IndexedDB에 저장
+════════════════════════════════════════ */
+const LOG_DB_KEY  = 'radio_play_log';
+const LOG_MAX     = 1000; // 최대 1000개 유지 (상세 로깅 대응)
+
+const RLog = (() => {
+  let _buf = [];
+  let _loaded = false;
+  let _bgWatchTimer = null; // 백그라운드 실제 재생 감시 타이머
+
+  // IDB에서 기존 로그 로드
+  async function load() {
+    try {
+      const r = await idbGet(LOG_DB_KEY);
+      _buf = r ? JSON.parse(r) : [];
+    } catch(e) { _buf = []; }
+    _loaded = true;
+  }
+
+  // IDB에 저장 (디바운스 — 100ms 내 연속 write는 한 번만 저장)
+  let _persistTimer = null;
+  function persist() {
+    if (_persistTimer) clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(async () => {
+      try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
+    }, 100);
+  }
+  // ★ 즉시 저장 (clear 전용 — 디바운스 없이 완료를 보장)
+  async function persistNow() {
+    if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+    try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
+  }
+
+  // ★ 현재 핵심 상태 스냅샷 문자열 생성
+  function _snap(extra = '') {
+    const S = window.S || {};
+    const audio = window.audio || {};
+    const hidden = document.visibilityState === 'hidden';
+    const ctx = window._sharedAudioCtx;
+    const parts = [
+      `playing=${S.playing||false}`,
+      `loading=${S.loading||false}`,
+      `wasPlaying=${S.wasPlaying||false}`,
+      `hidden=${hidden}`,
+      `audio.paused=${audio.paused ?? '?'}`,
+      `audio.src=${audio.src ? '있음' : '없음'}`,
+      `hls=${S.hls ? '활성' : '없음'}`,
+      `ctx=${ctx ? ctx.state : '없음'}`,
+      `retry=${S.retryCount||0}`,
+      `net=${navigator.onLine ? 'online' : 'OFFLINE'}`,
+    ];
+    if (extra) parts.push(extra);
+    return parts.join(' | ');
+  }
+
+  // 로그 기록
+  function write(level, msg, detail = '', snap = false) {
+    const now  = new Date();
+    const time = now.toLocaleTimeString('ko-KR', { hour12: false })
+                 + '.' + String(now.getMilliseconds()).padStart(3,'0');
+    const date = now.toLocaleDateString('ko-KR');
+    // snap=true 이면 detail에 상태 스냅샷 자동 추가
+    const fullDetail = snap ? (detail ? detail + ' ║ ' + _snap() : _snap()) : detail;
+    const entry = { level, time, date, msg,
+      detail: fullDetail,
+      station: window.S?.current?.name || '-',
+      ts: now.getTime() };
+    _buf.unshift(entry);
+    if (_buf.length > LOG_MAX) _buf.pop();
+    persist();
+    if (level === 'ERROR' || level === 'WARN' || level === 'STOP' || level === 'BG_FAIL') {
+      document.getElementById('logBtn')?.classList.add('has-error');
+    }
+    const fn = level === 'ERROR' || level === 'BG_FAIL' ? console.error
+             : level === 'WARN' ? console.warn : console.info;
+    fn(`[RLog][${level}] ${msg}`, fullDetail || '');
+  }
+
+  // ★ 백그라운드 실제 재생 감시 시작
+  // 백그라운드 진입 후 3초마다 실제로 오디오가 재생 중인지 확인
+  function startBgWatch() {
+    stopBgWatch();
+    let tick = 0;
+    let lastTime = window.audio?.currentTime ?? -1;
+    _bgWatchTimer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') { stopBgWatch(); return; }
+      const audio = window.audio;
+      if (!audio || !window.S?.playing) { stopBgWatch(); return; }
+      tick++;
+      const curTime = audio.currentTime;
+      const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
+      lastTime = curTime;
+      if (tick === 1) return; // 첫 tick은 기준값 수집만
+      if (progressing) {
+        write('BG_PLAY', `백그라운드 실제 재생 확인 [${tick}]`, `currentTime=${curTime.toFixed(2)}`);
+      } else {
+        write('BG_FAIL', `백그라운드 재생 정지 감지 [${tick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
+      }
+    }, 3000);
+  }
+
+  function stopBgWatch() {
+    if (_bgWatchTimer) { clearInterval(_bgWatchTimer); _bgWatchTimer = null; }
+  }
+
+  return {
+    load,
+    snap    : _snap,
+    startBgWatch,
+    stopBgWatch,
+    info    : (m, d)    => write('INFO',      m, d),
+    infoS   : (m, d)    => write('INFO',      m, d, true),  // 스냅샷 포함
+    play    : (m, d)    => write('PLAY',      m, d, true),  // 재생 관련은 항상 스냅샷
+    stop    : (m, d)    => write('STOP',      m, d, true),
+    warn    : (m, d)    => write('WARN',      m, d, true),
+    error   : (m, d)    => write('ERROR',     m, d, true),
+    reconnect:(m, d)    => write('RECONNECT', m, d, true),
+    call    : (m, d)    => write('CALL',      m, d, true),  // 통화 감지/종료
+    net     : (m, d)    => write('NET',       m, d, true),  // 네트워크 상태
+    bgPlay  : (m, d)    => write('BG_PLAY',   m, d),        // 백그라운드 재생 확인
+    bgFail  : (m, d)    => write('BG_FAIL',   m, d, true),  // 백그라운드 재생 실패
+    state   : (m, d)    => write('STATE',     m, d, true),  // 상태 스냅샷
+    getAll  : ()        => [..._buf],
+    clear   : async ()  => { _buf = []; await persistNow(); },
+  };
+})();
+
+// 로그 뷰어 UI
+function openLog() {
+  renderLogUI();
+  document.getElementById('logBg').classList.add('show');
+  document.getElementById('logBtn').classList.remove('has-error');
+}
+function closeLog(e) {
+  if (e && e.target !== document.getElementById('logBg')) return;
+  document.getElementById('logBg').classList.remove('show');
+}
+// 현재 로그 필터 상태
+let _logFilter = 'ALL';
+const _LOG_FILTERS = ['ALL','PLAY','STOP','ERROR','WARN','RECONNECT','CALL','NET','BG_PLAY','BG_FAIL','INFO','STATE'];
+
+function renderLogUI() {
+  const allLogs = RLog.getAll();
+  const logs = _logFilter === 'ALL' ? allLogs : allLogs.filter(e => e.level === _logFilter);
+  const body = document.getElementById('logBody');
+
+  // 필터 버튼 렌더
+  const filterBar = document.getElementById('logFilterBar');
+  if (filterBar) {
+    filterBar.innerHTML = _LOG_FILTERS.map(f => {
+      const counts = f === 'ALL' ? allLogs.length : allLogs.filter(e => e.level === f).length;
+      const active = f === _logFilter ? 'log-filter-active' : '';
+      return `<button class="log-filter-btn ${active}" onclick="setLogFilter('${f}')">${f}<span class="log-filter-count">${counts}</span></button>`;
+    }).join('');
+  }
+
+  if (!logs.length) {
+    body.innerHTML = '<div class="log-empty">기록된 로그가 없습니다.</div>';
+    return;
+  }
+  body.innerHTML = logs.map(e => {
+    // 스냅샷 detail이 있으면 ║ 기준으로 분리해서 두 줄로 표시
+    let msgHtml = '';
+    if (e.detail && e.detail.includes(' ║ ')) {
+      const [userDetail, snap] = e.detail.split(' ║ ');
+      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${userDetail ? ' — ' + userDetail : ''}</span>`
+              + `<div class="log-snap">${snap}</div>`;
+    } else {
+      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${e.detail ? ' — ' + e.detail : ''}</span>`;
+    }
+    return `<div class="log-entry ${e.level}">
+      <span class="log-time">${e.date} ${e.time}</span>
+      <span class="log-tag">[${e.level}]</span>
+      ${msgHtml}
+    </div>`;
+  }).join('');
+}
+
+function setLogFilter(f) {
+  _logFilter = f;
+  renderLogUI();
+}
+function exportLog() {
+  const logs = RLog.getAll();
+  const header = [
+    `KOREA FM 라디오 — 재생 로그`,
+    `내보내기: ${new Date().toLocaleString('ko-KR')}`,
+    `총 ${logs.length}개 항목`,
+    '═'.repeat(80),
+    ''
+  ].join('\n');
+  const lines = logs.map(e => {
+    let line = `${e.date} ${e.time}  [${e.level.padEnd(9)}] [${e.station}] ${e.msg}`;
+    if (e.detail) {
+      if (e.detail.includes(' ║ ')) {
+        const [userDetail, snap] = e.detail.split(' ║ ');
+        if (userDetail) line += ' — ' + userDetail;
+        line += '\n' + ' '.repeat(34) + '↳ ' + snap;
+      } else {
+        line += ' — ' + e.detail;
+      }
+    }
+    return line;
+  }).join('\n');
+  const blob = new Blob([header + lines], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  // ★ toISOString()은 UTC 기준 — 한국(UTC+9) 새벽에 내보내면 날짜가 하루 전으로 나오는 버그
+  //    로컬 날짜 기준으로 파일명 생성
+  const _nd = new Date();
+  const _localDate = `${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
+  a.download = `radio-log-${_localDate}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+async function clearLog() {
+  if (!confirm('로그를 모두 삭제할까요?')) return;
+  await RLog.clear();
+  renderLogUI();
+  showToast('🗑️ 로그가 초기화됐습니다.');
+}
+
+/* ════════════════════════════════════════
+   재시도
+════════════════════════════════════════ */
+function clearRetryTimer() {
+  if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
+}
+
+function scheduleRetry() {
+  if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
+
+  S.playing = false;
+  S.loading = false; // ★ 영구 로딩 UI 방지
+  updateNowPlaying(); updateActiveCard();
+
+  // ★ 백그라운드 상태에서는 재시도 루프 없이 즉시 종료
+  // → 포그라운드 복귀 시 visibilitychange에서 자동 재연결
+  if (document.visibilityState === 'hidden') {
+    if (S.current) S.wasPlaying = true; // 복귀 시 재연결 트리거
+    S.retryCount = 0;
+    if (S.hls) { S.hls.destroy(); S.hls = null; } // HLS 인스턴스 정리
+    audio.src = '';
+    RLog.info('백그라운드 재시도 건너뜀 — 포그라운드 복귀 시 재연결');
+    return;
+  }
+
+  if (S.retryCount >= 5) {
+    RLog.error('재연결 5회 실패 — 방송 중단');
+    showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
+    return;
+  }
+  S.retryCount++;
+  const delay = Math.min(2000 * Math.pow(2, S.retryCount - 1), 30000);
+  RLog.warn(`재연결 대기 ${S.retryCount}회차`, `${Math.round(delay/1000)}초 후 재시도`);
+  showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
+  S.retryTimer = setTimeout(() => { if (S.current) playStation(S.current, false, true); }, delay);
+}
+
+function retryPlay() {
+  if (!S.current) return;
+  clearRetryTimer(); S.retryCount = 0;
+  playStation(S.current, true);
+}
+
+/* ════════════════════════════════════════
+   재생 엔진
+════════════════════════════════════════ */
+function playStation(s, forceRefresh = false, isRetry = false) {
+  const thisCall = ++S.callId;
+  S.needReconnect = false;
+  S.sleepStopped  = false; // ★ 수동 재생 시 취침 타이머 차단 해제
+  // ★ 수동 채널 전환 시에만 wasPlaying 초기화
+  // 재시도/재연결(isRetry=true) 경로에서는 덮어쓰지 않음
+  if (!isRetry) S.wasPlaying = false;
+
+  // ★ 수동 채널 선택 시 자동 재연결 락·인터벌 즉시 해제 (중복 실행 차단)
+  reconnectingCall = false;
+  stopCallWatch();
+
+  showError(null); clearRetryTimer(); stopWatchdog();
+  // ★ 수동 채널 선택 시에만 retryCount 리셋 — scheduleRetry 재시도 경로에서는 유지 (지수 백오프 작동)
+  if (!isRetry) S.retryCount = 0;
+  S.loading = true; S.playing = false; S.current = s;
+  localStorage.setItem('radio_last', s.id);
+  updateNowPlaying(); updateActiveCard();
+  RLog.play(`채널 선택: ${s.name}`, `${s.freq} / forceRefresh=${forceRefresh}`);
+
+  if (S.hls) { S.hls.destroy(); S.hls = null; }
+  S.userPaused = true;
+  audio.pause(); audio.src = '';
+
+  // Firebase 동기화
+  if (typeof syncMode !== 'undefined' && syncMode && typeof fbDb !== 'undefined' && fbDb) {
+    _fbIgnore = Date.now(); // ★ 이 기기가 쓴 이벤트임을 타임스탬프로 표시
+    fbDb.ref('shared/station').set({ id: s.id, nick: myNick, at: Date.now() });
+  }
+
+  resolveStreamUrl(s, forceRefresh).then(url => {
+    if (thisCall !== S.callId) return;
+
+    function onOK() {
+      if (thisCall !== S.callId) return;
+      S.playing    = true; S.loading = false; S.retryCount = 0;
+      S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
+      S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
+      RLog.play('재생 시작 성공');
+      // 백그라운드에서 재생 성공 시 실제 재생 감시 즉시 시작
+      if (document.visibilityState === 'hidden') RLog.startBgWatch();
+
+      // ★ 재생 시작 시 라이브 엣지 강제 동기화
+      // HLS.js가 backBufferLength:0 + startPosition:-1 을 적용했지만
+      // 혹시라도 오래된 위치에서 시작되는 경우를 대비한 최종 안전장치
+      // ★ onOK 내 강제 currentTime 점프 제거 — startPosition:-1 로 이미 라이브 엣지 시작 보장
+
+      localStorage.setItem('radio_playing', '1');
+      updateNowPlaying(); updateActiveCard(); updateMediaSession();
+      startWatchdog();   // 실제 재생 감시 시작
+      requestWakeLock(); // ★ 재생 성공 시 WakeLock 획득
+    }
+    function onFail(retry) {
+      if (thisCall !== S.callId) return;
+      S.loading = false; S.playing = false;
+      updateNowPlaying(); updateActiveCard(); updateMediaSession();
+      RLog.error('재생 실패(onFail)', `retry=${retry}`);
+      if (retry) scheduleRetry();
+    }
+
+    if (window.Hls && window.Hls.isSupported()) {
+      const hls = new window.Hls({
+        // ★ 라이브 엣지 즉시 재생 설정 — 버퍼를 최소화해 항상 현재 시점 방송 재생
+        maxBufferLength:              10,  // ★ 5→10: bufferStalledError 반복 방지 (Joy4U 세그먼트 여유)
+        maxMaxBufferLength:           15,  // ★ 8→15: 버퍼 자동 확장 상한
+        backBufferLength:             1,   // ★ 0→1: 완전 제거 시 세그먼트 경계 미세 끊김 발생
+        liveSyncDurationCount:        2,   // ★ 1→2: 라이브 엣지 2세그먼트 뒤 재생 (bufferStall 방지)
+        liveMaxLatencyDurationCount:  4,   // ★ 2→4: 급격한 엣지 점프 억제
+        liveDurationInfinity:        true, // 라이브 스트림 duration을 Infinity로 유지
+        startPosition:               -1,   // 항상 라이브 엣지에서 시작 (-1 = 최신 위치)
+        enableWorker:                true,
+      });
+      S.hls = hls;
+      hls.loadSource(url); hls.attachMedia(audio);
+      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+        // ★ 매니페스트 파싱 후 명시적으로 라이브 엣지 위치에서 로드 시작
+        hls.startLoad(-1);
+        audio.volume = S.volume;
+        audio.play().then(onOK).catch(() => {
+          RLog.warn('자동재생 차단 (브라우저 정책) — 화면 탭 필요');
+          showToast('▶ 화면을 탭하면 재생됩니다');
+          onFail(false);
+        });
+      });
+      // ★ LEVEL_LOADED에서 audio.currentTime 강제 점프 제거
+      // → currentTime 강제 변경은 버퍼 플러시를 유발해 재생 중 주기적 끊김의 직접 원인
+      // → 라이브 엣지 동기화는 HLS.js 자체(liveMaxLatencyDurationCount)에 완전히 위임
+      let mediaErrorCount = 0;
+      let netErrCount = 0;    // ★ 비치명 네트워크 오류 누적 카운트
+      let netErrTimer = null; // ★ startLoad 디바운스 타이머 (runaway 루프 방지)
+      hls.on(window.Hls.Events.ERROR, (_, d) => {
+        if (thisCall !== S.callId) { hls.destroy(); return; } // 구 채널 에러 조용히 폐기
+        if (d.type === window.Hls.ErrorTypes.NETWORK_ERROR) {
+          if (d.fatal) {
+            RLog.error('HLS 네트워크 오류(치명)', `${d.details || ''}`);
+            if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
+            if (S.hls === hls) S.hls = null;
+            hls.destroy(); onFail(true);
+          } else {
+            netErrCount++;
+            if (netErrCount > 3) {
+              // ★ 비치명 오류 3회 초과 — startLoad 반복은 의미 없음
+              // HLS 인스턴스를 완전히 재생성해 새 TCP 연결로 복구
+              RLog.warn('HLS 네트워크 오류(인스턴스 재생성)', `${d.details || ''} [${netErrCount}회]`);
+              if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
+              if (S.hls === hls) S.hls = null;
+              hls.destroy(); onFail(true); // scheduleRetry → 새 playStation 호출
+              return;
+            }
+            RLog.warn('HLS 네트워크 오류(복구 시도)', `${d.details || ''} [${netErrCount}/3]`);
+            // ★ startLoad를 500ms 디바운스로 제한 — 연속 오류 시 폭주 방지
+            if (!netErrTimer) {
+              netErrTimer = setTimeout(() => {
+                netErrTimer = null;
+                hls.startLoad();
+              }, 500);
+            }
+          }
+          return;
+        }
+        if (d.type === window.Hls.ErrorTypes.MEDIA_ERROR) {
+          if (mediaErrorCount < 2) {
+            RLog.warn(`HLS 미디어 오류(복구 ${mediaErrorCount+1}회)`, `${d.details || ''}`);
+            mediaErrorCount++;
+            hls.recoverMediaError();
+            // ★ recoverMediaError() 후 audio가 paused 상태로 방치되는 문제 해결
+            // HLS.js 스펙상 recoverMediaError 이후 명시적으로 play()를 재호출해야 함
+            setTimeout(() => { if (S.hls === hls && audio.paused) audio.play().catch(() => {}); }, 100);
+          } else {
+            RLog.error('HLS 미디어 오류(복구 한계 초과)', `${d.details || ''}`);
+            if (S.hls === hls) S.hls = null;
+            hls.destroy(); onFail(true);
+          }
+          return;
+        }
+        if (d.fatal) {
+          if (S.hls === hls) S.hls = null;
+          hls.destroy(); onFail(true);
+        }
+      });
+    } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+      audio.src = url; audio.volume = S.volume;
+      audio.play().then(onOK).catch(e => {
+        RLog.warn('네이티브 HLS play() 실패', e?.message || '');
+        onFail(true);
+      });
+    } else {
+      showError('이 브라우저는 HLS를 지원하지 않습니다.');
+      S.loading = false; updateNowPlaying(); updateActiveCard();
+    }
+  }).catch(() => {
+    if (thisCall !== S.callId) return;
+    S.loading = false; S.playing = false;
+    updateNowPlaying(); updateActiveCard(); updateMediaSession();
+    showError('스트림 주소를 가져오지 못했습니다.');
+  });
+}
+
+function togglePlay() {
+  if (!S.current || S.loading) return;
+  if (S.playing) {
+    clearRetryTimer(); stopWatchdog();
+    if (S.hls) S.hls.stopLoad();
+    S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
+    audio.pause(); S.playing = false;
+    localStorage.setItem('radio_playing', '0');
+    releaseWakeLock(); // ★ 사용자 정지 시 WakeLock 해제
+    RLog.stopBgWatch();
+    RLog.stop('사용자 정지 (일시정지 버튼)');
+    updateNowPlaying(); updateActiveCard(); updateMediaSession();
+  } else {
+    playStation(S.current);
+  }
+}
+
+/* ════════════════════════════════════════
+   오디오 이벤트 (전화/인터럽트 처리)
+════════════════════════════════════════ */
+audio.addEventListener('ended',   () => { if (S.current && S.playing) scheduleRetry(); });
+audio.addEventListener('error',   () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
+// ★ stalled: 데이터 수신 중단 감지
+// HLS.js 활성 상태에서는 HLS.js 내부가 자체 복구하므로 외부 개입 금지
+// native <audio> 전용으로만 scheduleRetry 호출
+audio.addEventListener('stalled', () => {
+  if (!S.current || !S.playing || S.loading) return;
+  if (S.hls) return; // ★ HLS.js가 자체 복구 처리 중 — 외부 재시작 금지
+  scheduleRetry();
+});
+
+/* ════════════════════════════════════════
+   네트워크 전환 감지 (WiFi ↔ 데이터)
+   — Android에서 online/offline 이벤트 없이
+     IP만 바뀌는 경우를 Network Information API로 감지
+════════════════════════════════════════ */
+(function initNetworkSwitchDetect() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!conn) return; // 미지원 브라우저 (iOS 등)는 워치독으로 처리
+
+  let lastType = conn.effectiveType || conn.type || '';
+
+  conn.addEventListener('change', () => {
+    const newType = conn.effectiveType || conn.type || '';
+    if (newType === lastType) return;
+    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`); // ★ lastType 갱신 전에 로그
+    lastType = newType;
+    if (!S.current || (!S.wasPlaying && !S.playing)) return; // ★ 연산자 우선순위 명확화
+
+    // 네트워크 전환 직후 잠깐 대기 후 재연결
+    // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
+    setTimeout(() => {
+      if (S.current && (S.wasPlaying || S.playing)) {
+        console.info('[네트워크] 전환 후 재연결 실행');
+        S.wasPlaying = false;
+        S.needReconnect = false;
+        stopWatchdog();
+        clearRetryTimer();
+        playStation(S.current);
+      }
+    }, 500);
+  });
+})();
+
+audio.addEventListener('pause', () => {
+  if (S.userPaused) { S.userPaused = false; return; }
+  if (S.sleepStopped) { RLog.info('pause 이벤트 무시 (취침 타이머 종료 상태)'); return; }
+  // ★ 재생 시작 직후 1500ms 이내 pause는 HLS 버퍼링 시작 시 브라우저가
+  //    내부적으로 발화하는 오발동 — CALL로 오판하지 않도록 억제
+  if (S.justStarted && (Date.now() - S.justStarted) < 1500) {
+    RLog.info('pause 이벤트 억제 (재생 직후 오발동)', `elapsed=${Date.now()-S.justStarted}ms`);
+    return;
+  }
+  // ★ audio.src가 없는 상태에서의 pause는 재생 중이 아님 — 무시
+  if (!audio.src || audio.src === '' || audio.src === location.href) {
+    RLog.info('pause 이벤트 무시 (audio.src 없음 — 재생 중 아님)');
+    return;
+  }
+  // ★ 백그라운드(화면 잠금·앱 전환) 상태에서 OS가 발화하는 pause는 통화 감지 대상이 아님
+  // → 화면을 내리면 OS가 audio.pause()를 호출해 이 핸들러가 트리거되어 재생이 끊기는 핵심 원인
+  if (document.visibilityState === 'hidden') {
+    RLog.info('pause 이벤트 무시 (백그라운드 — OS 발화)');
+    // 백그라운드에서 pause됐지만 재생 중이었다면 wasPlaying 보존
+    if (S.playing && S.current) {
+      S.wasPlaying = true;
+      S.playing    = false;
+      updateNowPlaying(); updateActiveCard();
+    }
+    return;
+  }
+  if (S.playing && S.current && !S.loading) {
+    RLog.call('통화/음성입력으로 재생 중단 감지');
+    S.wasPlaying = true;
+    S.needReconnect = true;
+    S.playing = false;
+    S.justStarted = 0; // 가드 해제
+    updateNowPlaying(); updateActiveCard();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
+  }
+});
+
+audio.addEventListener('play', () => {
+  // ★ 취침 타이머 종료 후 OS/HLS가 자동으로 재생을 복구하는 경우 차단
+  if (S.sleepStopped) {
+    S.userPaused = true;
+    audio.pause();
+    RLog.info('자동 재연결 차단 (취침 타이머 종료)');
+    return;
+  }
+  // needReconnect: 통화/음성입력으로 인한 외부 중단 상태
+  if (S.needReconnect && S.current && !reconnectingCall) {
+    S.needReconnect = false;
+    S.wasPlaying    = true;  // ★ false → true: 재연결 트리거가 wasPlaying을 필요로 함
+    S.userPaused    = true;
+    audio.pause();
+    // ★ AudioContext resume → statechange 흐름에 위임
+    // 백그라운드/포그라운드 모두 동일하게 AudioContext 상태로 판단
+    const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
+    if (ctx && ctx.state === 'running') {
+      // 포그라운드면 즉시, 백그라운드면 tryReconnect가 처리
+      S.wasPlaying = false; S.needReconnect = false;
+      if (document.visibilityState !== 'hidden') playStation(S.current);
+      else { S.wasPlaying = true; startWatch(); } // ★ 백그라운드: 통화 감지 폴링 시작
+    } else if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {}); // statechange → tryReconnect 흐름
+    } else {
+      if (document.visibilityState !== 'hidden') playStation(S.current);
+      else { S.wasPlaying = true; } // 포그라운드 복귀 시 visibilitychange가 처리
+    }
+  }
+});
+
+/* ════════════════════════════════════════
+   공유 AudioContext 싱글턴
+   통화·음성입력 종료 감지를 위해
+   initCallReconnect + initBluetoothReconnect가 공통으로 사용
+════════════════════════════════════════ */
+let _sharedAudioCtx  = null;
+let _ctxStateWatched = false; // statechange 리스너 중복 등록 방지
+
+function getSharedAudioCtx() {
+  if (_sharedAudioCtx && _sharedAudioCtx.state !== 'closed') return _sharedAudioCtx;
+  try {
+    _sharedAudioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    _ctxStateWatched = false; // 새 인스턴스 → 리스너 재등록 필요
+  } catch(e) {}
+  return _sharedAudioCtx;
+}
+
+function ensureAudioCtxWatch() {
+  if (_ctxStateWatched) return;
+  const ctx = getSharedAudioCtx();
+  if (!ctx) return;
+  _ctxStateWatched = true;
+  ctx.addEventListener('statechange', () => {
+    // 오래된 컨텍스트의 이벤트 무시
+    if (ctx !== _sharedAudioCtx || ctx.state === 'closed') return;
+    // play 이벤트 중 suspended → resume 시도
+    if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
+    // running 복귀 = 통화/음성입력 종료 → 재연결
+    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+      if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 AudioContext 복귀로 재생 재시작 차단
+      RLog.call('AudioContext running 복귀 (통화 종료 감지)');
+      // ★ 포그라운드: 즉시 재연결
+      // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
+      if (document.visibilityState !== 'hidden') {
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      } else {
+        tryReconnect(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
+      }
+    }
+  });
+}
+
+// ★ 앱 시작 즉시 AudioContext 생성 + statechange 등록
+// 사용자 첫 터치 전이라 suspended 상태지만, 상태 변화는 감지 가능
+try { getSharedAudioCtx(); ensureAudioCtxWatch(); } catch(e) {}
+
+/* ════════════════════════════════════════
+   통화 종료 자동 재연결
+════════════════════════════════════════ */
+// ★ play 이벤트 오발동 차단용으로 외부에서 참조
+let reconnectingCall = false;
+
+// ★ playStation 내부에서 통화감지 인터벌을 즉시 멈추기 위한 외부 참조
+let stopCallWatch = () => {};
+
+(function initCallReconnect() {
+  let watchTimer  = null;
+  let callSuspect = false;
+
+  function tryReconnect() {
+    if (reconnectingCall || !S.current || !S.wasPlaying) return;
+    if (S.sleepStopped) { RLog.info('tryReconnect 차단 (취침 타이머 종료)'); return; }
+    // ★ 수동 재생/로딩 중이면 중복 실행 방지
+    if (S.playing || S.loading) { S.wasPlaying = false; return; }
+    // ★ 백그라운드에서도 통화 종료 후 재연결 허용
+    // manifestLoadError 루프는 scheduleRetry의 hidden 차단이 이미 보호하고 있음
+    reconnectingCall = true;
+    S.wasPlaying     = false;
+    S.needReconnect  = false;
+    callSuspect      = false;
+    stopWatch();
+    showError(null);
+
+    // ★ 소프트 재연결 먼저 시도 — HLS가 살아있으면 play()만 재호출
+    // 알림음·짧은 인터럽트는 HLS 스트림이 유효하므로 전체 재연결(2~3초 침묵) 불필요
+    if (S.hls && audio.src) {
+      RLog.call('통화/인터럽트 종료 → play() 소프트 재연결 시도');
+      S.userPaused = true; // pause 핸들러 오발동 방지
+      setTimeout(() => {
+        audio.play().then(() => {
+          // ★ 소프트 재연결 성공 — HLS 인스턴스 재사용, 끊김 최소화
+          reconnectingCall = false;
+          S.playing = true; S.loading = false; S.userPaused = false;
+          RLog.call('소프트 재연결 성공 ✅');
+          updateNowPlaying(); updateActiveCard(); updateMediaSession();
+          startWatchdog();
+        }).catch(() => {
+          // ★ play() 실패 → 전체 재연결로 폴백
+          reconnectingCall = false;
+          RLog.call('소프트 재연결 실패 → 전체 재연결 전환');
+          _fullReconnect();
+        });
+      }, 600); // 인터럽트 해제까지 최소 대기
+      return;
+    }
+
+    // HLS가 없거나 src가 비어있으면 바로 전체 재연결
+    RLog.call('통화/음성입력 종료 → 전체 재연결 준비');
+    _fullReconnect();
+  }
+
+  function _fullReconnect() {
+    reconnectingCall = true;
+    // ★ pause 핸들러 오발동 방지 — 반드시 상태 먼저 초기화
+    S.userPaused = true;
+    S.playing    = false;
+
+    // ★ 대기 전에 기존 스트림 즉시 정리
+    try {
+      audio.pause();
+      if (S.hls) { S.hls.destroy(); S.hls = null; }
+      audio.src = '';
+    } catch(e) {
+      console.warn('[fullReconnect] 기존 스트림 정리 실패:', e);
+    }
+
+    setTimeout(() => {
+      // ★ 백그라운드에서도 통화 종료 후 전체 재연결 허용
+      // scheduleRetry가 hidden 상태에서 wasPlaying=true를 보존하므로 루프 안전
+      RLog.call('통화 종료 → 전체 재연결 실행' + (document.visibilityState === 'hidden' ? ' (백그라운드에서 재생 복구)' : ' (포그라운드)'));
+      playStation(S.current, true);  // 긴 통화 후 URL 강제 갱신
+      setTimeout(() => { reconnectingCall = false; }, 2000);
+    }, 1200);
+  }
+
+  function startWatch() {
+    if (watchTimer || reconnectingCall) return;
+    callSuspect = true;
+    // ★ AudioContext statechange가 주 감지 수단이지만,
+    //    suspended 상태가 지속될 경우를 대비한 폴백 폴링
+    watchTimer = setInterval(() => {
+      if (!S.wasPlaying || !S.current || reconnectingCall) { stopWatch(); return; }
+      if (!audio.paused || !navigator.onLine) return;
+      // ★ 매번 새 컨텍스트 생성 금지 — 공유 싱글턴 재사용
+      const ctx = getSharedAudioCtx();
+      if (!ctx) return;
+      // suspended면 resume 시도 → statechange → tryReconnect 흐름으로 이어짐
+      if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
+      if (ctx.state === 'running') { tryReconnect(); }
+    }, 2000);
+  }
+
+  function stopWatch() {
+    if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+    callSuspect = false;
+  }
+  stopCallWatch = stopWatch; // ★ playStation에서 인터벌 경쟁 차단용으로 외부 노출
+
+  audio.addEventListener('pause', () => {
+    if (document.visibilityState === 'hidden') return;
+    if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 통화 감지 폴링 차단
+    setTimeout(() => {
+      if (S.wasPlaying && S.current && !reconnectingCall) startWatch();
+    }, 500);
+  });
+
+  audio.addEventListener('play', () => stopWatch());
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      // ★ 재생/로딩 중이면 wasPlaying 보존 (복귀 시 재연결 트리거)
+      if (S.playing || S.loading) S.wasPlaying = true;
+      // ★ 백그라운드 진입 시 재생/로딩 상태 저장 — onFail 타이밍 레이스 대비
+      S._hiddenWasActive = S.playing || S.loading || S.wasPlaying;
+      // ★ 로그는 wasPlaying 보존 후 출력 — 정확한 상태 반영
+      RLog.infoS('앱 백그라운드 진입');
+      // ★ 백그라운드 실제 재생 감시 시작 (3초마다 currentTime 변화 체크)
+      if (S.playing) RLog.startBgWatch();
+
+      // ★ 백그라운드 진입 시 재시도·폴링 중단 (manifest 루프 방지)
+      clearRetryTimer();
+      stopCallWatch();
+      stopWatchdog();
+      if (typeof S._stopVoiceTimer === 'function') S._stopVoiceTimer();
+
+      // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
+      S._watchdogPaused = S.playing || S.loading;
+
+      // ★ 로딩 중(아직 재생 안 된 상태)일 때만 HLS 정리 — 이미 재생 성공 중인 audio는 절대 건드리지 않음
+      // → S.playing=true인 상태에서 pause()/src='' 하면 백그라운드 오디오가 즉시 끊김
+      if (S.loading && !S.playing) {
+        if (S.hls) { S.hls.destroy(); S.hls = null; }
+        S.wasPlaying = true;
+        S.userPaused = true;
+        audio.pause(); audio.src = '';
+        S.loading = false;
+        S.retryCount = 0;
+        updateNowPlaying(); updateActiveCard();
+      }
+      return;
+    }
+
+    // ★ 포그라운드 복귀
+    RLog.stopBgWatch(); // 포그라운드 복귀 — 백그라운드 감시 중단
+    RLog.infoS('앱 포그라운드 복귀');
+
+    // 1) 워치독 재시작
+    if (S._watchdogPaused && S.playing && !S.loading) {
+      S._watchdogPaused = false;
+      startWatchdog();
+    }
+
+    // 2) 이미 재생/로딩 중이면 스킵
+    if (S.playing || S.loading) return;
+    if (reconnectingCall) {
+      RLog.info('visibilitychange 재연결 스킵 (tryReconnect 진행 중)');
+      return;
+    }
+
+    // ★ wasPlaying이면 즉시 재연결
+    // _hiddenWasActive는 단독 트리거로 사용하지 않음 — wasPlaying 소실 대비 보조 조건
+    if (S.wasPlaying && S.current && !S.playing && !S.loading) {
+      if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
+      RLog.reconnect('포그라운드 복귀 → 재연결');
+      S.wasPlaying = false;
+      S._hiddenWasActive = false;
+      S.retryCount = 0;
+      clearRetryTimer();
+      playStation(S.current, true);
+    }
+    S._hiddenWasActive = false; // 복귀 후 항상 초기화
+  });
+
+  window.addEventListener('online', () => {
+    if (!S.current) return;
+    // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
+    if (S.wasPlaying || S.playing) {
+      RLog.net('네트워크 온라인 복귀 → 재연결 시도');
+      setTimeout(() => {
+        stopWatchdog(); clearRetryTimer();
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      }, 500);
+    }
+  });
+})();
+
+/* ════════════════════════════════════════
+   블루투스 재연결
+════════════════════════════════════════ */
+(function initBluetoothReconnect() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.addEventListener) return;
+
+  // ★ 독립 AudioContext 제거 — 공유 싱글턴(getSharedAudioCtx) 사용
+  //    앱 시작 시 이미 statechange 리스너 등록됨 (ensureAudioCtxWatch)
+
+  navigator.mediaDevices.addEventListener('devicechange', async () => {
+    if (!S.current) return;
+    let hasAudioOut = true;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      hasAudioOut = devices.some(d => d.kind === 'audiooutput');
+    } catch(e) {}
+    if (S.wasPlaying && hasAudioOut) {
+      setTimeout(() => {
+        if (S.wasPlaying && S.current) {
+          S.wasPlaying = false; S.needReconnect = false;
+          playStation(S.current);
+        }
+      }, 300);
+    }
+  });
+
+  // ★ play 이벤트 시 공유 AudioContext가 suspended면 resume 시도
+  audio.addEventListener('play', () => {
+    const ctx = getSharedAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch(); // statechange 리스너 확실히 등록
+  }, { once: false });
+
+  // ★ 첫 터치 시 공유 AudioContext resume 시도 + 리스너 보장
+  document.addEventListener('click', () => {
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch();
+  }, { once: true, passive: true });
+  document.addEventListener('touchstart', () => {
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    ensureAudioCtxWatch();
+  }, { once: true, passive: true });
+})();
+
+/* ════════════════════════════════════════
+   네트워크 오프라인 감지
+════════════════════════════════════════ */
+// ★ 백그라운드 진입 시각 기록 — offline 오감지 필터링에 사용
+let _bgHiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') _bgHiddenAt = Date.now();
+  else _bgHiddenAt = 0;
+}, true); // capture 단계로 등록 — 다른 핸들러보다 먼저 실행
+
+window.addEventListener('offline', () => {
+  if (!S.current) return;
+  if (!S.playing && !S.wasPlaying) return;
+
+  // ★ 백그라운드 진입 직후 500ms 이내 offline은 OS 절전 오감지로 무시
+  if (_bgHiddenAt && Date.now() - _bgHiddenAt < 500) {
+    RLog.net('offline 이벤트 무시 (백그라운드 진입 직후 OS 절전 오감지)');
+    return;
+  }
+
+  RLog.net('네트워크 오프라인 감지 — 방송 중단');
+  if (S.playing) { S.wasPlaying = true; S.playing = false; }
+  clearRetryTimer(); stopWatchdog(); // ★ 워치독 즉시 정리
+  if (S.hls) S.hls.stopLoad();
+  updateNowPlaying(); updateActiveCard();
+  showError('네트워크가 끊겼습니다. 연결을 확인 중...');
+});
+
+/* ════════════════════════════════════════
+   음성입력(마이크) 종료 후 재생 복원
+   visibilitychange가 발생하지 않는 음성입력 UI 오버레이 대응
+════════════════════════════════════════ */
+(function initVoiceInputReconnect() {
+  let _voiceTimer = null;
+
+  function stopVoiceTimer() {
+    if (_voiceTimer) { clearInterval(_voiceTimer); _voiceTimer = null; }
+  }
+  // ★ 백그라운드 진입 시 외부에서 타이머 중단 가능하도록 전역 노출
+  // ★ window 전역 노출 제거 — S 객체에 저장해 전역 네임스페이스 오염 방지
+  S._stopVoiceTimer = stopVoiceTimer;
+
+  // ★ 핵심 재연결 함수 — 호출 시 즉시 재연결 or AudioContext resume 위임
+  function doReconnect(reason) {
+    if (S.sleepStopped) { RLog.info(`doReconnect 차단 (취침 타이머 종료) — ${reason}`); return; }
+    if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
+    stopVoiceTimer();
+    console.info('[VoiceInput]', reason, '→ 재연결');
+    const ctx = getSharedAudioCtx();
+    if (ctx && ctx.state === 'suspended') {
+      // AudioContext가 아직 suspended면 resume → statechange → ensureAudioCtxWatch 흐름
+      ctx.resume().catch(() => {
+        // resume 실패 시 직접 재연결
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      });
+    } else {
+      S.wasPlaying = false; S.needReconnect = false;
+      playStation(S.current);
+    }
+  }
+
+  // ① pause 이벤트 — userPaused 여부와 무관하게 wasPlaying 강제 보존
+  //    기존 pause 핸들러가 userPaused=true일 때 wasPlaying을 세팅하지 않는 문제를 여기서 보완
+  audio.addEventListener('pause', () => {
+    if (!S.current) return;
+    if (S.userPaused) return;
+    if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 wasPlaying 보존 차단
+    // playing이었거나, 로딩 중에 OS가 pause를 걸었을 때 wasPlaying 보존
+    if (S.playing || S.loading) {
+      S.wasPlaying = true;
+    }
+    // ★ 백그라운드 상태에서는 폴링 타이머 시작 차단
+    if (document.visibilityState === 'hidden') return;
+    // pause 후 폴링 시작 — 음성입력/통화 종료 감지 (주 감지 실패 대비 폴백)
+    stopVoiceTimer();
+    let tick = 0;
+    _voiceTimer = setInterval(() => {
+      tick++;
+      if (S.playing || S.loading || !S.current) { stopVoiceTimer(); return; }
+      if (!S.wasPlaying) { stopVoiceTimer(); return; }
+      if (tick > 60) { stopVoiceTimer(); return; } // 최대 2분 감지
+      // AudioContext가 running이면 마이크 사용이 종료된 것
+      const ctx = getSharedAudioCtx();
+      if (!ctx) return;
+      if (ctx.state === 'running') {
+        doReconnect('폴링 감지(AudioCtx running)');
+      } else if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {}); // resume 시도 → statechange로 처리
+      }
+    }, 2000);
+  });
+
+  // play 이벤트 시 폴링 종료
+  audio.addEventListener('play', () => stopVoiceTimer());
+
+  // ② visibilitychange — 탭 전환이 발생하는 경우(전화, 일부 음성입력)
+  // ★ initCallReconnect의 visibilitychange와 중복되므로
+  //    재생이 완전히 끊긴 경우(wasPlaying=true, playing=false)만 처리
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    // 이미 재생 중이거나 initCallReconnect가 처리 중이면 스킵
+    if (S.playing || S.loading || reconnectingCall) return;
+    doReconnect('visibilitychange(voice)');
+  });
+
+  // ③ pageshow — 백/포워드 캐시로 복귀 시 (bfcache)
+  window.addEventListener('pageshow', (e) => {
+    if (!e.persisted) return;
+    doReconnect('pageshow(bfcache)');
+  });
+
+})();
+
+/* ════════════════════════════════════════
+   볼륨
+════════════════════════════════════════ */
+function handleVolume(val) {
+  const parsed = parseFloat(val);
+  if (isNaN(parsed)) return;
+  S.volume = Math.min(1, Math.max(0, parsed));
+  audio.volume = S.volume;
+  const c  = (S.current && S.current.color) || 'var(--red)';
+  const sl = document.getElementById('volSlider');
+  if (sl) {
+    sl.style.background =
+      `linear-gradient(to right,${c} ${S.volume*100}%,var(--bg3) ${S.volume*100}%)`;
+  }
+}
+
+/* ════════════════════════════════════════
+   MediaSession (잠금화면 컨트롤)
+════════════════════════════════════════ */
+function updateMediaSession() {
+  if (!('mediaSession' in navigator) || !S.current) return;
+
+  const _aw = [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }];
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title:  S.current.name,
+    artist: `${S.current.freq} · ${S.current.genre}`,
+    album:  'KOREA FM 라디오',
+    artwork: _aw
+  });
+
+  navigator.mediaSession.setActionHandler('play', () => {
+    playStation(S.current);
+  });
+
+  navigator.mediaSession.setActionHandler('pause', () => {
+    S.userPaused = true; S.wasPlaying = false; S.needReconnect = false;
+    S.justStarted = 0; // 수동 정지 시 가드 즉시 해제
+    if (S.hls) S.hls.stopLoad();
+    audio.pause(); S.playing = false;
+    localStorage.setItem('radio_playing', '0');
+    updateNowPlaying(); updateActiveCard();
+    navigator.mediaSession.playbackState = 'paused';
+  });
+
+  navigator.mediaSession.setActionHandler('stop', () => {
+    S.userPaused = true;
+    if (S.hls) S.hls.stopLoad();
+    audio.pause(); S.playing = false;
+    localStorage.setItem('radio_playing', '0');
+    updateNowPlaying(); updateActiveCard();
+    navigator.mediaSession.playbackState = 'paused';
+  });
+
+  ['previoustrack', 'nexttrack', 'seekbackward', 'seekforward'].forEach(a => {
+    try { navigator.mediaSession.setActionHandler(a, null); } catch(e) {}
+  });
+
+  navigator.mediaSession.playbackState =
+    (S.playing || S.loading) ? 'playing' : 'paused';
+}
+
+/* ════════════════════════════════════════
+   Screen Wake Lock
+   Android Chrome 84+ 지원 — OS가 오디오 탭을 종료하지 못하도록 잠금
+════════════════════════════════════════ */
+let _wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    if (_wakeLock && !_wakeLock.released) return;
+    _wakeLock = await navigator.wakeLock.request('screen');
+    _wakeLock.addEventListener('release', () => {
+      _wakeLock = null;
+      if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
+        requestWakeLock();
+      }
+    });
+  } catch(e) {
+    console.warn('[WakeLock] 획득 실패:', e.message);
+  }
+}
+
+function releaseWakeLock() {
+  if (_wakeLock && !_wakeLock.released) {
+    _wakeLock.release().catch(() => {});
+    _wakeLock = null;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
+    requestWakeLock();
+  }
+});
+
+/* ════════════════════════════════════════
+   취침 타이머
+════════════════════════════════════════ */
+const SleepTimer = (() => {
+  let _endTime   = 0;      // 종료 시각 (timestamp)
+  let _ticker    = null;   // 1초 인터벌
+  let _fadeTimer = null;   // 페이드아웃 인터벌
+  let _origVol   = 1;      // 페이드 전 원래 볼륨
+
+  // 남은 초
+  function remaining() {
+    return Math.max(0, Math.round((_endTime - Date.now()) / 1000));
+  }
+
+  // MM:SS 포맷
+  function fmt(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  // UI 업데이트
+  function _updateUI() {
+    const rem  = remaining();
+    const el   = document.getElementById('sleepCountdown');
+    if (el) {
+      el.textContent = fmt(rem);
+      el.style.display = 'block'; // ★ 명시적 표시 보장
+    }
+    // 헤더 버튼에 남은 시간 표시 (1분 미만이면 초 표시)
+    const btn  = document.getElementById('sleepBtn');
+    if (btn && _ticker) {
+      btn.title = `취침 타이머 — ${fmt(rem)} 남음`;
+    }
+  }
+
+  // 볼륨 페이드아웃 후 정지 (30초에 걸쳐 0으로)
+  function _fadeAndStop() {
+    const audio = window.audio;
+    if (!audio) { stop(true); return; }
+    _origVol = audio.volume;
+    // ★ 페이드 종료 절대 시각 기준 — setInterval throttle로 steps 카운트가 틀어지는 문제 방지
+    const fadeEndAt  = Date.now() + 30 * 1000;
+    const startVol   = _origVol;
+    if (window.S) window.S.userPaused = true;
+    RLog.info('취침 타이머 — 볼륨 페이드아웃 시작 (30초)');
+    _fadeTimer = setInterval(() => {
+      const elapsed = Date.now();
+      const ratio   = Math.min(1, (elapsed - (fadeEndAt - 30000)) / 30000);
+      audio.volume  = Math.max(0, startVol * (1 - ratio));
+      if (window.S) window.S.userPaused = true;
+      if (elapsed >= fadeEndAt || audio.volume === 0) {
+        clearInterval(_fadeTimer); _fadeTimer = null;
+        audio.volume = startVol; // 볼륨 원복
+        stop(true);
+      }
+    }, 500);
+  }
+
+  // 타이머 시작 (minutes: 분)
+  function start(minutes) {
+    clear();
+    _endTime = Date.now() + minutes * 60 * 1000;
+    RLog.info(`취침 타이머 설정 — ${minutes}분 후 자동 정지`);
+    // 헤더 버튼 활성화
+    document.getElementById('sleepBtn')?.classList.add('active');
+    // 1초마다 카운트다운 갱신
+    _ticker = setInterval(() => {
+      const rem = remaining();
+      _updateUI();
+      // 30초 남으면 페이드 시작
+      if (rem <= 30 && rem > 0 && !_fadeTimer) _fadeAndStop(); // ★ ===30 → <=30 (setInterval 부정확으로 30을 건너뛸 수 있음)
+      // 0초 도달 (페이드 없이 즉시 정지 폴백)
+      if (rem <= 0 && !_fadeTimer) stop(true);
+    }, 1000);
+    _updateUI();
+    _renderSheet();
+  }
+
+  // 타이머 취소
+  function cancel() {
+    if (!_ticker) return;
+    clear();
+    RLog.info('취침 타이머 취소');
+    _renderSheet();
+    showToast('⏱ 취침 타이머가 취소됐습니다.');
+  }
+
+  // 내부 정리
+  function clear() {
+    if (_ticker)    { clearInterval(_ticker);    _ticker    = null; }
+    if (_fadeTimer) { clearInterval(_fadeTimer); _fadeTimer = null; }
+    _endTime = 0;
+    document.getElementById('sleepBtn')?.classList.remove('active');
+    const btn = document.getElementById('sleepBtn');
+    if (btn) btn.title = '취침 타이머';
+  }
+
+  // 재생 정지 실행
+  function stop(withToast) {
+    clear();
+    const S     = window.S;
+    const audio = window.audio;
+
+    // ★ sleepStopped 플래그 즉시 설정 — 이후 모든 자동 재연결 경로 원천 차단
+    if (S) S.sleepStopped = true;
+
+    try {
+      if (S) S.justStarted = 0;
+      if (audio) audio.volume = _origVol;
+      if (S) S.callId = (S.callId || 0) + 1;
+
+      if (typeof clearRetryTimer === 'function') clearRetryTimer();
+      if (typeof stopWatchdog    === 'function') stopWatchdog();
+      if (typeof stopCallWatch   === 'function') stopCallWatch();
+
+      if (S) {
+        RLog.stop('취침 타이머 정지');
+        S.wasPlaying       = false;
+        S.userPaused       = true;
+        S.needReconnect    = false;
+        S.playing          = false;
+        S.loading          = false;
+        S._hiddenWasActive = false;
+        window.reconnectingCall = false;
+      }
+
+      // ★ localStorage 먼저 — bfcache 복원 레이스 방지
+      try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
+
+      if (S && S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
+
+      if (audio) {
+        try { audio.pause(); } catch(e) {}
+        // src 초기화는 50ms 후 — emptied 이벤트 추가 pause 방지
+        setTimeout(() => { try { if (audio.src) audio.src = ''; } catch(e) {} }, 50);
+      }
+
+      if (typeof releaseWakeLock    === 'function') releaseWakeLock();
+      if (typeof updateNowPlaying   === 'function') updateNowPlaying();
+      if (typeof updateActiveCard   === 'function') updateActiveCard();
+      if (typeof updateMediaSession === 'function') updateMediaSession();
+    } catch(err) {
+      RLog.info('취침 타이머 stop() 예외', String(err));
+    }
+
+    // ★ 토스트는 try 블록 밖 — 예외 발생 여부와 무관하게 항상 표시
+    if (withToast) {
+      RLog.info('취침 타이머 종료 — 재생 정지');
+      try { showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.'); } catch(e) {}
+    }
+
+    try { _renderSheet(); } catch(e) {}
+  }
+
+  // 시트 UI 렌더 (활성/설정 전환)
+  function _renderSheet() {
+    const active = !!_ticker;
+    const elActive = document.getElementById('sleepActive');
+    const elSetup  = document.getElementById('sleepSetup');
+    // ★ display를 먼저 적용한 후 _updateUI() 호출 — 숨겨진 상태에서 textContent 업데이트 시 렌더링 안 됨 방지
+    if (elActive) elActive.style.display = active ? 'block' : 'none';
+    if (elSetup)  elSetup.style.display  = active ? 'none'  : 'block';
+    if (active) {
+      // ★ display 변경 후 브라우저 레이아웃 플러시를 기다린 뒤 텍스트 갱신
+      requestAnimationFrame(() => _updateUI());
+    }
+  }
+
+  return { start, cancel, isActive: () => !!_ticker, renderSheet: _renderSheet };
+})();
+
+function openSleepTimer() {
+  SleepTimer.renderSheet();
+  // ★ 재생 중이 아닐 때 안내 배너 표시
+  const notice = document.getElementById('sleepNoPlayNotice');
+  if (notice) notice.style.display = (!S.playing && !S.loading) ? 'block' : 'none';
+  document.getElementById('sleepBg').classList.add('show');
+  // ★ 시트가 화면에 나타난 후 카운트다운 강제 갱신 (CSS 전환 전 렌더링 누락 방지)
+  setTimeout(() => SleepTimer.renderSheet(), 50);
+}
+function closeSleepTimer(e) {
+  if (e && e.target !== document.getElementById('sleepBg')) return;
+  document.getElementById('sleepBg').classList.remove('show');
+}
+function setSleepTimer(min) {
+  SleepTimer.start(min);
+  closeSleepTimer();
+  showToast(`⏱ ${min >= 60 ? min/60 + '시간' : min + '분'} 후 자동 정지`);
+}
+function setSleepTimerCustom() {
+  const val = parseInt(document.getElementById('sleepCustomMin')?.value);
+  if (!val || val < 1 || val > 480) {
+    showToast('⚠️ 1~480분 사이로 입력해주세요.'); return;
+  }
+  setSleepTimer(val);
+}
+function cancelSleepTimer() {
+  SleepTimer.cancel();
+  closeSleepTimer();
+}
+
+/* ══ firebase.js ══ */
+/* ════════════════════════════════════════
+   IndexedDB 백업
+   localStorage 삭제 시에도 IndexedDB에서 복원
+════════════════════════════════════════ */
+const DB_NAME    = 'kr-radio-db';
+const DB_VERSION = 1;
+const DB_STORE   = 'settings';
+
+let _idbInstance = null; // ★ 싱글턴 — 매 호출마다 새 커넥션 생성 방지
+
+function openDB() {
+  if (_idbInstance) return Promise.resolve(_idbInstance);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore(DB_STORE, { keyPath: 'key' });
+    };
+    req.onsuccess = e => { _idbInstance = e.target.result; resolve(_idbInstance); };
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function idbSet(key, value) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readwrite');
+      const st  = tx.objectStore(DB_STORE);
+      st.put({ key, value });
+      tx.oncomplete = () => resolve();
+      tx.onerror    = e => reject(e.target.error);
+    });
+  } catch(e) { console.warn('IndexedDB 저장 실패:', e); }
+}
+
+async function idbGet(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx  = db.transaction(DB_STORE, 'readonly');
+      const req = tx.objectStore(DB_STORE).get(key);
+      req.onsuccess = e => resolve(e.target.result?.value ?? null);
+      req.onerror   = e => reject(e.target.error);
+    });
+  } catch(e) { return null; }
+}
+
+async function saveProtected(key, value) {
+  try { localStorage.setItem(key, value); } catch(e) {}
+  await idbSet(key, value);
+}
+
+async function loadProtected(key) {
+  const local = localStorage.getItem(key);
+  if (local !== null) return local;
+  const idb = await idbGet(key);
+  if (idb !== null) {
+    try { localStorage.setItem(key, idb); } catch(e) {}
+    console.info(`[복원] ${key} → IndexedDB에서 복구됨`);
+  }
+  return idb;
+}
+
+async function restoreFromIDB() {
+  const favs = await loadProtected('radio_favs');
+  if (favs) {
+    try {
+      const parsed = JSON.parse(favs);
+      if (Array.isArray(parsed)) {
+        S.favorites = new Set(parsed);
+        updateFavCount(); renderAllList(); updateFavList();
+      }
+    } catch(e) {}
+  }
+
+  const locked = await loadProtected('radio_fav_locked');
+  if (locked !== null) {
+    favLocked = locked === '1';
+    applyFavLock();
+  }
+
+  const custom = await loadProtected('radio_custom_stations');
+  if (custom) {
+    try {
+      const parsed = JSON.parse(custom);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(s => {
+          if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+        });
+        renderAllList();
+      }
+    } catch(e) {}
+  }
+}
+
+/* ════════════════════════════════════════
+   사용자 UUID — IndexedDB에만 저장
+   인터넷 기록 삭제 후에도 유지됨
+════════════════════════════════════════ */
+let _userUUID = null;
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+/* ──────────────────────────────────────
+   UUID 쿠키 헬퍼
+   인터넷 기록 삭제(방문기록+캐시)로는 쿠키가 지워지지 않으므로
+   UUID를 쿠키에도 백업해 IndexedDB 소실에 대비
+─────────────────────────────────────── */
+function setCookieUUID(uuid) {
+  try {
+    // 10년 유효기간
+    const expires = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = `kr_radio_uuid=${uuid}; expires=${expires}; path=/; SameSite=Lax`;
+  } catch(e) {}
+}
+
+function getCookieUUID() {
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)kr_radio_uuid=([^;]+)/);
+    return m ? m[1] : null;
+  } catch(e) { return null; }
+}
+
+async function getUserUUID() {
+  if (_userUUID) return _userUUID;
+
+  // 1순위: IndexedDB
+  let uuid = await idbGet('user_uuid');
+
+  // 2순위: 쿠키 (IDB가 지워진 경우 복원)
+  if (!uuid) {
+    uuid = getCookieUUID();
+    if (uuid) {
+      await idbSet('user_uuid', uuid);
+      console.info('[UUID] 쿠키에서 복원 → IndexedDB 재저장:', uuid);
+    }
+  }
+
+  // 없으면 신규 생성 후 양쪽에 저장
+  if (!uuid) {
+    uuid = generateUUID();
+    await idbSet('user_uuid', uuid);
+    console.info('[UUID] 새 UUID 생성:', uuid);
+  } else {
+    console.info('[UUID] 복원 완료:', uuid);
+  }
+
+  // 항상 쿠키에도 동기화
+  setCookieUUID(uuid);
+
+  _userUUID = uuid;
+  return uuid;
+}
+
+/* ════════════════════════════════════════
+   Firebase 설정 및 상태
+════════════════════════════════════════ */
+const FB_CONFIG = {
+  apiKey:            'AIzaSyBma41vUE5uNmz_klRxK2B-jtKvcHQRbxI',
+  authDomain:        'my-kr-radio.firebaseapp.com',
+  databaseURL:       'https://my-kr-radio-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:         'my-kr-radio',
+  storageBucket:     'my-kr-radio.firebasestorage.app',
+  messagingSenderId: '995302347935',
+  appId:             '1:995302347935:web:c8348fe1bbaabc9c96beaa'
+};
+
+let fbDb       = null;
+let fbReady    = false;
+let fbListener = null;
+let syncMode   = false;
+let myNick     = localStorage.getItem('radio_nick') || '';
+let _fbIgnore  = 0; // ★ boolean → 타임스탬프로 변경: 300ms 이내 이벤트만 무시
+
+// ★ Firebase 초기화 싱글턴 Promise — 동시 다중 호출 시 중복 initializeApp 방지
+let _fbInitPromise = null;
+
+function initFirebase() {
+  if (_fbInitPromise) return _fbInitPromise;
+  _fbInitPromise = (async () => {
+    if (fbReady) return;
+    try {
+      try { firebase.initializeApp(FB_CONFIG); } catch(e) {} // 이미 초기화된 경우 무시
+      fbDb    = firebase.database();
+      fbReady = true;
+      await initUserData();
+    } catch(e) {
+      console.warn('Firebase 초기화 실패:', e);
+      _fbInitPromise = null; // 실패 시 재시도 허용
+      await restoreFromIDB().catch(() => {});
+    }
+  })();
+  return _fbInitPromise;
+}
+
+/* ════════════════════════════════════════
+   Firebase 사용자 데이터 동기화
+════════════════════════════════════════ */
+async function fbSaveUserData() {
+  if (!fbReady || !fbDb) return;
+  // ★ 계정 로그인 중이면 accounts/ 경로만 사용 — users/ 와 이중 저장 방지
+  if (_accountId) return;
+  try {
+    const uuid = await getUserUUID();
+    await fbDb.ref(`users/${uuid}`).set({
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+  } catch(e) { console.warn('Firebase 사용자 데이터 저장 실패:', e); }
+}
+
+async function fbLoadUserData() {
+  if (!fbReady || !fbDb) return false;
+  try {
+    const uuid = await getUserUUID();
+    const snap = await fbDb.ref(`users/${uuid}`).once('value');
+    const data = snap.val();
+    if (!data) return false;
+
+    if (Array.isArray(data.favorites) && data.favorites.length > 0) {
+      S.favorites = new Set(data.favorites);
+      // ★ saveFav() 대신 직접 저장 — Firebase 복원 데이터를 다시 Firebase로 쓰는 불필요한 루프 방지
+      try { localStorage.setItem('radio_favs', JSON.stringify([...S.favorites])); } catch(e) {}
+      idbSet('radio_favs', JSON.stringify([...S.favorites])).catch(() => {});
+      updateFavCount(); renderAllList(); updateFavList();
+    }
+
+    if (typeof data.favLocked === 'boolean') {
+      favLocked = data.favLocked;
+      const lockVal = favLocked ? '1' : '0';
+      try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+      await idbSet('radio_fav_locked', lockVal);
+      applyFavLock();
+    }
+
+    if (Array.isArray(data.customStations) && data.customStations.length > 0) {
+      const existing = JSON.parse(localStorage.getItem('radio_custom_stations') || '[]');
+      const merged = [...existing];
+      data.customStations.forEach(s => {
+        if (!merged.find(x => x.id === s.id)) merged.push(s);
+      });
+      saveCustomStations(merged);
+      merged.forEach(s => {
+        if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+      });
+      renderAllList();
+    }
+
+    console.info('[Firebase] 사용자 데이터 복원 완료');
+    return true;
+  } catch(e) {
+    console.warn('Firebase 사용자 데이터 불러오기 실패:', e);
+    return false;
+  }
+}
+
+async function initUserData() {
+  const fbRestored = await fbLoadUserData();
+  if (!fbRestored) await restoreFromIDB();
+  console.info('[초기화] 사용자 데이터 로드 완료');
+}
+
+/* ════════════════════════════════════════
+   계정 관리 (ID 기반 즐겨찾기 클라우드 백업)
+   — 인터넷 기록 삭제 후에도 로그인으로 복원 가능
+════════════════════════════════════════ */
+let _accountId  = localStorage.getItem('radio_account_id')  || null;
+let _accountPin = localStorage.getItem('radio_account_pin') || '';
+let _accTab     = 'login'; // 'login' | 'register'
+
+/* 계정 데이터를 Firebase 계정 경로에 저장 */
+async function saveAccountData() {
+  if (!_accountId || !fbReady || !fbDb) return;
+  try {
+    // ★ pin/pinHashed는 로그인 시 이미 설정됨 — 덮어쓰기 방지 (favorites·custom만 업데이트)
+    await fbDb.ref(`accounts/${_accountId}`).update({
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+  } catch(e) { console.warn('[계정] 저장 실패:', e); }
+}
+
+/* Firebase 계정 데이터로 로컬 상태 복원 */
+function _restoreFromAccount(data) {
+  if (Array.isArray(data.favorites)) {
+    S.favorites = new Set(data.favorites);
+    saveProtected('radio_favs', JSON.stringify([...S.favorites])).catch(() => {});
+    updateFavCount(); renderAllList(); updateFavList();
+  }
+  if (typeof data.favLocked === 'boolean') {
+    favLocked = data.favLocked;
+    saveProtected('radio_fav_locked', favLocked ? '1' : '0').catch(() => {});
+    applyFavLock();
+  }
+  if (Array.isArray(data.customStations) && data.customStations.length > 0) {
+    const existing = loadCustomStations();
+    const merged   = [...existing];
+    data.customStations.forEach(s => {
+      if (!merged.find(x => x.id === s.id)) merged.push(s);
+    });
+    saveCustomStations(merged);
+    merged.forEach(s => {
+      if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+    });
+    renderAllList();
+  }
+}
+
+/* 계정 상태를 로컬에 저장 + 버튼 UI 갱신 */
+function _setAccount(id, pin) {
+  _accountId  = id;
+  _accountPin = pin;
+  try { localStorage.setItem('radio_account_id',  id);  } catch(e) {}
+  try { localStorage.setItem('radio_account_pin', pin); } catch(e) {}
+  idbSet('radio_account_id',  id).catch(() => {});
+  idbSet('radio_account_pin', pin).catch(() => {});
+  // 쿠키에도 백업 (IDB+localStorage 동시 삭제 대비)
+  try {
+    const exp = new Date(Date.now() + 10 * 365 * 86400000).toUTCString();
+    document.cookie = `kr_radio_acct=${encodeURIComponent(id)}|${encodeURIComponent(pin)}; expires=${exp}; path=/; SameSite=Lax`;
+  } catch(e) {}
+  _updateAccountBtn();
+}
+
+/* 헤더 버튼 UI 갱신 */
+function _updateAccountBtn() {
+  const btn = document.getElementById('accountBtn');
+  if (!btn) return;
+  if (_accountId) {
+    btn.classList.add('logged-in');
+    btn.innerHTML = `👤 <span class="acc-name">${esc(_accountId)}</span>`;
+    btn.title = '계정 정보';
+  } else {
+    btn.classList.remove('logged-in');
+    btn.innerHTML = '👤';
+    btn.title = '로그인 / 회원가입';
+  }
+}
+
+/* 모달 열기 */
+function openAccountModal() {
+  const formWrap   = document.getElementById('accFormWrap');
+  const loggedWrap = document.getElementById('accLoggedWrap');
+  if (_accountId) {
+    formWrap.style.display               = 'none';
+    loggedWrap.style.display             = 'flex';
+    document.getElementById('accUserName').textContent = _accountId;
+  } else {
+    formWrap.style.display               = 'flex';
+    loggedWrap.style.display             = 'none';
+    document.getElementById('acc-id').value  = '';
+    document.getElementById('acc-pin').value = '';
+    switchAccountTab('login');
+    setTimeout(() => document.getElementById('acc-id').focus(), 120);
+  }
+  document.getElementById('accountModalBg').classList.add('show');
+}
+
+/* 모달 닫기 */
+function closeAccountModal(e) {
+  if (e && e.target !== document.getElementById('accountModalBg')) return;
+  document.getElementById('accountModalBg').classList.remove('show');
+}
+
+/* 탭 전환 */
+function switchAccountTab(tab) {
+  _accTab = tab;
+  document.getElementById('accTabLogin').classList.toggle('active',    tab === 'login');
+  document.getElementById('accTabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('accConfirmBtn').textContent = tab === 'login' ? '로그인' : '회원가입';
+  document.getElementById('accHint').innerHTML =
+    tab === 'login'
+      ? '아이디를 기억해두면 인터넷 기록을 삭제해도<br>어느 기기에서든 즐겨찾기를 복원할 수 있습니다.'
+      : '새 계정을 만들면 현재 즐겨찾기가 클라우드에<br>저장되고 어디서든 복원할 수 있습니다.';
+}
+
+/* 로그인 또는 회원가입 실행 */
+/* ════════════════════════════════════════
+   PIN 해시 헬퍼 — SHA-256으로 단방향 해시
+   평문 PIN을 로컬/Firebase에 저장하지 않도록
+════════════════════════════════════════ */
+async function hashPin(pin) {
+  if (!pin) return '';
+  try {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e) {
+    // crypto.subtle 미지원 환경 폴백 (매우 드물지만 안전망)
+    console.warn('[hashPin] crypto.subtle 미지원, 평문 사용:', e);
+    return pin;
+  }
+}
+
+async function doAccountAction() {
+  // Firebase가 아직 준비 안 됐으면 직접 초기화 시도
+  // (페이지 로드 직후 모달을 빠르게 열었을 때 대비)
+  if (!fbReady || !fbDb) {
+    try { await initFirebase(); } catch(e) {}
+    if (!fbReady || !fbDb) { showToast('⚠️ Firebase에 연결할 수 없습니다.'); return; }
+  }
+
+  const id  = document.getElementById('acc-id').value.trim().toLowerCase();
+  const pin = document.getElementById('acc-pin').value.trim();
+
+  if (!id || id.length < 3) {
+    showToast('⚠️ 아이디를 3자 이상 입력해주세요.'); return;
+  }
+  if (id.length > 12 || !/^[a-z0-9_\-가-힣]+$/.test(id)) {
+    showToast('⚠️ 아이디는 영문·숫자·한글·_·- 만 사용 가능합니다.'); return;
+  }
+  if (pin && !/^\d{4}$/.test(pin)) {
+    showToast('⚠️ PIN은 숫자 4자리로 입력해주세요.'); return;
+  }
+
+  if (_accTab === 'register') await _doRegister(id, pin);
+  else                          await _doLogin(id, pin);
+}
+
+async function _doRegister(id, pin) {
+  try {
+    const snap = await fbDb.ref(`accounts/${id}`).once('value');
+    if (snap.exists()) {
+      showToast('⚠️ 이미 사용 중인 아이디입니다.'); return;
+    }
+    // ★ PIN은 SHA-256 해시로만 저장 — 평문 노출 방지
+    const pinHash = await hashPin(pin);
+    await fbDb.ref(`accounts/${id}`).set({
+      pin:            pinHash,
+      pinHashed:      true, // ★ 마이그레이션 구분 플래그
+      favorites:      [...S.favorites],
+      favLocked:      favLocked,
+      customStations: JSON.parse(localStorage.getItem('radio_custom_stations') || '[]'),
+      updatedAt:      Date.now(),
+    });
+    _setAccount(id, pinHash); // 로컬에도 해시값만 저장
+    closeAccountModal();
+    showToast(`✅ "${id}" 계정이 생성됐습니다`);
+  } catch(e) {
+    console.error('[계정] 등록 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 쓰기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 등록 실패: ${e?.message || e}`);
+    }
+  }
+}
+
+async function _doLogin(id, pin) {
+  try {
+    const snap = await fbDb.ref(`accounts/${id}`).once('value');
+    if (!snap.exists()) {
+      showToast('⚠️ 존재하지 않는 아이디입니다.'); return;
+    }
+    const data = snap.val();
+
+    // ★ PIN 검증 — 해시 마이그레이션 지원
+    // pinHashed=true: 해시 비교 / 없으면 평문 계정 → 해시로 자동 업그레이드
+    if (data.pin) {
+      const pinHash = await hashPin(pin);
+      if (data.pinHashed) {
+        // 신규 해시 계정: 해시값 비교
+        if (data.pin !== pinHash) {
+          showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+        }
+      } else {
+        // 구형 평문 계정: 평문으로 먼저 비교 후 해시로 업그레이드
+        if (data.pin !== pin) {
+          showToast('⚠️ PIN 번호가 올바르지 않습니다.'); return;
+        }
+        // ★ 로그인 성공 시 자동으로 해시로 업그레이드
+        fbDb.ref(`accounts/${id}`).update({ pin: pinHash, pinHashed: true })
+          .catch(e => console.warn('[계정] PIN 해시 업그레이드 실패:', e));
+        _setAccount(id, pinHash);
+        _restoreFromAccount(data);
+        closeAccountModal();
+        showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
+        return;
+      }
+      _setAccount(id, pinHash);
+    } else {
+      _setAccount(id, '');
+    }
+    _restoreFromAccount(data);
+    closeAccountModal();
+    showToast(`🔓 "${id}" 계정으로 로그인됐습니다`);
+  } catch(e) {
+    console.error('[계정] 로그인 실패:', e);
+    if (e && e.code === 'PERMISSION_DENIED') {
+      showToast('⚠️ Firebase 규칙 오류: accounts 경로 읽기 권한이 없습니다');
+    } else {
+      showToast(`⚠️ 로그인 실패: ${e?.message || e}`);
+    }
+  }
+}
+
+function doLogout() {
+  _accountId  = null;
+  _accountPin = '';
+  try { localStorage.removeItem('radio_account_id');  } catch(e) {}
+  try { localStorage.removeItem('radio_account_pin'); } catch(e) {}
+  idbSet('radio_account_id',  '').catch(() => {});
+  idbSet('radio_account_pin', '').catch(() => {});
+  try { document.cookie = 'kr_radio_acct=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'; } catch(e) {}
+  _updateAccountBtn();
+  closeAccountModal();
+  showToast('로그아웃됐습니다');
+}
+
+/* ════════════════════════════════════════
+   함께 듣기 (실시간 채널 동기화)
+════════════════════════════════════════ */
+function startSync() {
+  if (!fbReady) return;
+  fbListener = fbDb.ref('shared/station').on('value', snap => {
+    const data = snap.val();
+    if (!data) return;
+    // ★ 타임스탬프 기반 무시 — 이 기기가 300ms 이내에 쓴 이벤트만 스킵
+    // boolean 방식은 타이밍에 따라 다른 사용자 이벤트를 잘못 무시할 수 있음
+    if (Date.now() - _fbIgnore < 300) return;
+    const s = STATIONS.find(x => x.id === data.id);
+    if (!s || (S.current && S.current.id === s.id)) return;
+    if (data.nick === myNick) return;
+    playStation(s, true);
+    showToast(`📻 ${data.nick || '누군가'}님이 ${s.name}으로 변경했습니다`);
+  });
+}
+
+function stopSync() {
+  if (fbDb && fbListener) {
+    fbDb.ref('shared/station').off('value', fbListener);
+    fbListener = null;
+  }
+}
+
+function toggleSync() {
+  if (syncMode) {
+    syncMode = false; stopSync();
+    document.getElementById('syncBtn').classList.remove('on');
+    showToast('함께 듣기가 종료되었습니다');
+  } else {
+    if (myNick) confirmSync();
+    else {
+      document.getElementById('nickModalBg').classList.add('show');
+      setTimeout(() => document.getElementById('nickInput').focus(), 100);
+    }
+  }
+}
+
+function closeNickModal() {
+  document.getElementById('nickModalBg').classList.remove('show');
+}
+
+function confirmSync() {
+  stopSync();
+  const inp = document.getElementById('nickInput').value.trim();
+  if (inp) { myNick = inp; localStorage.setItem('radio_nick', myNick); }
+  if (!myNick) myNick = '익명';
+  closeNickModal();
+  initFirebase();
+  if (!fbReady) { showToast('⚠️ Firebase 연결에 실패했습니다'); return; }
+  syncMode = true;
+  document.getElementById('syncBtn').classList.add('on');
+  startSync();
+  showToast(`🔗 함께 듣기 시작 (${myNick})`);
+}
+
+document.getElementById('nickInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmSync();
+});
+
+/* ══ ui.js ══ */
+/* 뷰포트 높이 동기화 — 활성 패널의 콘텐츠 높이를 swipeViewport에 반영해 빈 영역 터치/스크롤 방지 */
+function syncViewportHeight() {
+  const vp = document.getElementById('swipeViewport');
+  if (!vp) return;
+  const panels = vp.querySelectorAll('.swipe-panel');
+  const idx    = S.activeTab === 'all' ? 0 : 1;
+  const target = panels[idx];
+  if (target) {
+    // 콘텐츠 높이만큼만 설정 → 빈 영역 터치/스크롤 방지
+    vp.style.height = target.scrollHeight + 'px';
+  }
+}
+
+/* ════════════════════════════════════════
+   탭 전환
+════════════════════════════════════════ */
+function switchTab(tab) {
+  if (S.activeTab === tab) return;
+  S.activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab)
+  );
+  const track = document.getElementById('swipeTrack');
+  track.style.transform = tab === 'all' ? 'translateX(0%)' : 'translateX(-50%)';
+  const label = document.getElementById('ch-label');
+  if (label) label.textContent = tab === 'all' ? '전체 채널' : '⭐ 즐겨찾기';
+  syncViewportHeight(); // ★ 탭 전환 시 높이 동기화
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ════════════════════════════════════════
+   즐겨찾기
+════════════════════════════════════════ */
+function saveFav() {
+  const data = JSON.stringify([...S.favorites]);
+  // ★ saveProtected: localStorage + IndexedDB 동시 저장 (인터넷 기록 삭제 대비)
+  saveProtected('radio_favs', data).catch(() => {
+    showToast('⚠️ 즐겨찾기 저장에 실패했습니다.');
+  });
+  fbSaveUserData();
+  saveAccountData(); // ★ 계정 클라우드 백업
+}
+
+function toggleFav(id, e) {
+  e.stopPropagation();
+  if (favLocked) { showToast('🔒 즐겨찾기가 잠겨있습니다.'); return; }
+  if (S.favorites.has(id)) S.favorites.delete(id);
+  else                      S.favorites.add(id);
+  saveFav();
+  updateFavCount();
+  document.querySelectorAll(`.s-fav-btn[data-id="${id}"]`).forEach(btn => {
+    btn.textContent = S.favorites.has(id) ? '★' : '☆';
+    btn.classList.toggle('on', S.favorites.has(id));
+  });
+  updateFavList();
+}
+
+function updateFavCount() {
+  const el = document.getElementById('fav-count');
+  if (el) el.textContent = S.favorites.size > 0 ? `(${S.favorites.size})` : '';
+}
+
+function updateEmptyState() {
+  const empty = document.getElementById('fav-empty');
+  if (!empty) return;
+  const hasFav = [...S.favorites].some(id => STATIONS.find(s => s.id === id));
+  empty.style.display = hasFav ? 'none' : 'block';
+}
+
+/* ════════════════════════════════════════
+   채널 카드
+════════════════════════════════════════ */
+function createCard(s) {
+  const isActive  = S.current && S.current.id === s.id;
+  const isFav     = S.favorites.has(s.id);
+  const freqShort = s.freq.replace(' MHz','').replace(' ','');
+  const div = document.createElement('div');
+  div.className = `station-card${isActive ? ' active' : ''}`;
+  div.dataset.id = s.id;
+  div.innerHTML = `
+    <div class="st-badge" style="background:${s.color}22;color:${s.color}">
+      ${esc(freqShort)}
+    </div>
+    <div class="st-info">
+      <div class="st-name">
+        ${esc(s.name)}${s.custom ? '<span class="custom-station-badge">MY</span>' : ''}
+      </div>
+      <div class="st-desc">${esc(s.genre)}</div>
+    </div>
+    <div class="st-freq">${esc(s.freq)}</div>
+    <div class="live-dot"></div>
+    <button class="s-fav-btn${isFav?' on':''}" data-id="${s.id}" aria-label="즐겨찾기">
+      ${isFav ? '★' : '☆'}
+    </button>
+    ${s.custom ? `<button class="st-delete-btn" data-id="${s.id}" aria-label="삭제">✕</button>` : ''}
+  `;
+  div.addEventListener('click', () => {
+    if (S.current && S.current.id === s.id && !S.loading) togglePlay();
+    else playStation(s, true);
+  });
+  div.querySelector('.s-fav-btn').addEventListener('click', e => toggleFav(s.id, e));
+  if (s.custom) {
+    div.querySelector('.st-delete-btn').addEventListener('click', e => deleteCustomStation(s.id, e));
+  }
+  return div;
+}
+
+/* ★ 활성 카드만 업데이트 — 전체 재빌드 없이 active 클래스만 토글
+   채널 전환·재생 상태 변화 시 이 함수를 사용하고,
+   목록 자체가 바뀔 때(추가/삭제/즐겨찾기 변경)만 renderAllList/updateFavList를 호출 */
+function updateActiveCard() {
+  const allCards = document.querySelectorAll('.station-card');
+  allCards.forEach(card => {
+    const id       = parseInt(card.dataset.id);
+    const isActive = S.current && S.current.id === id;
+    card.classList.toggle('active', isActive);
+    // st-freq 색상 (active면 빨간색, 아니면 muted)
+    const freq = card.querySelector('.st-freq');
+    if (freq) freq.style.color = isActive ? 'var(--red)' : '';
+  });
+}
+
+function renderAllList() {
+  const list = document.getElementById('list-all');
+  if (!list) return;
+  list.innerHTML = '';
+  STATIONS.forEach(s => list.appendChild(createCard(s)));
+  syncViewportHeight(); // ★
+}
+
+function updateFavList() {
+  const list = document.getElementById('list-fav');
+  if (!list) return;
+  list.innerHTML = '';
+  STATIONS.filter(s => S.favorites.has(s.id)).forEach(s => list.appendChild(createCard(s)));
+  updateEmptyState();
+  syncViewportHeight(); // ★
+}
+
+/* ★ renderStations: 목록 내용이 바뀔 때만 호출 (전체 재빌드)
+   재생 상태만 바뀔 때는 updateActiveCard()를 사용 */
+function renderStations() {
+  renderAllList();
+  updateFavList();
+}
+
+/* ════════════════════════════════════════
+   Now Playing 패널
+════════════════════════════════════════ */
+function updateNowPlaying() {
+  const np     = document.getElementById('nowPlaying');
+  const wave   = document.getElementById('waveform');
+  const btnSvg = document.getElementById('iconPlay');
+  const status = document.getElementById('npStatus');
+  const spin   = document.getElementById('spinner');
+
+  document.getElementById('npStation').textContent =
+    S.current ? S.current.name : '채널을 선택하세요';
+  document.getElementById('npFreq').textContent =
+    S.current ? `${S.current.freq} · ${S.current.genre}` : '—';
+
+  if (S.current && S.current.color) {
+    // ★ 채널 색상은 패널 배경에만 적용 — --red(재생버튼/UI)는 항상 고정
+    const hex = S.current.color;
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    np.style.setProperty('--station-glow', `rgba(${r},${g},${b},0.45)`);
+  } else {
+    np.style.removeProperty('--station-glow');
+  }
+
+  if (S.loading) {
+    wave.className = 'waveform paused';
+    spin.style.display = 'block';
+    btnSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+    status.className = 'np-status';
+    status.textContent = '연결 중...';
+  } else if (S.playing) {
+    wave.className = 'waveform playing';
+    spin.style.display = 'none';
+    btnSvg.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+    status.className = 'np-status live';
+    status.textContent = '● LIVE';
+  } else {
+    wave.className = 'waveform paused';
+    spin.style.display = 'none';
+    btnSvg.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    // ★ retryCount > 0 이면 재연결 대기 중 — "일시정지"와 구분해서 표시
+    if (S.current && S.retryCount > 0) {
+      status.className = 'np-status error';
+      status.textContent = `↺ 재연결 대기 중 (${S.retryCount}/5)`;
+    } else {
+      status.className = 'np-status';
+      status.textContent = S.current ? '일시정지' : '재생 중인 채널이 없습니다';
+    }
+  }
+
+  // 슬라이더 색상 갱신
+  handleVolume(S.volume);
+}
+
+/* ════════════════════════════════════════
+   토스트
+════════════════════════════════════════ */
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ════════════════════════════════════════
+   테마
+════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   테마 관리 — 다크 / 라이트 / 자동 3단계
+════════════════════════════════════════ */
+let _autoThemeTimer = null; // 자동 모드 시간대 체크 인터벌
+
+function _getAutoTheme() {
+  // ★ 시스템이 명시적으로 라이트를 선택한 경우만 라이트 우선
+  // 다크 설정인 경우에는 시간대(6시~18시)로 판단 — 항상 다크 설정인 기기 대응
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  if (prefersLight) return 'light';
+  const h = new Date().getHours();
+  return (h >= 6 && h < 18) ? 'light' : 'dark';
+}
+
+function _applyThemeClass(theme) {
+  // theme: 'dark' | 'light' (실제 적용값)
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  // meta theme-color도 동기화
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#0d0d1a';
+}
+
+function applyTheme(mode) {
+  // mode: 'dark' | 'light' | 'auto'
+  const btn = document.getElementById('themeBtn');
+  if (_autoThemeTimer) { clearInterval(_autoThemeTimer); _autoThemeTimer = null; }
+
+  if (mode === 'auto') {
+    btn.textContent = '🔄';
+    btn.title = '자동 모드 (시스템 설정 / 시간대 연동) — 클릭 시 다크로';
+    _applyThemeClass(_getAutoTheme());
+    // 매 분마다 시간대 체크 (일출/일몰 경계 자동 전환)
+    _autoThemeTimer = setInterval(() => {
+      _applyThemeClass(_getAutoTheme());
+    }, 60 * 1000);
+    // 시스템 설정 변경 실시간 감지
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = () => {
+      if (localStorage.getItem('radio_theme') === 'auto') _applyThemeClass(_getAutoTheme());
+    };
+  } else if (mode === 'light') {
+    btn.textContent = '☀️';
+    btn.title = '라이트 모드 — 클릭 시 자동으로';
+    _applyThemeClass('light');
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = null;
+  } else {
+    btn.textContent = '🌙';
+    btn.title = '다크 모드 — 클릭 시 라이트로';
+    _applyThemeClass('dark');
+    window.matchMedia('(prefers-color-scheme: dark)').onchange = null;
+  }
+}
+
+function toggleTheme() {
+  // 다크 → 라이트 → 자동 → 다크 순환
+  const cur = localStorage.getItem('radio_theme') || 'auto';
+  const next = cur === 'dark' ? 'light' : cur === 'light' ? 'auto' : 'dark';
+  localStorage.setItem('radio_theme', next);
+  applyTheme(next);
+  const label = next === 'dark' ? '다크 모드' : next === 'light' ? '라이트 모드' : '자동 모드';
+  showToast(`${next === 'dark' ? '🌙' : next === 'light' ? '☀️' : '🔄'} ${label}`);
+}
+
+// 앱 시작 시 저장된 모드 적용 (기본값: auto)
+applyTheme(localStorage.getItem('radio_theme') || 'auto');
+
+/* ════════════════════════════════════════
+   PWA
+════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: '/' })
+      .then(reg => {
+        console.log('[SW]', reg.scope);
+        // 새 SW 대기 중이면 업데이트 토스트 표시
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('🔄 새 버전이 준비됐습니다. 앱을 다시 시작해주세요.');
+            }
+          });
+        });
+      })
+      .catch(e => console.warn('[SW] 실패:', e));
+  });
+}
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+});
+function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+}
+
+/* ════════════════════════════════════════
+   뒤로가기 — 항상 백그라운드 유지
+════════════════════════════════════════ */
+(function initBackHandler() {
+  // ★ pushState 1번으로 통일 — 2번 중복은 history 스택을 불필요하게 누적시킴
+  history.pushState({ page: 'radio' }, '', location.href);
+  window.addEventListener('popstate', () => {
+    history.pushState({ page: 'radio' }, '', location.href);
+    if (S.playing || S.loading) {
+      showToast('🎵 방송이 백그라운드에서 계속 재생됩니다');
+    }
+  });
+})();
+
+/* ════════════════════════════════════════
+   즐겨찾기 잠금
+════════════════════════════════════════ */
+function applyFavLock() {
+  const btn = document.getElementById('favLockBtn');
+  if (!btn) return;
+  if (favLocked) {
+    btn.classList.add('locked');
+    btn.innerHTML = '<span class="lock-icon">🔒</span>';
+    btn.title = '즐겨찾기 잠금 해제';
+  } else {
+    btn.classList.remove('locked');
+    btn.innerHTML = '<span class="lock-icon">🔓</span>';
+    btn.title = '즐겨찾기 잠금';
+  }
+}
+
+function toggleFavLock() {
+  favLocked = !favLocked;
+  const lockVal = favLocked ? '1' : '0';
+  try { localStorage.setItem('radio_fav_locked', lockVal); } catch(e) {}
+  idbSet('radio_fav_locked', lockVal);
+  fbSaveUserData();
+  saveAccountData(); // ★ 계정 클라우드 백업
+  applyFavLock();
+  showToast(favLocked ? '🔒 즐겨찾기가 잠겼습니다' : '🔓 즐겨찾기 잠금이 해제됐습니다');
+}
+
+/* ════════════════════════════════════════
+   방송 추가 (커스텀 채널)
+════════════════════════════════════════ */
+function loadCustomStations() {
+  try {
+    const saved = localStorage.getItem('radio_custom_stations');
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+}
+
+function saveCustomStations(list) {
+  const data = JSON.stringify(list);
+  try { localStorage.setItem('radio_custom_stations', data); } catch(e) {
+    showToast('⚠️ 저장 공간이 부족합니다.');
+  }
+  idbSet('radio_custom_stations', data).catch(e => // ★ 오류 무시 방지
+    console.warn('[IndexedDB] 커스텀 채널 저장 실패:', e)
+  );
+  fbSaveUserData();
+  saveAccountData();
+}
+
+function mergeCustomStations() {
+  const custom = loadCustomStations();
+  custom.forEach(s => {
+    if (!STATIONS.find(x => x.id === s.id)) STATIONS.push(s);
+  });
+}
+
+function openAddStation() {
+  ['asi-name','asi-freq','asi-genre','asi-url'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('asi-color').value = '#e74c3c';
+  document.getElementById('addStationBg').classList.add('show');
+}
+
+function closeAddStation(e) {
+  if (e && e.target !== document.getElementById('addStationBg')) return;
+  document.getElementById('addStationBg').classList.remove('show');
+}
+
+function confirmAddStation() {
+  const name  = document.getElementById('asi-name').value.trim();
+  const freq  = document.getElementById('asi-freq').value.trim() || '—';
+  const genre = document.getElementById('asi-genre').value.trim() || '기타';
+  const url   = document.getElementById('asi-url').value.trim();
+  const color = document.getElementById('asi-color').value;
+
+  if (!name) { showToast('⚠️ 방송국 이름을 입력해주세요.'); return; }
+  if (!url)  { showToast('⚠️ 스트림 URL을 입력해주세요.'); return; }
+  if (!url.startsWith('http')) { showToast('⚠️ URL은 http로 시작해야 합니다.'); return; }
+
+  const custom    = loadCustomStations();
+  // ★ Date.now() + 랜덤값 조합 — 빠른 연속 추가나 장기 사용 시에도 ID 충돌 방지
+  // ★ ID 충돌 방지 — 생성된 ID가 기존 STATIONS에 없을 때까지 재시도
+  let newId;
+  do { newId = 1000000 + Math.floor(Math.random() * 900000); }
+  while (STATIONS.find(x => x.id === newId));
+  const newStation = { id: newId, name, freq, genre, color, stream: url, custom: true };
+
+  custom.push(newStation);
+  saveCustomStations(custom);
+  STATIONS.push(newStation);
+  renderAllList(); updateFavCount();
+  closeAddStation();
+  showToast(`✅ "${name}" 채널이 추가됐습니다.`);
+}
+
+function deleteCustomStation(id, e) {
+  e.stopPropagation();
+  const s = STATIONS.find(x => x.id === id);
+  if (!s || !s.custom) return;
+  if (S.current && S.current.id === id) {
+    showToast('⚠️ 재생 중인 채널은 삭제할 수 없습니다.'); return;
+  }
+  const custom = loadCustomStations().filter(x => x.id !== id);
+  saveCustomStations(custom);
+  const idx = STATIONS.findIndex(x => x.id === id);
+  if (idx > -1) STATIONS.splice(idx, 1);
+  S.favorites.delete(id); saveFav();
+  renderAllList(); updateFavCount();
+  updateFavList(); // ★ 즐겨찾기 탭에서 삭제된 채널 즉시 제거
+  showToast('🗑️ 채널이 삭제됐습니다.');
+}
+
+/* ════════════════════════════════════════
+   변경 이력
+════════════════════════════════════════ */
+function openChangelog() {
+  const body = document.getElementById('changelogBody');
+  body.innerHTML = '';
+  CHANGELOG.forEach((entry, i) => {
+    const div = document.createElement('div');
+    div.className = 'changelog-entry';
+    div.innerHTML = `
+      <div class="changelog-ver">
+        <span class="changelog-ver-badge${i > 0 ? ' old' : ''}">${entry.version}</span>
+        <span class="changelog-date">${entry.date}</span>
+      </div>
+      <div class="changelog-list">
+        ${entry.changes.map(c => `<div class="changelog-item">${esc(c)}</div>`).join('')}
+      </div>`;
+    body.appendChild(div);
+  });
+  document.getElementById('changelogBg').classList.add('show');
+}
+
+function closeChangelog(e) {
+  if (e && e.target !== document.getElementById('changelogBg')) return;
+  document.getElementById('changelogBg').classList.remove('show');
+}
+
+/* ════════════════════════════════════════
+   스와이프 제스처
+════════════════════════════════════════ */
+(function() {
+  const vp    = document.getElementById('swipeViewport');
+  const track = document.getElementById('swipeTrack');
+  let sx = 0, sy = 0, st = 0, dragging = false, base = 0;
+
+  vp.addEventListener('touchstart', e => {
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    st = Date.now(); dragging = false;
+    base = S.activeTab === 'all' ? 0 : -50;
+    track.style.transition = 'none';
+  }, { passive: true });
+
+  vp.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+    if (!dragging && Math.abs(dy) > Math.abs(dx)) return;
+    dragging = true;
+    const next = Math.max(-50, Math.min(0, base + (dx / vp.clientWidth) * 100));
+    track.style.transform = `translateX(${next}%)`;
+  }, { passive: true });
+
+  vp.addEventListener('touchend', e => {
+    if (!dragging) return;
+    track.style.transition = '';
+    const dx   = e.changedTouches[0].clientX - sx;
+    const fast = Date.now() - st < 250 && Math.abs(dx) > 40;
+    const far  = Math.abs(dx) > vp.clientWidth * 0.35;
+    if (fast || far) switchTab(dx < 0 ? 'fav' : 'all');
+    else track.style.transform = `translateX(${base}%)`;
+  }, { passive: true });
+})();
+
+/* ════════════════════════════════════════
+   초기화
+════════════════════════════════════════ */
+document.getElementById('btnPlay').addEventListener('click', togglePlay);
+document.getElementById('volSlider').addEventListener('input', function() {
+  handleVolume(this.value);
+});
+document.querySelectorAll('.tab-btn').forEach(b =>
+  b.addEventListener('click', () => switchTab(b.dataset.tab))
+);
+
+mergeCustomStations();
+applyFavLock();
+_updateAccountBtn(); // ★ 계정 버튼 초기 상태
+handleVolume(S.volume);
+
+// 업데이트 토스트
+(function checkUpdate() {
+  const lastSeen = localStorage.getItem('radio_seen_version');
+  if (lastSeen && lastSeen !== APP_VERSION) {
+    const latest  = CHANGELOG[0];
+    const summary = latest.changes.slice(0, 2).join(', ');
+    setTimeout(() => showToast(`🆕 ${APP_VERSION} 업데이트: ${summary}`), 1500);
+  }
+  localStorage.setItem('radio_seen_version', APP_VERSION);
+})();
+
+// 1. 즉시 렌더링
+updateFavCount();
+renderAllList();
+updateFavList();
+
+// 2. 마지막 방송국 즉시 복원
+// PWA 바로가기(?autoplay=id) 우선, 없으면 마지막 채널 복원
+const _autoplayRaw = parseInt(new URLSearchParams(location.search).get('autoplay'));
+const _autoplayId  = Number.isFinite(_autoplayRaw) && _autoplayRaw > 0 ? _autoplayRaw : null;
+const _lastId      = _autoplayId || parseInt(localStorage.getItem('radio_last')) || null;
+if (_lastId) {
+  S.current = STATIONS.find(s => s.id === _lastId) || null;
+  if (S.current) {
+    updateNowPlaying(); renderStations();
+    if (localStorage.getItem('radio_playing') === '1') {
+      playStation(S.current);
+      let _gestureUsed = false;
+      const resumeOnGesture = () => {
+        if (_gestureUsed) return;
+        _gestureUsed = true;
+        document.removeEventListener('touchstart', resumeOnGesture, true);
+        document.removeEventListener('click',      resumeOnGesture, true);
+        if (!S.playing && !S.loading && S.current) playStation(S.current);
+      };
+      document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true, capture: true });
+      document.addEventListener('click',      resumeOnGesture, { once: true, passive: true, capture: true });
+    }
+  }
+}
+
+// 3. Firebase/IndexedDB 복원 — 백그라운드
+(async function initData() {
+  // ★ Firebase를 최우선으로 초기화 — 싱글턴 Promise로 중복 실행 차단
+  await initFirebase().catch(e => console.warn('Firebase 사전 초기화 실패:', e));
+
+  // ★ localStorage가 비어있으면(인터넷 기록 삭제 등) 반드시 IndexedDB 먼저 복원
+  const localFavs   = localStorage.getItem('radio_favs');
+  const localLocked = localStorage.getItem('radio_fav_locked');
+  if (!localFavs || localLocked === null) {
+    await restoreFromIDB().catch(() => {});
+  }
+
+  try {
+    await initUserData();
+
+    // ★ 계정 ID 복원: localStorage → IDB → 쿠키 순으로 확인 후 Firebase에서 데이터 로드
+    if (!_accountId) {
+      // IDB에서 계정 ID 확인
+      const savedId  = await idbGet('radio_account_id').catch(() => null);
+      const savedPin = await idbGet('radio_account_pin').catch(() => '');
+      let   restoredId  = savedId  || '';
+      let   restoredPin = savedPin || '';
+
+      // IDB도 없으면 쿠키에서 확인
+      if (!restoredId) {
+        try {
+          const m = document.cookie.match(/(?:^|;\s*)kr_radio_acct=([^;]+)/);
+          if (m) {
+            const parts = decodeURIComponent(m[1]).split('|');
+            restoredId  = parts[0] || '';
+            restoredPin = parts[1] || '';
+          }
+        } catch(e) {}
+      }
+
+      if (restoredId) {
+        try {
+          const snap = await fbDb.ref(`accounts/${restoredId}`).once('value');
+          if (snap.exists()) {
+            _setAccount(restoredId, restoredPin);
+            _restoreFromAccount(snap.val());
+            console.info(`[계정] "${restoredId}" 자동 복원 완료`);
+          }
+        } catch(e) { console.warn('[계정] 자동 복원 실패:', e); }
+      }
+    }
+  } catch(e) {
+    console.warn('Firebase 데이터 복원 실패:', e);
+    // Firebase 실패 시 IndexedDB로만 복원
+    if (!localFavs) await restoreFromIDB().catch(() => {});
+  }
+  updateFavCount();
+  updateFavList();
+  applyFavLock();
+
+  // ★ 로그 시스템 초기화 — IDB에서 기존 로그 로드
+  RLog.load().then(() => {
+    RLog.info('앱 시작', `${APP_VERSION}`);
+  });
+})();
+
+// ★ versionBadge 즉시 표시 — Firebase 초기화 대기 없이 앱 시작 즉시 반영
+document.getElementById('versionBadge').textContent = APP_VERSION;
+
+/* ════════════════════════════════════════
+   bfcache 복원 (백 버튼·탭 복귀)
+   Android Chrome이 탭을 메모리에서 내렸다가 복원할 때
+   visibilitychange 없이 pageshow(persisted=true)만 발생
+════════════════════════════════════════ */
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  RLog.info('bfcache 복원 — 재생 상태 확인');
+  if (S.sleepStopped) { RLog.info('bfcache 복원 재연결 차단 (취침 타이머 종료)'); return; }
+  if (S.current && (S.wasPlaying || localStorage.getItem('radio_playing') === '1')) {
+    S.wasPlaying = false;
+    setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current); }, 300);
+  }
+});
+
+</script>
+
+</body>
+</html>

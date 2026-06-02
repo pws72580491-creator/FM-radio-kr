@@ -210,22 +210,30 @@ header {
   margin: 12px 0 4px;
 }
 #sleepBtn {
-  width: 28px; height: 28px; flex-shrink: 0;
-  border-radius: 50%;
+  height: 28px; flex-shrink: 0;
+  border-radius: 14px;
   border: 1.5px solid rgba(255,255,255,0.25);
   background: rgba(255,255,255,0.12);
   color: rgba(255,255,255,0.85);
   cursor: pointer;
   font-size: 14px;
+  min-width: 28px;
+  padding: 0 6px;
   display: flex; align-items: center; justify-content: center;
-  transition: transform .2s, background .2s, border-color .2s;
+  transition: transform .2s, background .2s, border-color .2s, min-width .3s;
   backdrop-filter: blur(4px);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
 }
-#sleepBtn:hover { transform: scale(1.12); background: rgba(255,255,255,0.22); }
+#sleepBtn:hover { transform: scale(1.05); background: rgba(255,255,255,0.22); }
 #sleepBtn.active {
   background: var(--red);
   border-color: var(--red);
   color: #fff;
+  min-width: 64px;
+  font-size: 13px;
+  font-weight: 700;
   animation: sleep-pulse 2s infinite;
 }
 @keyframes sleep-pulse {
@@ -1294,8 +1302,21 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.3';
+const APP_VERSION = 'v2.8.7';
 const CHANGELOG = [
+  { version: 'v2.8.7', date: '2026-06-02', changes: [
+    '[버그수정 치명] 로그 상태값 전부 false — RLog._snap()에서도 window.S / window.audio 사용. const 변수는 window에 없으므로 항상 undefined. 직접 스코프 참조로 수정. 이제 로그가 실제 상태를 정확히 반영',
+    '[버그수정] 백그라운드 manifestLoadError 시 scheduleRetry() 불필요 호출 — Android가 백그라운드 네트워크 요청을 차단해 발생하는 정상 패턴. wasPlaying=true만 보존하고 포그라운드 복귀 시 재연결로 처리',
+  ]},
+  { version: 'v2.8.6', date: '2026-06-01', changes: [
+    '[버그수정] 화면 확대 방지 재적용 — Android Chrome은 meta viewport user-scalable=no를 무시. touchmove(핀치줌)와 touchend(더블탭줌) 이벤트에 preventDefault() 추가',
+  ]},
+  { version: 'v2.8.5', date: '2026-06-01', changes: [
+    '[버그수정 치명] 취침 타이머 재생 정지 불가 — stop()과 _fadeAndStop() 안에서 window.S / window.audio로 접근하고 있었음. const로 선언된 변수는 window 객체에 붙지 않아 항상 undefined → 아무 동작도 안 됨. 직접 스코프 참조(S, audio)로 수정',
+  ]},
+  { version: 'v2.8.4', date: '2026-06-01', changes: [
+    '[개선] 취침 타이머 헤더 버튼에 남은 시간 직접 표시 — 시트를 닫은 상태에서도 MM:SS 카운트다운이 버튼 안에 보임. 타이머 종료/취소 시 ⏱ 이모지로 자동 원복',
+  ]},
   { version: 'v2.8.3', date: '2026-06-01', changes: [
     '[버그수정 치명] scheduleRetry() 백그라운드에서 audio.src="" 실행 — HLS 에러 한 번만 나도 재생 중인 오디오를 강제 종료하던 핵심 원인. audio.paused=false이면 src를 절대 건드리지 않도록 수정',
     '[버그수정] onFail() 백그라운드에서 wasPlaying 보존 안 됨 — 포그라운드 복귀 후 재연결이 실행되지 않던 문제 수정',
@@ -1795,20 +1816,22 @@ const RLog = (() => {
 
   // ★ 현재 핵심 상태 스냅샷 문자열 생성
   function _snap(extra = '') {
-    const S = window.S || {};
-    const audio = window.audio || {};
+    // ★ window.S / window.audio → 직접 스코프 참조
+    // const S, audio는 같은 <script> 최상위에 선언 — window.X는 항상 undefined
+    const _S   = (typeof S     !== 'undefined') ? S     : {};
+    const _a   = (typeof audio !== 'undefined') ? audio : {};
     const hidden = document.visibilityState === 'hidden';
     const ctx = window._sharedAudioCtx;
     const parts = [
-      `playing=${S.playing||false}`,
-      `loading=${S.loading||false}`,
-      `wasPlaying=${S.wasPlaying||false}`,
+      `playing=${_S.playing||false}`,
+      `loading=${_S.loading||false}`,
+      `wasPlaying=${_S.wasPlaying||false}`,
       `hidden=${hidden}`,
-      `audio.paused=${audio.paused ?? '?'}`,
-      `audio.src=${audio.src ? '있음' : '없음'}`,
-      `hls=${S.hls ? '활성' : '없음'}`,
+      `audio.paused=${_a.paused ?? '?'}`,
+      `audio.src=${_a.src ? '있음' : '없음'}`,
+      `hls=${_S.hls ? '활성' : '없음'}`,
       `ctx=${ctx ? ctx.state : '없음'}`,
-      `retry=${S.retryCount||0}`,
+      `retry=${_S.retryCount||0}`,
       `net=${navigator.onLine ? 'online' : 'OFFLINE'}`,
     ];
     if (extra) parts.push(extra);
@@ -2134,7 +2157,18 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             RLog.error('HLS 네트워크 오류(치명)', `${d.details || ''}`);
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
             if (S.hls === hls) S.hls = null;
-            hls.destroy(); onFail(true);
+            hls.destroy();
+            // ★ 백그라운드에서 manifestLoadError: Android가 네트워크 요청을 차단/타임아웃
+            // → scheduleRetry()를 호출해도 어차피 백그라운드 분기에서 건너뜀
+            // → wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 맡김
+            if (document.visibilityState === 'hidden') {
+              S.wasPlaying = true;
+              S.playing = false; S.loading = false;
+              RLog.info('백그라운드 치명 오류 — 포그라운드 복귀 시 재연결 예약');
+              updateNowPlaying(); updateActiveCard();
+            } else {
+              onFail(true);
+            }
           } else {
             netErrCount++;
             if (netErrCount > 3) {
@@ -2860,34 +2894,33 @@ const SleepTimer = (() => {
 
   // UI 업데이트
   function _updateUI() {
-    const rem  = remaining();
-    const el   = document.getElementById('sleepCountdown');
+    const rem = remaining();
+    // 시트 안 카운트다운
+    const el = document.getElementById('sleepCountdown');
     if (el) {
       el.textContent = fmt(rem);
-      el.style.display = 'block'; // ★ 명시적 표시 보장
+      el.style.display = 'block';
     }
-    // 헤더 버튼에 남은 시간 표시 (1분 미만이면 초 표시)
-    const btn  = document.getElementById('sleepBtn');
+    // ★ 헤더 버튼에 남은 시간 직접 표시 (시트 닫힌 상태에서도 보임)
+    const btn = document.getElementById('sleepBtn');
     if (btn && _ticker) {
-      btn.title = `취침 타이머 — ${fmt(rem)} 남음`;
+      btn.textContent = fmt(rem); // 이모지 대신 남은 시간으로 교체
     }
   }
 
   // 볼륨 페이드아웃 후 정지 (30초에 걸쳐 0으로)
   function _fadeAndStop() {
-    const audio = window.audio;
-    if (!audio) { stop(true); return; }
+    // ★ window.audio → 직접 스코프 참조
     _origVol = audio.volume;
-    // ★ 페이드 종료 절대 시각 기준 — setInterval throttle로 steps 카운트가 틀어지는 문제 방지
-    const fadeEndAt  = Date.now() + 30 * 1000;
-    const startVol   = _origVol;
-    if (window.S) window.S.userPaused = true;
+    const fadeEndAt = Date.now() + 30 * 1000;
+    const startVol  = _origVol;
+    S.userPaused = true; // ★ window.S → S
     RLog.info('취침 타이머 — 볼륨 페이드아웃 시작 (30초)');
     _fadeTimer = setInterval(() => {
       const elapsed = Date.now();
       const ratio   = Math.min(1, (elapsed - (fadeEndAt - 30000)) / 30000);
       audio.volume  = Math.max(0, startVol * (1 - ratio));
-      if (window.S) window.S.userPaused = true;
+      S.userPaused  = true; // 페이드 중 pause 이벤트 → CALL 오판 방지
       if (elapsed >= fadeEndAt || audio.volume === 0) {
         clearInterval(_fadeTimer); _fadeTimer = null;
         audio.volume = startVol; // 볼륨 원복
@@ -2930,50 +2963,48 @@ const SleepTimer = (() => {
     if (_ticker)    { clearInterval(_ticker);    _ticker    = null; }
     if (_fadeTimer) { clearInterval(_fadeTimer); _fadeTimer = null; }
     _endTime = 0;
-    document.getElementById('sleepBtn')?.classList.remove('active');
     const btn = document.getElementById('sleepBtn');
-    if (btn) btn.title = '취침 타이머';
+    if (btn) {
+      btn.classList.remove('active');
+      btn.textContent = '⏱'; // ★ 이모지 원복
+      btn.title = '취침 타이머';
+    }
   }
 
   // 재생 정지 실행
   function stop(withToast) {
     clear();
-    const S     = window.S;
-    const audio = window.audio;
+    // ★ window.S / window.audio → 직접 스코프 참조
+    // const S, audio는 같은 <script> 최상위에 선언되어 있으므로 window. 접근 불필요
+    // window.S = undefined 가 되어 stop()이 아무 동작도 하지 못하던 핵심 원인
 
-    // ★ sleepStopped 플래그 즉시 설정 — 이후 모든 자동 재연결 경로 원천 차단
-    if (S) S.sleepStopped = true;
+    // ★ sleepStopped 플래그 즉시 설정
+    S.sleepStopped = true;
 
     try {
-      if (S) S.justStarted = 0;
-      if (audio) audio.volume = _origVol;
-      if (S) S.callId = (S.callId || 0) + 1;
+      S.justStarted = 0;
+      audio.volume  = _origVol;
+      S.callId      = (S.callId || 0) + 1;
 
       if (typeof clearRetryTimer === 'function') clearRetryTimer();
       if (typeof stopWatchdog    === 'function') stopWatchdog();
       if (typeof stopCallWatch   === 'function') stopCallWatch();
 
-      if (S) {
-        RLog.stop('취침 타이머 정지');
-        S.wasPlaying       = false;
-        S.userPaused       = true;
-        S.needReconnect    = false;
-        S.playing          = false;
-        S.loading          = false;
-        S._hiddenWasActive = false;
-        window.reconnectingCall = false;
-      }
+      RLog.stop('취침 타이머 정지');
+      S.wasPlaying       = false;
+      S.userPaused       = true;
+      S.needReconnect    = false;
+      S.playing          = false;
+      S.loading          = false;
+      S._hiddenWasActive = false;
+      reconnectingCall   = false;
 
-      // ★ localStorage 먼저 — bfcache 복원 레이스 방지
       try { localStorage.setItem('radio_playing', '0'); } catch(e) {}
 
-      if (S && S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
+      if (S.hls) { try { S.hls.stopLoad(); S.hls.destroy(); S.hls = null; } catch(e) {} }
 
-      if (audio) {
-        try { audio.pause(); } catch(e) {}
-        // src 초기화는 50ms 후 — emptied 이벤트 추가 pause 방지
-        setTimeout(() => { try { if (audio.src) audio.src = ''; } catch(e) {} }, 50);
-      }
+      try { audio.pause(); } catch(e) {}
+      setTimeout(() => { try { if (audio.src) audio.src = ''; } catch(e) {} }, 50);
 
       if (typeof releaseWakeLock    === 'function') releaseWakeLock();
       if (typeof updateNowPlaying   === 'function') updateNowPlaying();
@@ -2983,7 +3014,6 @@ const SleepTimer = (() => {
       RLog.info('취침 타이머 stop() 예외', String(err));
     }
 
-    // ★ 토스트는 try 블록 밖 — 예외 발생 여부와 무관하게 항상 표시
     if (withToast) {
       RLog.info('취침 타이머 종료 — 재생 정지');
       try { showToast('\u{1F634} 취침 타이머 종료 — 재생을 정지했습니다.'); } catch(e) {}
@@ -4131,6 +4161,26 @@ function closeChangelog(e) {
     if (fast || far) switchTab(dx < 0 ? 'fav' : 'all');
     else track.style.transform = `translateX(${base}%)`;
   }, { passive: true });
+})();
+
+/* ════════════════════════════════════════
+   확대/축소 방지
+   Android Chrome은 meta viewport의 user-scalable=no를 무시하므로
+   JS로 직접 차단
+════════════════════════════════════════ */
+(function preventZoom() {
+  // 핀치줌 — touches 2개 이상이면 preventDefault
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  // 더블탭 줌 — 300ms 이내 연속 탭 차단
+  let _lastTap = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - _lastTap < 300) e.preventDefault();
+    _lastTap = now;
+  }, { passive: false });
 })();
 
 /* ════════════════════════════════════════

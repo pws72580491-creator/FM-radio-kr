@@ -1224,7 +1224,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.12</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.14</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1306,8 +1306,17 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.12';
+const APP_VERSION = 'v2.8.14';
 const CHANGELOG = [
+  { version: 'v2.8.14', date: '2026-06-03', changes: [
+    '[버그수정] audio emptied 오발동 — HLS.js가 내부적으로 src를 재설정할 때도 emptied가 발생. audio.paused=false(실제 재생 중)이면 무시하도록 수정. freeze 직전 BG_PLAY 287회 확인됐는데 playing=false/wasPlaying=false로 찍힌 원인',
+    '[버그수정] audio emptied 핸들러 중복 등록 — 메인 핸들러와 lifecycle 핸들러가 둘 다 emptied를 처리해 scheduleRetry 이중 호출 가능. lifecycle 쪽 중복 제거',
+    '[버그수정] freeze 직전 wasPlaying 강제 보존 — audio가 실제 재생 중이면 wasPlaying=true 보장 후 freeze. resume 시 재연결 안 되는 문제 방지',
+  ]},
+  { version: 'v2.8.13', date: '2026-06-03', changes: [
+    '[버그수정 치명] 정지 상태에서 크롬 실행 시 방송 재생되는 문제 — AudioContext statechange(running 복귀) 핸들러에 userPaused 체크 누락. 크롬 등 타 앱이 AudioContext를 건드리면 suspended→running 전환 발생 → wasPlaying=true이면 재생 트리거됨. !S.userPaused 조건 추가로 차단',
+    '[버그수정] startWatch 폴링 tryReconnect에도 동일한 userPaused 가드 추가',
+  ]},
   { version: 'v2.8.12', date: '2026-06-03', changes: [
     '[버그수정 치명] 백그라운드 재생 끊기면 포기하던 문제 — scheduleRetry가 hidden이면 wasPlaying=true만 세팅하고 타이머 등록을 안 함 → 재연결 전혀 안 됨. 수정: 백그라운드에서도 재시도 타이머 등록. 5초 기준으로 지수 백오프(최대 30초)',
     '[버그수정 치명] 5회 재연결 실패 후 완전 포기 — 이후 60초 대기 후 재시도로 변경. 방송이 끊겨도 자동으로 복구',
@@ -2328,12 +2337,17 @@ audio.addEventListener('stalled', () => {
 // Android은 화면 꺼짐 + WakeLock 없으면 오디오 세션을 OS가 종료시킬 수 있음
 // pause 이벤트는 기존 핸들러가 처리하지만, emptied(src 강제 초기화)는 별도 대응 필요
 audio.addEventListener('emptied', () => {
-  // S.playing=true인데 src가 비워졌으면 OS가 강제 종료한 것
-  if (S.playing && S.current && !S.userPaused) {
-    RLog.kill('audio emptied (재생 중 src 강제 초기화) — OS 강제 종료 의심, 재연결');
-    S.playing = false;
-    scheduleRetry();
+  if (!S.current || !S.playing || S.userPaused) return;
+  // ★ emptied는 HLS.js 내부 동작 중에도 발생 가능 (src 재설정 등)
+  // → audio가 실제로 살아있으면 (paused=false, src 있음) OS 강제종료가 아님 — 건드리지 않음
+  if (!audio.paused && audio.src && audio.src !== location.href) {
+    RLog.kill('audio emptied (src 재설정 감지 — audio는 재생 중, 무시)');
+    return;
   }
+  // 실제로 src가 비워지고 재생이 멈춘 경우만 재연결
+  RLog.kill('audio emptied (재생 중 src 강제 초기화) — OS 강제 종료 의심, 재연결');
+  S.playing = false;
+  scheduleRetry();
 });
 
 /* ════════════════════════════════════════
@@ -2467,7 +2481,9 @@ function ensureAudioCtxWatch() {
     // play 이벤트 중 suspended → resume 시도
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
-    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+    // ★ userPaused 체크 — 사용자가 직접 정지한 상태에서 크롬 등 타 앱 실행 시
+    //    AudioContext suspended→running 전환이 발생해 의도치 않게 재생되는 버그 차단
+    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading && !S.userPaused) {
       if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 AudioContext 복귀로 재생 재시작 차단
       RLog.call('AudioContext running 복귀 (통화 종료 감지)');
       // ★ 포그라운드: 즉시 재연결
@@ -2581,7 +2597,7 @@ let stopCallWatch = () => {};
       if (!ctx) return;
       // suspended면 resume 시도 → statechange → tryReconnect 흐름으로 이어짐
       if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
-      if (ctx.state === 'running') { tryReconnect(); }
+      if (ctx.state === 'running' && !S.userPaused) { tryReconnect(); } // ★ userPaused 체크 추가
     }, 2000);
   }
 
@@ -4445,8 +4461,13 @@ window.addEventListener('pageshow', (e) => {
   // ② freeze — Chrome/Android가 탭을 CPU 절약으로 동결 (백그라운드 메모리 압박)
   // 이 이벤트 이후 JS 실행이 중단되므로 이 로그가 마지막이 될 수 있음
   document.addEventListener('freeze', () => {
+    // ★ freeze 직전 wasPlaying 강제 보존 — freeze 전 scheduleRetry가 상태를 바꾼 경우 복원
+    // audio가 실제로 재생 중이었으면(BG_PLAY 확인) resume 후 반드시 재연결되어야 함
+    if (S.current && (S.playing || (!audio.paused && audio.src && audio.src !== location.href))) {
+      S.wasPlaying = true;
+    }
     RLog.kill('앱 freeze (OS 메모리 절약 — JS 실행 중단 예정)',
-      `playing=${S.playing} | loading=${S.loading} | wasPlaying=${S.wasPlaying}`);
+      `playing=${S.playing} | loading=${S.loading} | wasPlaying=${S.wasPlaying} | audio.paused=${audio.paused}`);
     // freeze 직전 IDB 동기 저장 불가 — 최선 시도
     try { idbSet('radio_play_log', JSON.stringify(RLog.getAll())); } catch(_) {}
   });
@@ -4487,12 +4508,8 @@ window.addEventListener('pageshow', (e) => {
       RLog.kill('audio error 이벤트 (native)', `code=${code} | ${msg}`);
     }
   });
-  audio.addEventListener('emptied', () => {
-    // emptied: src가 비워질 때 발생 — 의도치 않은 src 초기화 추적
-    if (S.playing) {
-      RLog.kill('audio emptied (재생 중 src 강제 초기화 감지)');
-    }
-  });
+  // ★ audio emptied 로그는 메인 핸들러(scheduleRetry 포함)에서 처리
+  // 여기서는 중복 등록하지 않음 — scheduleRetry 이중 호출 방지
 
 })();
 

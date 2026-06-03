@@ -91,6 +91,8 @@
 [data-theme="light"] .log-entry.BG_FAIL .log-tag   { color: #dc2626; }
 [data-theme="light"] .log-entry.STATE .log-tag     { color: #64748b; }
 [data-theme="light"] .log-entry.BG_FAIL            { background: rgba(220,38,38,0.05); }
+[data-theme="light"] .log-entry.KILL .log-tag       { color: #c2410c; }
+[data-theme="light"] .log-entry.KILL                { background: rgba(194,65,12,0.05); }
 
 html, body {
   height: 100%;
@@ -716,6 +718,8 @@ input[type=range]::-webkit-slider-thumb {
 .log-entry.BG_PLAY  .log-tag { color: #34d399; }   /* 백그라운드 재생 확인 — 연두 */
 .log-entry.BG_FAIL  .log-tag { color: #f87171; }   /* 백그라운드 재생 실패 — 빨강 */
 .log-entry.STATE    .log-tag { color: #94a3b8; }   /* 상태 스냅샷 — 회색 */
+.log-entry.KILL     .log-tag { color: #ff4500; }   /* 종료/동결 — 주황빨강 */
+.log-entry.KILL { background: rgba(255,69,0,0.07); }
 /* 백그라운드 재생 실패는 행 전체 강조 */
 .log-entry.BG_FAIL { background: rgba(248,113,113,0.06); }
 .log-msg { color: var(--text); word-break: break-all; }
@@ -1220,7 +1224,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.7.5</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.12</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1302,8 +1306,32 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.7';
+const APP_VERSION = 'v2.8.12';
 const CHANGELOG = [
+  { version: 'v2.8.12', date: '2026-06-03', changes: [
+    '[버그수정 치명] 백그라운드 재생 끊기면 포기하던 문제 — scheduleRetry가 hidden이면 wasPlaying=true만 세팅하고 타이머 등록을 안 함 → 재연결 전혀 안 됨. 수정: 백그라운드에서도 재시도 타이머 등록. 5초 기준으로 지수 백오프(최대 30초)',
+    '[버그수정 치명] 5회 재연결 실패 후 완전 포기 — 이후 60초 대기 후 재시도로 변경. 방송이 끊겨도 자동으로 복구',
+    '[버그수정] 포그라운드 복귀 시 재연결 안 되는 경우 — wasPlaying=false지만 백그라운드에서 활성이었으면 강제 재연결',
+    '[버그수정] 치명 오류 처리 통일 — 백그라운드/포그라운드 모두 onFail(true) 경유, 별도 분기 제거',
+    '[버그수정] audio emptied/ended/stalled 이벤트 — OS 강제 종료 감지 후 scheduleRetry 호출, KILL 로그 기록',
+  ]},
+  { version: 'v2.8.11', date: '2026-06-03', changes: [
+    '[신기능] 앱 종료/동결 원인 KILL 로그 레벨 신설 — pagehide(탭 종료/앱 종료), freeze(OS 메모리 절약 동결), resume(동결 해제), audio emptied/ended/error(스트림 강제 중단) 이벤트 기록. 로그 뷰어에 KILL 필터 추가, 빨간 강조 표시',
+    '[신기능] WakeLock 상세 로그 — 획득 성공, OS 강제 해제(화면 꺼짐/백그라운드), 해제 시 재생 상태 기록. 획득 실패도 WARN으로 기록',
+    '[버그수정] freeze 이벤트 후 resume 시 재연결 — OS 동결 해제 후 재생이 끊긴 경우 자동 재연결',
+  ]},
+  { version: 'v2.8.10', date: '2026-06-03', changes: [
+    '[버그수정 치명] scheduleRetry setTimeout 콜백 백그라운드 실행 — 포그라운드에서 타이머 등록 후 백그라운드 진입 시 콜백이 hidden 상태에서 playStation 실행 → manifestLoadError 루프. setTimeout 콜백에 hidden 체크 추가. 백그라운드이면 wasPlaying=true만 보존하고 포그라운드 복귀 시 재연결',
+    '[버그수정] startWatch 폴링 백그라운드에서 tryReconnect 호출 — setInterval 폴링이 hidden 체크 없이 tryReconnect() 호출 → 백그라운드 재연결 → manifestLoadError. 폴링 내부에 hidden 체크 추가',
+  ]},
+  { version: 'v2.8.9', date: '2026-06-03', changes: [
+    '[버그수정 치명] 백그라운드 진입 중 manifestLoadError 루프 — 로딩 중 백그라운드 진입 시 S.callId를 증가시키지 않아 진행 중인 resolveStreamUrl().then() 비동기 콜백이 thisCall 가드를 통과해 HLS를 재시작하던 문제. 백그라운드 진입 시 callId++ 추가로 구 콜백 즉시 무효화',
+    '[버그수정] bufferStalledError 복구 후 CALL 오감지 연쇄 — recoverMediaError() 내부에서 audio가 일시 pause되어 통화/음성입력으로 오판, 재생→CALL→재생 루프 반복. recoverMediaError() 전에 userPaused=true 세팅해 pause 핸들러 억제, 100ms 후 play() 재호출 전 userPaused=false 복원',
+  ]},
+  { version: 'v2.8.8', date: '2026-06-03', changes: [
+    '[버그수정 치명] 로그 상태값 전부 false — startBgWatch() 내부의 window.audio / window.S 참조 수정. const 변수는 window에 없으므로 항상 undefined → 백그라운드 감시 타이머가 즉시 종료되고 audio.src=없음/playing=false로 잘못 기록되던 문제. 직접 스코프 참조로 수정',
+    '[버그수정] 로그 station 컬럼 항상 "-" 표시 — write()의 window.S?.current?.name도 동일한 원인. 직접 스코프 참조로 수정',
+  ]},
   { version: 'v2.8.7', date: '2026-06-02', changes: [
     '[버그수정 치명] 로그 상태값 전부 false — RLog._snap()에서도 window.S / window.audio 사용. const 변수는 window에 없으므로 항상 undefined. 직접 스코프 참조로 수정. 이제 로그가 실제 상태를 정확히 반영',
     '[버그수정] 백그라운드 manifestLoadError 시 scheduleRetry() 불필요 호출 — Android가 백그라운드 네트워크 요청을 차단해 발생하는 정상 패턴. wasPlaying=true만 보존하고 포그라운드 복귀 시 재연결로 처리',
@@ -1848,12 +1876,13 @@ const RLog = (() => {
     const fullDetail = snap ? (detail ? detail + ' ║ ' + _snap() : _snap()) : detail;
     const entry = { level, time, date, msg,
       detail: fullDetail,
-      station: window.S?.current?.name || '-',
+      // ★ window.S → 직접 스코프 참조 (const S는 window에 없음)
+      station: (typeof S !== 'undefined' ? S : null)?.current?.name || '-',
       ts: now.getTime() };
     _buf.unshift(entry);
     if (_buf.length > LOG_MAX) _buf.pop();
     persist();
-    if (level === 'ERROR' || level === 'WARN' || level === 'STOP' || level === 'BG_FAIL') {
+    if (level === 'ERROR' || level === 'WARN' || level === 'STOP' || level === 'BG_FAIL' || level === 'KILL') {
       document.getElementById('logBtn')?.classList.add('has-error');
     }
     const fn = level === 'ERROR' || level === 'BG_FAIL' ? console.error
@@ -1866,13 +1895,16 @@ const RLog = (() => {
   function startBgWatch() {
     stopBgWatch();
     let tick = 0;
-    let lastTime = window.audio?.currentTime ?? -1;
+    // ★ window.audio → 직접 스코프 참조 (const audio는 window에 없으므로 window.audio는 undefined)
+    let lastTime = (typeof audio !== 'undefined') ? (audio.currentTime ?? -1) : -1;
     _bgWatchTimer = setInterval(() => {
       if (document.visibilityState !== 'hidden') { stopBgWatch(); return; }
-      const audio = window.audio;
-      if (!audio || !window.S?.playing) { stopBgWatch(); return; }
+      // ★ window.S / window.audio → 직접 스코프 참조
+      const _S = (typeof S !== 'undefined') ? S : null;
+      const _a = (typeof audio !== 'undefined') ? audio : null;
+      if (!_a || !_S?.playing) { stopBgWatch(); return; }
       tick++;
-      const curTime = audio.currentTime;
+      const curTime = _a.currentTime;
       const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
       lastTime = curTime;
       if (tick === 1) return; // 첫 tick은 기준값 수집만
@@ -1905,6 +1937,7 @@ const RLog = (() => {
     bgPlay  : (m, d)    => write('BG_PLAY',   m, d),        // 백그라운드 재생 확인
     bgFail  : (m, d)    => write('BG_FAIL',   m, d, true),  // 백그라운드 재생 실패
     state   : (m, d)    => write('STATE',     m, d, true),  // 상태 스냅샷
+    kill    : (m, d)    => write('KILL',      m, d, true),  // 앱 종료/동결/강제 중단
     getAll  : ()        => [..._buf],
     clear   : async ()  => { _buf = []; await persistNow(); },
   };
@@ -1922,7 +1955,7 @@ function closeLog(e) {
 }
 // 현재 로그 필터 상태
 let _logFilter = 'ALL';
-const _LOG_FILTERS = ['ALL','PLAY','STOP','ERROR','WARN','RECONNECT','CALL','NET','BG_PLAY','BG_FAIL','INFO','STATE'];
+const _LOG_FILTERS = ['ALL','PLAY','STOP','ERROR','WARN','RECONNECT','CALL','NET','BG_PLAY','BG_FAIL','INFO','STATE','KILL'];
 
 function renderLogUI() {
   const allLogs = RLog.getAll();
@@ -2018,35 +2051,51 @@ function scheduleRetry() {
 
   S.playing = false;
   S.loading = false;
+  if (S.current) S.wasPlaying = true; // ★ 항상 보존 — 포그라운드/백그라운드 모두
   updateNowPlaying(); updateActiveCard();
 
-  // ★ 백그라운드 상태 처리
-  if (document.visibilityState === 'hidden') {
-    if (S.current) S.wasPlaying = true; // 복귀 시 재연결 트리거 보존
-    S.retryCount = 0;
-    // ★ 오디오가 실제로 재생 중(paused=false, src 있음)이면 절대 건드리지 않음
-    // → HLS 에러가 났더라도 audio 자체는 살아있을 수 있음
-    if (!audio.paused && audio.src && audio.src !== location.href) {
-      RLog.info('백그라운드 재시도 건너뜀 — 오디오 재생 중, src 유지');
-      return;
-    }
-    // 실제로 끊긴 경우만 정리
-    if (S.hls) { S.hls.destroy(); S.hls = null; }
-    audio.src = '';
-    RLog.info('백그라운드 재시도 건너뜀 — 포그라운드 복귀 시 재연결');
+  // ★ 오디오가 실제로 재생 중이면 HLS 에러에도 audio 자체는 살아있을 수 있음 — 건드리지 않음
+  if (!audio.paused && audio.src && audio.src !== location.href) {
+    RLog.info('재시도 건너뜀 — 오디오 실제 재생 중, src 유지');
     return;
+  }
+
+  // ★ HLS/src 정리
+  if (S.hls) { S.hls.destroy(); S.hls = null; }
+  if (!audio.src || audio.src === location.href) {
+    // src가 이미 없으면 굳이 초기화 불필요
+  } else {
+    audio.src = '';
   }
 
   if (S.retryCount >= 5) {
     RLog.error('재연결 5회 실패 — 방송 중단');
-    showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
+    if (document.visibilityState !== 'hidden') {
+      showError('연결 실패 (5회). 재연결 버튼을 눌러주세요.');
+    }
+    // ★ 포기하지 않음 — 60초 후 재시도 (백그라운드 포함)
+    S.retryCount = 0;
+    S.retryTimer = setTimeout(() => {
+      if (!S.current || !S.wasPlaying) return;
+      RLog.reconnect('5회 실패 후 60초 대기 완료 — 재연결 재시작');
+      S.retryCount = 0;
+      playStation(S.current, true, true);
+    }, 60000);
     return;
   }
+
   S.retryCount++;
-  const delay = Math.min(2000 * Math.pow(2, S.retryCount - 1), 30000);
-  RLog.warn(`재연결 대기 ${S.retryCount}회차`, `${Math.round(delay/1000)}초 후 재시도`);
-  showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
-  S.retryTimer = setTimeout(() => { if (S.current) playStation(S.current, false, true); }, delay);
+  // ★ 백그라운드에서는 더 짧은 간격으로 재시도 (사용자가 기다리지 않으므로)
+  const isHidden = document.visibilityState === 'hidden';
+  const baseDelay = isHidden ? 5000 : 2000;
+  const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), isHidden ? 30000 : 30000);
+  RLog.warn(`재연결 대기 ${S.retryCount}회차${isHidden ? ' (백그라운드)' : ''}`, `${Math.round(delay/1000)}초 후 재시도`);
+  if (!isHidden) showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
+
+  S.retryTimer = setTimeout(() => {
+    if (!S.current || !S.wasPlaying) return;
+    playStation(S.current, false, true);
+  }, delay);
 }
 
 function retryPlay() {
@@ -2158,17 +2207,10 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
             if (S.hls === hls) S.hls = null;
             hls.destroy();
-            // ★ 백그라운드에서 manifestLoadError: Android가 네트워크 요청을 차단/타임아웃
-            // → scheduleRetry()를 호출해도 어차피 백그라운드 분기에서 건너뜀
-            // → wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 맡김
-            if (document.visibilityState === 'hidden') {
-              S.wasPlaying = true;
-              S.playing = false; S.loading = false;
-              RLog.info('백그라운드 치명 오류 — 포그라운드 복귀 시 재연결 예약');
-              updateNowPlaying(); updateActiveCard();
-            } else {
-              onFail(true);
-            }
+            // ★ 치명 오류 — 백그라운드/포그라운드 모두 scheduleRetry로 처리
+            // scheduleRetry가 항상 wasPlaying=true 보존 + 재시도 타이머 등록
+            RLog.kill('HLS 치명 오류 — 재연결 예약', `hidden=${document.visibilityState === 'hidden'}`);
+            onFail(true);
           } else {
             netErrCount++;
             if (netErrCount > 3) {
@@ -2195,10 +2237,21 @@ function playStation(s, forceRefresh = false, isRetry = false) {
           if (mediaErrorCount < 2) {
             RLog.warn(`HLS 미디어 오류(복구 ${mediaErrorCount+1}회)`, `${d.details || ''}`);
             mediaErrorCount++;
+            // ★ recoverMediaError()는 내부적으로 audio를 잠시 pause 상태로 만듦
+            // → pause 핸들러가 통화(CALL)로 오감지하는 원인
+            // → userPaused=true로 먼저 세팅해 pause 핸들러 억제
+            S.userPaused = true;
             hls.recoverMediaError();
             // ★ recoverMediaError() 후 audio가 paused 상태로 방치되는 문제 해결
             // HLS.js 스펙상 recoverMediaError 이후 명시적으로 play()를 재호출해야 함
-            setTimeout(() => { if (S.hls === hls && audio.paused) audio.play().catch(() => {}); }, 100);
+            setTimeout(() => {
+              if (S.hls === hls && audio.paused) {
+                S.userPaused = false; // play() 전에 해제해야 play 이벤트가 정상 처리됨
+                audio.play().catch(() => {});
+              } else {
+                S.userPaused = false;
+              }
+            }, 100);
           } else {
             RLog.error('HLS 미디어 오류(복구 한계 초과)', `${d.details || ''}`);
             if (S.hls === hls) S.hls = null;
@@ -2249,15 +2302,38 @@ function togglePlay() {
 /* ════════════════════════════════════════
    오디오 이벤트 (전화/인터럽트 처리)
 ════════════════════════════════════════ */
-audio.addEventListener('ended',   () => { if (S.current && S.playing) scheduleRetry(); });
-audio.addEventListener('error',   () => { if (S.current && S.playing && !S.loading && !S.hls) scheduleRetry(); });
+audio.addEventListener('ended',   () => {
+  if (S.current && S.playing) {
+    RLog.kill('audio ended — 스트림 종료 감지, 재연결');
+    scheduleRetry();
+  }
+});
+audio.addEventListener('error',   () => {
+  if (S.current && S.playing && !S.loading && !S.hls) {
+    RLog.kill('audio error (native) — 재연결');
+    scheduleRetry();
+  }
+});
 // ★ stalled: 데이터 수신 중단 감지
 // HLS.js 활성 상태에서는 HLS.js 내부가 자체 복구하므로 외부 개입 금지
 // native <audio> 전용으로만 scheduleRetry 호출
 audio.addEventListener('stalled', () => {
   if (!S.current || !S.playing || S.loading) return;
   if (S.hls) return; // ★ HLS.js가 자체 복구 처리 중 — 외부 재시작 금지
+  RLog.kill('audio stalled (native) — 재연결');
   scheduleRetry();
+});
+
+// ★ 화면 꺼짐 후 오디오 강제 종료 감지
+// Android은 화면 꺼짐 + WakeLock 없으면 오디오 세션을 OS가 종료시킬 수 있음
+// pause 이벤트는 기존 핸들러가 처리하지만, emptied(src 강제 초기화)는 별도 대응 필요
+audio.addEventListener('emptied', () => {
+  // S.playing=true인데 src가 비워졌으면 OS가 강제 종료한 것
+  if (S.playing && S.current && !S.userPaused) {
+    RLog.kill('audio emptied (재생 중 src 강제 초기화) — OS 강제 종료 의심, 재연결');
+    S.playing = false;
+    scheduleRetry();
+  }
 });
 
 /* ════════════════════════════════════════
@@ -2497,6 +2573,9 @@ let stopCallWatch = () => {};
     watchTimer = setInterval(() => {
       if (!S.wasPlaying || !S.current || reconnectingCall) { stopWatch(); return; }
       if (!audio.paused || !navigator.onLine) return;
+      // ★ 백그라운드에서는 tryReconnect 금지 — 백그라운드 playStation → manifestLoadError 루프 유발
+      // AudioContext statechange 경로도 hidden 체크를 하므로 여기서도 동일하게 처리
+      if (document.visibilityState === 'hidden') return;
       // ★ 매번 새 컨텍스트 생성 금지 — 공유 싱글턴 재사용
       const ctx = getSharedAudioCtx();
       if (!ctx) return;
@@ -2539,12 +2618,19 @@ let stopCallWatch = () => {};
       stopWatchdog();
       if (typeof S._stopVoiceTimer === 'function') S._stopVoiceTimer();
 
+      // ★ 재생 중 백그라운드 진입 시 WakeLock 재확인
+      // 화면이 꺼지면 WakeLock이 자동 해제되므로 재획득 시도는 의미 없음
+      // 대신 WakeLock 상태를 기록해 추후 분석에 활용 (위 visibilitychange 핸들러에서 처리)
+
       // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
       S._watchdogPaused = S.playing || S.loading;
 
       // ★ 로딩 중(아직 재생 안 된 상태)일 때만 HLS 정리 — 이미 재생 성공 중인 audio는 절대 건드리지 않음
       // → S.playing=true인 상태에서 pause()/src='' 하면 백그라운드 오디오가 즉시 끊김
       if (S.loading && !S.playing) {
+        // ★ callId 증가 — 진행 중인 resolveStreamUrl().then() 비동기 콜백의 thisCall 가드를 무효화
+        // 백그라운드 진입 후 뒤늦게 실행된 콜백이 HLS를 재시작 → manifestLoadError 유발하던 핵심 원인
+        S.callId++;
         if (S.hls) { S.hls.destroy(); S.hls = null; }
         S.wasPlaying = true;
         S.userPaused = true;
@@ -2585,9 +2671,13 @@ let stopCallWatch = () => {};
       return;
     }
 
-    // 4) wasPlaying이면 즉시 재연결
-    if (S.wasPlaying && S.current) {
+    // 4) 재연결 필요 여부 판단
+    // wasPlaying=true: 정상 경로
+    // _hiddenWasActive=true + wasPlaying=false: 백그라운드에서 재시도 전부 실패했지만 포그라운드 복귀 — 무조건 재시도
+    const needReconnect = S.wasPlaying || (S._hiddenWasActive && S.current);
+    if (needReconnect && S.current) {
       if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
+      if (!S.wasPlaying) RLog.warn('포그라운드 복귀 — wasPlaying=false였으나 강제 재연결 (백그라운드 재연결 실패 복구)');
       RLog.reconnect('포그라운드 복귀 → 재연결');
       S.wasPlaying = false;
       S._hiddenWasActive = false;
@@ -2845,13 +2935,28 @@ async function requestWakeLock() {
   try {
     if (_wakeLock && !_wakeLock.released) return;
     _wakeLock = await navigator.wakeLock.request('screen');
+    RLog.info('WakeLock 획득');
     _wakeLock.addEventListener('release', () => {
+      const wasPlaying = S.playing || S.loading;
+      const hidden     = document.visibilityState === 'hidden';
+      // ★ WakeLock은 화면이 꺼지거나 탭이 백그라운드로 가면 OS가 강제 해제
+      // hidden=true + playing=true 조합은 "화면 꺼짐으로 재생 중단 위험" 신호
+      if (wasPlaying) {
+        RLog.kill(
+          hidden ? 'WakeLock 강제 해제 (화면 꺼짐/백그라운드) — 재생 중단 위험'
+                 : 'WakeLock 해제 (포그라운드 — 정상)',
+          `playing=${S.playing} | loading=${S.loading} | hidden=${hidden}`
+        );
+      } else {
+        RLog.info('WakeLock 해제 (재생 없음)');
+      }
       _wakeLock = null;
       if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
         requestWakeLock();
       }
     });
   } catch(e) {
+    RLog.warn('WakeLock 획득 실패', e.message || String(e));
     console.warn('[WakeLock] 획득 실패:', e.message);
   }
 }
@@ -4318,6 +4423,78 @@ window.addEventListener('pageshow', (e) => {
     setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current); }, 300);
   }
 });
+
+/* ════════════════════════════════════════
+   앱 종료 / 동결 감지 로깅
+   백그라운드 강제 종료 원인 추적용
+════════════════════════════════════════ */
+(function initLifecycleLogging() {
+
+  // ① pagehide — 탭 닫기 / 앱 스와이프 종료 / Android 메모리 회수
+  // persisted=true: bfcache에 보관 (재사용 가능)  |  persisted=false: 완전 파괴
+  window.addEventListener('pagehide', (e) => {
+    const reason = e.persisted ? 'bfcache 저장 (탭 비활성)' : '완전 종료 (탭 닫힘 / 앱 종료)';
+    RLog.kill(`앱 pagehide — ${reason}`,
+      `playing=${S.playing} | loading=${S.loading} | wasPlaying=${S.wasPlaying} | persisted=${e.persisted}`);
+    // persisted=false이면 IDB 즉시 저장 시도 (비동기지만 최선)
+    if (!e.persisted) {
+      try { idbSet('radio_play_log', JSON.stringify(RLog.getAll())); } catch(_) {}
+    }
+  });
+
+  // ② freeze — Chrome/Android가 탭을 CPU 절약으로 동결 (백그라운드 메모리 압박)
+  // 이 이벤트 이후 JS 실행이 중단되므로 이 로그가 마지막이 될 수 있음
+  document.addEventListener('freeze', () => {
+    RLog.kill('앱 freeze (OS 메모리 절약 — JS 실행 중단 예정)',
+      `playing=${S.playing} | loading=${S.loading} | wasPlaying=${S.wasPlaying}`);
+    // freeze 직전 IDB 동기 저장 불가 — 최선 시도
+    try { idbSet('radio_play_log', JSON.stringify(RLog.getAll())); } catch(_) {}
+  });
+
+  // ③ resume — freeze 해제 후 복원
+  document.addEventListener('resume', () => {
+    RLog.info('앱 resume (freeze 해제 — JS 실행 재개)');
+    // freeze 후 복귀 시 재연결 필요 여부 확인
+    if (S.current && (S.wasPlaying || S.playing) && !S.sleepStopped) {
+      setTimeout(() => {
+        if (!S.playing && !S.loading && S.current) {
+          RLog.reconnect('resume 후 재연결');
+          S.wasPlaying = false;
+          playStation(S.current, true);
+        }
+      }, 500);
+    }
+  });
+
+  // ④ visibilitychange — hidden 진입 시 화면 꺼짐 vs 앱 전환 구분 보강
+  // Android에서 화면을 끄면 hidden이 되고 WakeLock도 해제됨
+  // 기존 핸들러에 이미 로깅 있으므로 여기서는 WakeLock 상태만 추가 기록
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && S.playing) {
+      const wlStatus = _wakeLock && !_wakeLock.released ? '활성' : '없음/해제됨';
+      RLog.info(`백그라운드 진입 시 WakeLock 상태: ${wlStatus}`);
+    }
+  });
+
+  // ⑤ audio 종료 이벤트 — HLS 외부에서 발생하는 중단 기록
+  audio.addEventListener('ended', () => {
+    if (S.current) RLog.kill('audio ended 이벤트 (스트림 예기치 않게 종료)');
+  });
+  audio.addEventListener('error', (e) => {
+    if (!S.hls) { // HLS.js가 없는 경우(native)만 — HLS.js는 자체 에러 핸들러 사용
+      const code = e.target?.error?.code;
+      const msg  = e.target?.error?.message || '';
+      RLog.kill('audio error 이벤트 (native)', `code=${code} | ${msg}`);
+    }
+  });
+  audio.addEventListener('emptied', () => {
+    // emptied: src가 비워질 때 발생 — 의도치 않은 src 초기화 추적
+    if (S.playing) {
+      RLog.kill('audio emptied (재생 중 src 강제 초기화 감지)');
+    }
+  });
+
+})();
 
 </script>
 

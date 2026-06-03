@@ -316,6 +316,24 @@ header {
 }
 .sleep-desc { font-size: 11px; color: var(--muted); line-height: 1.6; text-align: center; }
 
+/* 취침 타이머 상시 카운트다운 바 */
+.sleep-bar {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin: 10px 0 0;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: rgba(255, 90, 90, 0.10);
+  border: 1px solid rgba(255, 90, 90, 0.25);
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+.sleep-bar:hover, .sleep-bar:active { background: rgba(255,90,90,0.18); }
+.sleep-bar-icon  { font-size: 14px; }
+.sleep-bar-time  { font-size: 17px; font-weight: 800; color: var(--red);
+                   font-variant-numeric: tabular-nums; letter-spacing: .03em; }
+.sleep-bar-label { font-size: 12px; color: var(--muted); }
+
 /* 설치 버튼 */
 #installBtn {
   display: none;
@@ -1056,6 +1074,13 @@ input[type=range]::-webkit-slider-thumb {
     </div>
 
     <div class="np-status" id="npStatus">재생 중인 채널이 없습니다</div>
+
+    <!-- 취침 타이머 상시 카운트다운 바 -->
+    <div id="sleepBar" class="sleep-bar" style="display:none" onclick="openSleepTimer()">
+      <span class="sleep-bar-icon">🌙</span>
+      <span class="sleep-bar-time" id="sleepBarTime">00:00</span>
+      <span class="sleep-bar-label">후 자동 정지</span>
+    </div>
   </div>
 
   <!-- ★ 채널 스크롤 영역 시작 — 헤더/Now Playing은 고정, 여기서부터 스크롤 -->
@@ -1224,7 +1249,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.14</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.15</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1306,8 +1331,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.14';
+const APP_VERSION = 'v2.8.15';
 const CHANGELOG = [
+  { version: 'v2.8.15', date: '2026-06-03', changes: [
+    '[개선] 취침 타이머 카운트다운 Now Playing 영역에 상시 표시 — 시트를 닫아도 남은 시간을 바 형태로 항상 확인 가능. 탭하면 시트 다시 열림',
+  ]},
   { version: 'v2.8.14', date: '2026-06-03', changes: [
     '[버그수정] audio emptied 오발동 — HLS.js가 내부적으로 src를 재설정할 때도 emptied가 발생. audio.paused=false(실제 재생 중)이면 무시하도록 수정. freeze 직전 BG_PLAY 287회 확인됐는데 playing=false/wasPlaying=false로 찍힌 원인',
     '[버그수정] audio emptied 핸들러 중복 등록 — 메인 핸들러와 lifecycle 핸들러가 둘 다 emptied를 처리해 scheduleRetry 이중 호출 가능. lifecycle 쪽 중복 제거',
@@ -3027,6 +3055,13 @@ const SleepTimer = (() => {
     if (btn && _ticker) {
       btn.textContent = fmt(rem); // 이모지 대신 남은 시간으로 교체
     }
+    // ★ Now Playing 상시 카운트다운 바 업데이트
+    const bar     = document.getElementById('sleepBar');
+    const barTime = document.getElementById('sleepBarTime');
+    if (bar && barTime) {
+      barTime.textContent = fmt(rem);
+      bar.style.display   = _ticker ? '' : 'none';
+    }
   }
 
   // 볼륨 페이드아웃 후 정지 (30초에 걸쳐 0으로)
@@ -3090,6 +3125,9 @@ const SleepTimer = (() => {
       btn.textContent = '⏱'; // ★ 이모지 원복
       btn.title = '취침 타이머';
     }
+    // ★ 카운트다운 바 숨기기
+    const bar = document.getElementById('sleepBar');
+    if (bar) bar.style.display = 'none';
   }
 
   // 재생 정지 실행

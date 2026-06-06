@@ -40,6 +40,11 @@
 <style>
 /* ══ 리셋 & 변수 ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  -webkit-text-size-adjust: 100%; /* iOS 텍스트 자동 확대 방지 */
+  text-size-adjust: 100%;
+  touch-action: pan-x pan-y;     /* 핀치줌 CSS 레벨 차단 */
+}
 
 :root {
   --bg:        #0d0d1a;
@@ -4441,6 +4446,16 @@ function closeChangelog(e) {
     const now = Date.now();
     if (now - _lastTap < 300) e.preventDefault();
     _lastTap = now;
+  }, { passive: false });
+
+  // iOS Safari 제스처 이벤트 차단
+  document.addEventListener('gesturestart',  (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gestureend',    (e) => e.preventDefault(), { passive: false });
+
+  // Ctrl+스크롤 줌 차단 (키보드 연결 시)
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) e.preventDefault();
   }, { passive: false });
 })();
 

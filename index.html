@@ -1249,7 +1249,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.18</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.19</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1331,8 +1331,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.18';
+const APP_VERSION = 'v2.8.19';
 const CHANGELOG = [
+  { version: 'v2.8.19', date: '2026-06-06', changes: [
+    '[개선] WakeLock release 시 wasPlaying 즉시 보존 — release 이벤트가 visibilitychange보다 먼저 실행되어 스냅샷에 wasPlaying=false로 찍히던 문제. 재생 중 해제 시 선점으로 wasPlaying=true 세팅',
+  ]},
   { version: 'v2.8.18', date: '2026-06-05', changes: [
     '[버그수정] WakeLock 권한 거부(permission denied) 시 백그라운드 재생 유지 실패 — WakeLock 획득 실패 후 아무 대응 없이 화면 꺼지면 재생 끊김. AudioContext 무음 keepalive(볼륨 0 오실레이터)로 대체해 Android이 탭을 오디오 활성 앱으로 유지하도록 보완',
     '[개선] WakeLock 해제(화면 꺼짐) 시에도 keepalive 자동 시작 — WakeLock이 있다가 해제되는 경우도 keepalive로 이어서 보호',
@@ -3071,6 +3074,9 @@ async function requestWakeLock() {
     _wakeLock.addEventListener('release', () => {
       const wasPlaying = S.playing || S.loading;
       const hidden     = document.visibilityState === 'hidden';
+      // ★ 재생 중 WakeLock 해제 시 wasPlaying 즉시 보존
+      // visibilitychange보다 release가 먼저 실행되므로 여기서 선점 세팅
+      if (wasPlaying && S.current) S.wasPlaying = true;
       if (wasPlaying) {
         RLog.kill(
           hidden ? 'WakeLock 강제 해제 (화면 꺼짐/백그라운드) — 재생 중단 위험'

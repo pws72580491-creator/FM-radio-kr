@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.19</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.20</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1336,8 +1336,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.19';
+const APP_VERSION = 'v2.8.20';
 const CHANGELOG = [
+  { version: 'v2.8.20', date: '2026-06-07', changes: [
+    '[개선] 재생 성공(onOK) 즉시 wasPlaying=true 세팅 — 재생 직후 화면 꺼짐/freeze 발생 시 wasPlaying=false 상태로 방치되어 재연결 포기하던 잠재적 위험 제거',
+  ]},
   { version: 'v2.8.19', date: '2026-06-06', changes: [
     '[개선] WakeLock release 시 wasPlaying 즉시 보존 — release 이벤트가 visibilitychange보다 먼저 실행되어 스냅샷에 wasPlaying=false로 찍히던 문제. 재생 중 해제 시 선점으로 wasPlaying=true 세팅',
   ]},
@@ -2215,6 +2218,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
+      S.wasPlaying = true;  // ★ 재생 성공 즉시 wasPlaying 보존 — 직후 화면 꺼짐/freeze 시 재연결 보장
       S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
       // ★ 재생 성공 시 이전 scheduleRetry 타이머 즉시 취소
       // 백그라운드 재시도 중 재생이 성공했는데 이전 타이머가 살아있어

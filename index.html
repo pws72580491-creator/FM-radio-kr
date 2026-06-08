@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.20</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.22</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1336,8 +1336,15 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.20';
+const APP_VERSION = 'v2.8.22';
 const CHANGELOG = [
+  { version: 'v2.8.22', date: '2026-06-08', changes: [
+    '[버그수정] startBgWatch tick===1 skip 제거 — lastTime을 audio.currentTime으로 초기화함에도 첫 tick을 기준값 수집만 하고 비교를 건너뛰어 백그라운드 재생 중단 감지가 실질적으로 6초 걸리던 문제. skip 조건 제거로 3초(1 tick) 만에 감지. BG_PLAY 카운터도 tick→bgTick으로 명칭 정리',
+  ]},
+  { version: 'v2.8.21', date: '2026-06-07', changes: [
+    '[버그수정] 백그라운드 중 scheduleRetry 타이머 콜백이 hidden 상태에서 playStation 호출 — visibilitychange 진입 시 clearRetryTimer()로 기존 타이머는 취소되지만, 백그라운드 진입 후 manifestLoadError→scheduleRetry로 새 타이머가 등록되면 hidden 상태에서 실행. 콜백에 hidden 가드 추가: 백그라운드이면 wasPlaying=true 보존 후 즉시 종료, 포그라운드 복귀 시 재연결에 위임',
+    '[버그수정] loading 중 백그라운드 진입 시 audio error code=4 (Empty src attribute) — HLS.js attachMedia 도중 src="" 동기 실행 시 타이밍 충돌. HLS destroy 후 Promise.resolve().then()으로 src 초기화를 마이크로태스크로 지연해 충돌 방지',
+  ]},
   { version: 'v2.8.20', date: '2026-06-07', changes: [
     '[개선] 재생 성공(onOK) 즉시 wasPlaying=true 세팅 — 재생 직후 화면 꺼짐/freeze 발생 시 wasPlaying=false 상태로 방치되어 재연결 포기하던 잠재적 위험 제거',
   ]},
@@ -1955,8 +1962,12 @@ const RLog = (() => {
   // 백그라운드 진입 후 3초마다 실제로 오디오가 재생 중인지 확인
   function startBgWatch() {
     stopBgWatch();
-    let tick = 0;
+    let bgTick = 0;
     // ★ window.audio → 직접 스코프 참조 (const audio는 window에 없으므로 window.audio는 undefined)
+    // ★ lastTime을 호출 시점 currentTime으로 초기화 — tick=1 skip 조건 불필요
+    // 이전에 tick===1 skip이 있었던 이유: lastTime=-1 초기화 시 첫 tick이 항상 "진행 중"으로
+    // 오판하는 걸 막기 위해서였으나, 현재는 audio.currentTime으로 정확히 초기화하므로 불필요.
+    // skip 제거로 백그라운드 재생 중단을 3초(1 tick) 만에 감지 가능 (기존 6초에서 개선)
     let lastTime = (typeof audio !== 'undefined') ? (audio.currentTime ?? -1) : -1;
     _bgWatchTimer = setInterval(() => {
       if (document.visibilityState !== 'hidden') { stopBgWatch(); return; }
@@ -1964,15 +1975,14 @@ const RLog = (() => {
       const _S = (typeof S !== 'undefined') ? S : null;
       const _a = (typeof audio !== 'undefined') ? audio : null;
       if (!_a || !_S?.playing) { stopBgWatch(); return; }
-      tick++;
+      bgTick++;
       const curTime = _a.currentTime;
       const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
       lastTime = curTime;
-      if (tick === 1) return; // 첫 tick은 기준값 수집만
       if (progressing) {
-        write('BG_PLAY', `백그라운드 실제 재생 확인 [${tick}]`, `currentTime=${curTime.toFixed(2)}`);
+        write('BG_PLAY', `백그라운드 실제 재생 확인 [${bgTick}]`, `currentTime=${curTime.toFixed(2)}`);
       } else {
-        write('BG_FAIL', `백그라운드 재생 정지 감지 [${tick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
+        write('BG_FAIL', `백그라운드 재생 정지 감지 [${bgTick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
         // ★ 백그라운드에서 재생이 실제로 멈췄으면 scheduleRetry로 재연결
         // 기존에는 로그만 찍고 방치했음 — 재시도 없이 포기하는 원인
         if ((typeof S !== 'undefined' ? S : null)?.current) {
@@ -2168,6 +2178,14 @@ function scheduleRetry() {
     // ★ wasPlaying 체크 제거 — tryReconnect 등이 중간에 wasPlaying=false로 바꿔도
     //    current가 있으면 재시도해야 함. 사용자 정지(userPaused)만 차단
     if (S.userPaused) return;
+    // ★ 백그라운드 상태에서 타이머 콜백이 실행되면 playStation 금지
+    // visibilitychange hidden 진입 시 clearRetryTimer()로 취소하지만,
+    // 백그라운드 진입 후 새로 등록된 타이머(manifestLoadError → scheduleRetry)는 보호 안 됨
+    // → hidden이면 wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 위임
+    if (document.visibilityState === 'hidden') {
+      S.wasPlaying = true;
+      return;
+    }
     playStation(S.current, false, true);
   }, delay);
 }
@@ -2730,12 +2748,16 @@ let stopCallWatch = () => {};
         // ★ callId 증가 — 진행 중인 resolveStreamUrl().then() 비동기 콜백의 thisCall 가드를 무효화
         // 백그라운드 진입 후 뒤늦게 실행된 콜백이 HLS를 재시작 → manifestLoadError 유발하던 핵심 원인
         S.callId++;
-        if (S.hls) { S.hls.destroy(); S.hls = null; }
         S.wasPlaying = true;
         S.userPaused = true;
-        audio.pause(); audio.src = '';
         S.loading = false;
         S.retryCount = 0;
+        audio.pause();
+        // ★ HLS.js가 attachMedia 직후 audio.src를 blob URL로 교체하는 도중
+        // src=''를 동기 실행하면 MEDIA_ELEMENT_ERROR: Empty src attribute 발생
+        // → HLS destroy 후 다음 마이크로태스크에서 src 초기화해 타이밍 충돌 방지
+        if (S.hls) { S.hls.destroy(); S.hls = null; }
+        Promise.resolve().then(() => { if (!S.playing) audio.src = ''; });
         updateNowPlaying(); updateActiveCard();
       }
       return;

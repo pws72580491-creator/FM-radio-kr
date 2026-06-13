@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.28</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.29</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1336,8 +1336,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.28';
+const APP_VERSION = 'v2.8.29';
 const CHANGELOG = [
+  { version: 'v2.8.29', date: '2026-06-13', changes: [
+    '[버그수정 치명] _scheduleNetReconnect hidden 가드 누락 — 백그라운드 중 네트워크 전환(WiFi↔LTE) 시 _scheduleNetReconnect 1500ms 타이머 콜백이 hidden 상태에서 playStation() 호출. HLS 재초기화로 currentTime=0 리셋 → levelLoadTimeOut → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단. 로그에서 BG_PLAY [954] currentTime=0.00 직후 bufferStalledError/levelLoadTimeOut 패턴으로 확인됨. hidden이면 wasPlaying=true 보존 후 defer, 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리',
+  ]},
   { version: 'v2.8.28', date: '2026-06-10', changes: [
     '[개선] 로그 긴급 저장 — 앱 강제종료/OS kill 시 IndexedDB persist()가 완료되기 전에 프로세스가 죽으면 마지막 로그가 소실되던 문제. write()마다 localStorage에 최근 60개를 동기(setItem)로 즉시 백업. 앱 시작 시 localStorage tail과 IndexedDB를 ts 기준으로 병합 복원. 강제종료 직전 결정적 이벤트(네트워크 전환, KILL 등)를 로그에서 확인 가능',
   ]},
@@ -2561,13 +2564,18 @@ function _scheduleNetReconnect(reason) {
     _netReconnectTimer = null;
     if (!S.current || !S.wasPlaying) return;
     if (S.playing || S.loading) return; // 이미 재생 중이면 스킵
+    // ★ 백그라운드에서는 playStation 절대 금지
+    // hidden 중 playStation → HLS 재초기화 → currentTime=0 리셋 → levelLoadTimeOut
+    // → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단
+    // visibilitychange visible 핸들러가 wasPlaying=true 보고 재연결 처리
+    if (document.visibilityState === 'hidden') {
+      RLog.net(`네트워크 전환 감지 — 백그라운드라 재연결 defer (${reason})`);
+      return;
+    }
     RLog.net(`네트워크 전환 후 재연결 실행 (${reason})`);
     S.needReconnect = false;
     stopWatchdog();
     clearRetryTimer();
-    // ★ isRetry=true — wasPlaying을 초기화하지 않음
-    // connection.change/online 핸들러가 wasPlaying=false로 덮어쓰면
-    // 이후 실패 시 scheduleRetry가 복구 포기하는 원인이 됨
     playStation(S.current, true, true);
   }, 1500); // ★ 1500ms — IP 재할당 대기 (500ms는 너무 짧아 재실패 빈번)
 }

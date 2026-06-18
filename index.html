@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.29</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.31</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1336,8 +1336,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.29';
+const APP_VERSION = 'v2.8.31';
 const CHANGELOG = [
+  { version: 'v2.8.31', date: '2026-06-18', changes: [
+    '[버그수정] startAudioKeepAlive 중복 호출 — _keepAliveTimer로 가드했으나 함수 내부에서 _keepAliveTimer를 세팅하지 않아 가드가 항상 무효. WakeLock 실패 핸들러와 onOK()가 동시에 호출되면 오실레이터 노드가 2개 생성되어 AudioContext 부하 및 메모리 누수 발생. _keepAliveNode 기준으로 가드 수정',
+  ]},
+  { version: 'v2.8.30', date: '2026-06-13', changes: [
+    '[버그수정] LTE↔WiFi 전환 후 재시작 안 됨 — offline 핸들러에서 hls.stopLoad() 후 audio.paused=false+src=blob 상태 유지. scheduleRetry의 오디오 실제 재생 중 오판으로 재시도 건너뜀. 포그라운드에서 audio.pause() 명시 호출 및 S.hls=null 처리',
+    '[버그수정] LTE↔WiFi 전환 후 재시작 안 됨 — _scheduleNetReconnect 타이머 내 playStation 직전 audio/hls 명시 정리. offline 후 잔여 상태가 playStation 진입 조건을 오염시키던 문제 차단. 대기 시간 1500→2000ms로 상향',
+    '[버그수정] connection.change 이벤트 발화 시 타입 동일해도 로그 기록 — 감지 여부 추적 강화',
+  ]},
   { version: 'v2.8.29', date: '2026-06-13', changes: [
     '[버그수정 치명] _scheduleNetReconnect hidden 가드 누락 — 백그라운드 중 네트워크 전환(WiFi↔LTE) 시 _scheduleNetReconnect 1500ms 타이머 콜백이 hidden 상태에서 playStation() 호출. HLS 재초기화로 currentTime=0 리셋 → levelLoadTimeOut → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단. 로그에서 BG_PLAY [954] currentTime=0.00 직후 bufferStalledError/levelLoadTimeOut 패턴으로 확인됨. hidden이면 wasPlaying=true 보존 후 defer, 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리',
   ]},
@@ -2576,8 +2584,13 @@ function _scheduleNetReconnect(reason) {
     S.needReconnect = false;
     stopWatchdog();
     clearRetryTimer();
+    // ★ playStation 전 audio 명시적 정리
+    // offline 후 hls.stopLoad()만 했으면 audio.paused=false + src=blob 상태일 수 있음
+    // playStation 진입부 hidden 체크 통과 후 정리되지만 명시적으로 먼저 처리
+    if (S.hls) { try { S.hls.destroy(); } catch(e) {} S.hls = null; }
+    try { audio.pause(); audio.src = ''; } catch(e) {}
     playStation(S.current, true, true);
-  }, 1500); // ★ 1500ms — IP 재할당 대기 (500ms는 너무 짧아 재실패 빈번)
+  }, 2000); // ★ 2000ms — IP 재할당 대기 (1500ms에서 상향, 더 안정적)
 }
 
 (function initNetworkSwitchDetect() {
@@ -2591,10 +2604,16 @@ function _scheduleNetReconnect(reason) {
 
   conn.addEventListener('change', () => {
     const newKey = _getNetKey();
-    if (newKey === lastKey) return; // 실제 변화 없으면 스킵
-    RLog.net(`네트워크 타입 전환: ${lastKey} → ${newKey}`);
+    // ★ 타입 변화 없어도 lastKey 갱신만 하고 계속 진행
+    // effectiveType|type이 같아도 실제 인터페이스가 바뀌었을 수 있음
+    const changed = newKey !== lastKey;
+    if (changed) RLog.net(`네트워크 타입 전환: ${lastKey} → ${newKey}`);
+    else RLog.net(`네트워크 change 이벤트 (타입 동일: ${newKey})`);
     lastKey = newKey;
-    if (!S.current || (!S.wasPlaying && !S.playing)) return;
+    // ★ wasPlaying || playing 외에 S.current만 있어도 재연결 시도
+    // offline이 먼저 와서 S.playing=false 된 뒤 change가 오면 wasPlaying으로 판단
+    if (!S.current) return;
+    if (!S.wasPlaying && !S.playing) return;
     _scheduleNetReconnect('connection.change');
   });
 })();
@@ -2990,7 +3009,13 @@ window.addEventListener('offline', () => {
   // ★ wasPlaying 즉시 보존
   if (S.playing || S.loading) { S.wasPlaying = true; S.playing = false; S.loading = false; }
   clearRetryTimer(); stopWatchdog();
-  if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
+  // ★ hls.stopLoad() 후 audio는 paused=false + src=blob 상태를 유지
+  // scheduleRetry의 "오디오 실제 재생 중" 오판 방지를 위해 포그라운드에서 명시적 pause
+  // (hidden 중에는 pause 금지 정책 유지)
+  if (document.visibilityState !== 'hidden') {
+    try { audio.pause(); } catch(e) {}
+  }
+  if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} S.hls = null; }
   updateNowPlaying(); updateActiveCard();
   if (document.visibilityState !== 'hidden') {
     showError('네트워크가 끊겼습니다. 연결을 확인 중...');
@@ -3166,7 +3191,9 @@ let _keepAliveNode = null;
 let _keepAliveTimer = null;
 
 function startAudioKeepAlive() {
-  if (_keepAliveTimer) return; // 이미 실행 중
+  // ★ _keepAliveNode로 가드 — _keepAliveTimer는 이 함수에서 세팅하지 않으므로 항상 null
+  // WakeLock 실패 핸들러와 onOK()가 거의 동시에 호출되면 오실레이터 노드가 2개 생성됨
+  if (_keepAliveNode) return; // 이미 실행 중
   const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
   if (!ctx) return;
   try {

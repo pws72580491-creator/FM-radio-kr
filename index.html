@@ -1253,8 +1253,20 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 </div>
 
-<!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.34</div>
+<!-- 버전 뱃지 (길게 누르면 진단) -->
+<div id="versionBadge" onclick="openChangelog()" oncontextmenu="openDiag(event)" ontouchstart="diagTouchStart(event)" ontouchend="diagTouchEnd(event)">v2.8.34</div>
+
+<!-- 진단 모달 -->
+<div id="diagBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto" onclick="closeDiag(event)">
+  <div id="diagSheet" style="margin:40px auto;max-width:480px;background:#1a1a2e;border-radius:16px;padding:20px;color:#eee;font-size:13px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <b style="font-size:16px">&#128269; API 진단</b>
+      <button onclick="document.getElementById('diagBg').style.display='none'" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer">X</button>
+    </div>
+    <button id="diagRunBtn" onclick="runDiag()" style="width:100%;padding:10px;background:#e74c3c;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:14px">전체 채널 테스트</button>
+    <div id="diagResult" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -4888,6 +4900,71 @@ window.addEventListener('pageshow', (e) => {
   // 여기서는 중복 등록하지 않음 — scheduleRetry 이중 호출 방지
 
 })();
+
+/* ══════════════════════════════════════════
+   진단 도구 — 버전 뱃지 길게 누르면 열림
+══════════════════════════════════════════ */
+let _diagTimer = null;
+function diagTouchStart(e) { _diagTimer = setTimeout(() => openDiag(e), 800); }
+function diagTouchEnd() { clearTimeout(_diagTimer); }
+function openDiag(e) {
+  if (e) e.preventDefault();
+  document.getElementById('diagBg').style.display = 'block';
+  document.getElementById('diagResult').innerHTML = '<p style="color:#888;text-align:center">위 버튼을 눌러 테스트 시작</p>';
+}
+function closeDiag(e) {
+  if (e && e.target !== document.getElementById('diagBg')) return;
+  document.getElementById('diagBg').style.display = 'none';
+}
+async function runDiag() {
+  const btn = document.getElementById('diagRunBtn');
+  const out = document.getElementById('diagResult');
+  btn.disabled = true; btn.textContent = '테스트 중...';
+  out.innerHTML = '';
+  const tests = [
+    { label:'KBS 1라디오',  url:'/api/stream?stn=kbs&ch=21' },
+    { label:'KBS 해피FM',   url:'/api/stream?stn=kbs&ch=22' },
+    { label:'KBS 쿨FM',     url:'/api/stream?stn=kbs&ch=25' },
+    { label:'KBS 클래식FM', url:'/api/stream?stn=kbs&ch=24' },
+    { label:'MBC 표준FM',   url:'/api/stream?stn=mbc&ch=sfm' },
+    { label:'MBC FM4U',     url:'/api/stream?stn=mbc&ch=mfm' },
+    { label:'SBS 러브FM',   url:'/api/stream?stn=sbs&ch=lovefm' },
+    { label:'SBS 파워FM',   url:'/api/stream?stn=sbs&ch=powerfm' },
+    { label:'CBS 음악FM',   url:'/api/stream?stn=cbs&ch=mfm' },
+    { label:'CBS 표준FM',   url:'/api/stream?stn=cbs&ch=sfm' },
+    { label:'Joy4U',        url:'/api/stream?stn=cbs&ch=joy4u' },
+    { label:'TBS',          url:'/api/stream?stn=tbs' },
+    { label:'YTN',          url:'/api/stream?stn=ytn' },
+    { label:'EBS FM', url:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8', direct:true },
+  ];
+  for (const t of tests) {
+    const row = document.createElement('div');
+    row.style.cssText = 'background:#0d0d1a;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:3px';
+    row.innerHTML = '<span style="font-weight:bold">' + t.label + '</span><span id="diag_' + t.label + '" style="color:#888;font-size:11px;word-break:break-all">확인 중...</span>';
+    out.appendChild(row);
+    try {
+      const res = await fetch(t.url, { cache:'no-store' });
+      const info = document.getElementById('diag_' + t.label);
+      if (t.direct) {
+        info.style.color = res.ok ? '#2ecc71' : '#e74c3c';
+        info.textContent = res.ok ? 'OK (HTTP ' + res.status + ')' : '실패 HTTP ' + res.status;
+        continue;
+      }
+      const json = await res.json();
+      if (json.url) {
+        info.style.color = '#2ecc71';
+        info.textContent = 'OK — ' + (json.url.length > 60 ? json.url.slice(0,60)+'…' : json.url);
+      } else {
+        info.style.color = '#e74c3c';
+        info.textContent = '실패: ' + (json.error || JSON.stringify(json));
+      }
+    } catch(e) {
+      const info = document.getElementById('diag_' + t.label);
+      if (info) { info.style.color = '#e74c3c'; info.textContent = '오류: ' + e.message; }
+    }
+  }
+  btn.disabled = false; btn.textContent = '다시 테스트';
+}
 
 </script>
 

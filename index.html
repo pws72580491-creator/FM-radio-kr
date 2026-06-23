@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.31</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.34</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1336,8 +1336,14 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.31';
+const APP_VERSION = 'v2.8.34';
 const CHANGELOG = [
+  { version: 'v2.8.34', date: '2026-06-24', changes: [
+    '[긴급수정] 각 방송사 API 직접 호출 시 브라우저 CORS 차단 문제. Vercel Serverless Function(/api/stream.js) 추가 — KBS/MBC/SBS/CBS/TBS/YTN 모두 서버 사이드에서 API 호출 후 { url } JSON 반환. 극동방송/EBS는 CORS 허용이므로 직접 유지',
+  ]},
+  { version: 'v2.8.33', date: '2026-06-24', changes: [
+    '[긴급수정] radio.bsod.kr 프록시 서버 장애로 극동방송 2채널 외 전 채널 재생 불가. 프록시 의존 완전 제거 — KBS(cfpwwwapi JSON), MBC(sminiplay Plain Text), SBS(apis.sbs.co.kr Plain Text), CBS/TBS/YTN/EBS 정적 URL 직접 호출로 전환. resolveStreamUrl streamType별 파싱 로직 추가',
+  ]},
   { version: 'v2.8.31', date: '2026-06-18', changes: [
     '[버그수정] startAudioKeepAlive 중복 호출 — _keepAliveTimer로 가드했으나 함수 내부에서 _keepAliveTimer를 세팅하지 않아 가드가 항상 무효. WakeLock 실패 핸들러와 onOK()가 동시에 호출되면 오실레이터 노드가 2개 생성되어 AudioContext 부하 및 메모리 누수 발생. _keepAliveNode 기준으로 가드 수정',
   ]},
@@ -1780,66 +1786,111 @@ let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 /* ══ stations.js ══ */
 /* ════════════════════════════════════════
    채널 데이터
+   ★ v2.8.34 — /api/stream Vercel Function 경유 (CORS 해결)
 ════════════════════════════════════════ */
-const P = 'https://radio.bsod.kr/stream/';
+
+// ★ Vercel Function 엔드포인트 (같은 도메인이므로 CORS 없음)
+const API = '/api/stream';
+
 const STATIONS = [
-  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
-  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },
-  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98', stream:P+'?stn=kbs&ch=2fm'     },
-  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212', stream:P+'?stn=kbs&ch=1fm'     },
-  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b', stream:P+'?stn=mbc&ch=sfm'     },
-  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c', stream:P+'?stn=mbc&ch=fm4u'    },
-  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400', stream:P+'?stn=sbs&ch=lovefm'  },
-  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22', stream:P+'?stn=sbs&ch=powerfm' },
-  { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3', stream:P+'?stn=cbs&ch=mfm'     },
-  { id:10, name:'TBS 교통방송', freq:'95.1 MHz',  genre:'교통/정보',  color:'#17a589', stream:P+'?stn=tbs&ch=fm'      },
-  { id:11, name:'YTN 라디오',   freq:'AM 1305',   genre:'뉴스',       color:'#1a252f', stream:P+'?stn=ytn'            },
+  // ── KBS
+  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276',
+    stream:'', streamApi:`${API}?stn=kbs&ch=21` },
+  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449',
+    stream:'', streamApi:`${API}?stn=kbs&ch=22` },
+  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98',
+    stream:'', streamApi:`${API}?stn=kbs&ch=25` },
+  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212',
+    stream:'', streamApi:`${API}?stn=kbs&ch=24` },
+  // ── MBC
+  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b',
+    stream:'', streamApi:`${API}?stn=mbc&ch=sfm` },
+  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c',
+    stream:'', streamApi:`${API}?stn=mbc&ch=mfm` },
+  // ── SBS
+  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400',
+    stream:'', streamApi:`${API}?stn=sbs&ch=lovefm` },
+  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22',
+    stream:'', streamApi:`${API}?stn=sbs&ch=powerfm` },
+  // ── CBS
+  { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3',
+    stream:'', streamApi:`${API}?stn=cbs&ch=mfm` },
+  { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090',
+    stream:'', streamApi:`${API}?stn=cbs&ch=sfm` },
+  { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad',
+    stream:'', streamApi:`${API}?stn=cbs&ch=joy4u` },
+  // ── TBS
+  { id:10, name:'TBS 교통방송', freq:'95.1 MHz',  genre:'교통/정보',  color:'#17a589',
+    stream:'', streamApi:`${API}?stn=tbs` },
+  // ── YTN
+  { id:11, name:'YTN 라디오',   freq:'AM 1305',   genre:'뉴스',       color:'#1a252f',
+    stream:'', streamApi:`${API}?stn=ytn` },
+  // ── EBS (정적 직접 — CORS 허용됨)
   { id:12, name:'EBS FM',       freq:'104.5 MHz', genre:'교육',       color:'#148f77',
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
+  // ── 극동방송 (febc API → m3u8, CORS 허용됨)
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
     stream:'https://mlive3.febc.net/live5/seoulfm/playlist.m3u8',
-    streamApi:'https://seoul.febc.net/radio/schedule/live/1' },
+    streamApi:'https://seoul.febc.net/radio/schedule/live/1', streamType:'febc' },
   { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
     stream:'https://mlive3.febc.net/live5/cwlive/playlist.m3u8',
-    streamApi:'https://changwon.febc.net/radio/schedule/live/4' },
-  { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
-  { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
+    streamApi:'https://changwon.febc.net/radio/schedule/live/4', streamType:'febc' },
 ];
 
 /* ════════════════════════════════════════
    스트림 URL 결정
-   streamApi 방송(극동방송): 캐시 재사용
-   일반 방송: 바로 stream URL 반환
+   /api/stream 응답: { url: "https://...m3u8" }
+   극동방송: HTML에서 m3u8 정규식 추출
+   EBS: 정적 URL 직접
 ════════════════════════════════════════ */
 const _streamCache = {}; // { [id]: { url, ts } }
-const CACHE_TTL_MS  = 30 * 60 * 1000; // ★ 30분 후 만료 — CDN URL 교체 대응
+const CACHE_TTL_MS  = 20 * 60 * 1000; // 20분 TTL
 
-/* ★ 캐시 버스팅 — CDN/프록시 캐시 강제 우회 */
 function bustUrl(url) {
   const sep = url.includes('?') ? '&' : '?';
   return url + sep + '_t=' + Date.now();
 }
 
 async function resolveStreamUrl(s, forceRefresh = false) {
+  // ── EBS: 정적 URL (streamApi 없음)
   if (!s.streamApi) {
     return forceRefresh ? bustUrl(s.stream) : s.stream;
   }
-  // ★ 캐시 TTL 체크 — 만료됐거나 forceRefresh면 재요청
+
+  // ── 캐시 체크
   const cached = _streamCache[s.id];
   if (!forceRefresh && cached && (Date.now() - cached.ts < CACHE_TTL_MS)) {
     return cached.url;
   }
+
   try {
-    const res  = await fetch(s.streamApi, { cache: 'no-store' });
-    const text = await res.text();
-    const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
-    if (m) {
-      _streamCache[s.id] = { url: m[0], ts: Date.now() }; // ★ url + 타임스탬프 저장
-      return m[0];
+    let url = null;
+
+    if (s.streamType === 'febc') {
+      // 극동방송: febc API → HTML에서 m3u8 추출
+      const res  = await fetch(s.streamApi, { cache: 'no-store' });
+      const text = await res.text();
+      const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
+      if (m) url = m[0];
+    } else {
+      // KBS/MBC/SBS/CBS/TBS/YTN: /api/stream → { url }
+      const res  = await fetch(s.streamApi, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.url) url = json.url;
+      else throw new Error(json.error || 'url 없음');
     }
-    console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
-  } catch(e) { console.warn('streamApi 실패:', e); }
-  return forceRefresh ? bustUrl(s.stream) : s.stream;
+
+    if (url) {
+      _streamCache[s.id] = { url, ts: Date.now() };
+      return url;
+    }
+    console.warn(`[resolveStreamUrl] ${s.name}: URL 추출 실패, 기본 URL 폴백`);
+  } catch(e) {
+    console.warn(`[resolveStreamUrl] ${s.name} 실패:`, e);
+  }
+
+  if (s.stream) return forceRefresh ? bustUrl(s.stream) : s.stream;
+  throw new Error(`${s.name}: 스트림 URL을 가져올 수 없습니다`);
 }
 
 /* ══ player.js ══ */

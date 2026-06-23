@@ -1254,7 +1254,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 (길게 누르면 진단) -->
-<div id="versionBadge" onclick="openChangelog()" oncontextmenu="openDiag(event)" ontouchstart="diagTouchStart(event)" ontouchend="diagTouchEnd(event)">v2.8.34</div>
+<div id="versionBadge" onclick="openChangelog()" oncontextmenu="openDiag(event)" ontouchstart="diagTouchStart(event)" ontouchend="diagTouchEnd(event)">v2.8.35</div>
 
 <!-- 진단 모달 -->
 <div id="diagBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto" onclick="closeDiag(event)">
@@ -1348,8 +1348,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.34';
+const APP_VERSION = 'v2.8.35';
 const CHANGELOG = [
+  { version: 'v2.8.35', date: '2026-06-24', changes: [
+    '[버그수정 치명] CBS 음악FM/표준FM/Joy4U — manifestLoadError 반복 실패. aac.cbs.co.kr가 브라우저 직접 fetch를 CORS 차단해 HLS.js가 manifest를 읽지 못하던 원인. stream.js(v4)에서 CBS를 정적 URL 직접 반환에서 서버사이드 HEAD 검증 후 반환 방식으로 전환 (fetchStaticUrl). TBS/YTN/EBS도 동일 방식 적용',
+    '[버그수정] 채널 전환 시 audio.src=있음 상태에서 Empty src attribute 에러 — 이전 HLS destroy와 audio.src=\'\' 사이 타이밍 경쟁. destroy 직후 명시적으로 audio.src=\'\' 초기화하도록 playStation 수정',
+    '[개선] EBS 진단 테스트도 /api/stream?stn=ebs 경유로 통일 — 직접 fetch 방식 제거',
+  ]},
   { version: 'v2.8.34', date: '2026-06-24', changes: [
     '[긴급수정] 각 방송사 API 직접 호출 시 브라우저 CORS 차단 문제. Vercel Serverless Function(/api/stream.js) 추가 — KBS/MBC/SBS/CBS/TBS/YTN 모두 서버 사이드에서 API 호출 후 { url } JSON 반환. 극동방송/EBS는 CORS 허용이므로 직접 유지',
   ]},
@@ -2294,8 +2299,13 @@ function scheduleRetry() {
   // ★ HLS/src 정리 — hidden 상태에서는 destroy/src 초기화 금지
   // Android Chrome은 hidden 중 destroy하면 오디오 세션이 완전 종료됨
   if (document.visibilityState !== 'hidden') {
-    if (S.hls) { S.hls.destroy(); S.hls = null; }
-    if (audio.src && audio.src !== location.href) audio.src = '';
+    if (S.hls) {
+      try { S.hls.stopLoad(); } catch(e) {}
+      try { S.hls.detachMedia(); } catch(e) {}
+      try { S.hls.destroy(); } catch(e) {}
+      S.hls = null;
+    }
+    try { if (audio.src && audio.src !== location.href) audio.src = ''; } catch(e) {}
   } else {
     // hidden 중에는 callId만 증가시켜 비동기 콜백 무효화
     if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
@@ -2378,9 +2388,18 @@ function playStation(s, forceRefresh = false, isRetry = false) {
 
   // ★ hidden 상태에서는 destroy/pause/src='' 금지
   if (document.visibilityState !== 'hidden') {
-    if (S.hls) { S.hls.destroy(); S.hls = null; }
+    // ★ destroy 직후 즉시 audio.src='' — destroy 완료 전 audio error(code=4 Empty src) 발생 방지
+    // HLS.js destroy()가 내부적으로 audio.src를 비울 때 타이밍 경쟁이 생겨
+    // "audio.src=있음" 상태에서 "Empty src attribute" 에러가 찍히던 원인
+    if (S.hls) {
+      try { S.hls.stopLoad(); } catch(e) {}
+      try { S.hls.detachMedia(); } catch(e) {}
+      try { S.hls.destroy(); } catch(e) {}
+      S.hls = null;
+    }
     S.userPaused = true;
-    audio.pause(); audio.src = '';
+    audio.pause();
+    try { if (audio.src && audio.src !== location.href) audio.src = ''; } catch(e) {}
   } else {
     if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} S.hls = null; }
   }
@@ -4935,7 +4954,7 @@ async function runDiag() {
     { label:'Joy4U',        url:'/api/stream?stn=cbs&ch=joy4u' },
     { label:'TBS',          url:'/api/stream?stn=tbs' },
     { label:'YTN',          url:'/api/stream?stn=ytn' },
-    { label:'EBS FM', url:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8', direct:true },
+    { label:'EBS FM',        url:'/api/stream?stn=ebs' },
   ];
   for (const t of tests) {
     const row = document.createElement('div');

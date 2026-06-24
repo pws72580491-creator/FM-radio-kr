@@ -2388,9 +2388,29 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         hls.startLoad(-1);
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
-          RLog.warn('자동재생 차단 (브라우저 정책) — 화면 탭 필요');
+          RLog.warn('자동재생 차단 (브라우저 정책) — HLS 유지, 탭 대기');
           showToast('▶ 화면을 탭하면 재생됩니다');
-          onFail(false);
+          // ★ HLS를 destroy하지 않고 대기
+          // 사용자가 탭하는 순간 audio.play()만 호출하면 바로 재생 가능
+          S.loading = false;
+          updateNowPlaying(); updateActiveCard();
+
+          function onUserTap() {
+            document.removeEventListener('touchend', onUserTap);
+            document.removeEventListener('mouseup',  onUserTap);
+            if (thisCall !== S.callId) return; // 이미 다른 채널로 전환됨
+            if (S.playing) return;             // 이미 재생 중
+            RLog.play('탭 감지 — 자동재생 차단 해제 시도');
+            audio.play().then(onOK).catch(() => {
+              // 탭 후에도 실패하면 완전 재시도
+              RLog.warn('탭 후 play() 실패 — onFail 처리');
+              if (S.hls === hls) S.hls = null;
+              hls.destroy();
+              onFail(true);
+            });
+          }
+          document.addEventListener('touchend', onUserTap, { once: true, passive: true });
+          document.addEventListener('mouseup',  onUserTap, { once: true });
         });
       });
       // ★ LEVEL_LOADED에서 audio.currentTime 강제 점프 제거

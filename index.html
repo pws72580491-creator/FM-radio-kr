@@ -678,14 +678,16 @@ input[type=range]::-webkit-slider-thumb {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--bg3); color: var(--muted);
   font-size: 16px; line-height: 1;
-  border: 1px solid var(--border); cursor: pointer;
+  border: 1px solid var(--border); cursor: grab;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   z-index: 150;
   display: flex; align-items: center; justify-content: center;
   transition: background .2s, color .2s;
+  touch-action: none; user-select: none;
 }
 #logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
 #logBtn:active { transform: scale(.92); }
+#logBtn.dragging { cursor: grabbing; transform: scale(1.1); opacity: .85; transition: none; }
 
 .log-bg {
   display: none; position: fixed; inset: 0;
@@ -777,13 +779,15 @@ input[type=range]::-webkit-slider-thumb {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--red); color: #fff;
   font-size: 22px; line-height: 1;
-  border: none; cursor: pointer;
+  border: none; cursor: grab;
   box-shadow: 0 4px 16px var(--red-glow);
   z-index: 150;
   display: flex; align-items: center; justify-content: center;
   transition: transform .2s, box-shadow .2s;
+  touch-action: none; user-select: none;
 }
 #addStationBtn:active { transform: scale(.92); }
+#addStationBtn.dragging { cursor: grabbing; transform: scale(1.1); opacity: .85; transition: none; }
 
 /* ══ 방송 추가 시트 ══ */
 .add-station-bg {
@@ -1155,7 +1159,7 @@ input[type=range]::-webkit-slider-thumb {
 <div id="toast"></div>
 
 <!-- 방송 추가 버튼 -->
-<button id="addStationBtn" onclick="openAddStation()" title="방송 추가">＋</button>
+<button id="addStationBtn" title="방송 추가">＋</button>
 
 <!-- 방송 추가 시트 -->
 <div class="add-station-bg" id="addStationBg" onclick="closeAddStation(event)">
@@ -1235,7 +1239,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 로그 버튼 -->
-<button id="logBtn" onclick="openLog()" title="재생 로그">📋</button>
+<button id="logBtn" title="재생 로그">📋</button>
 
 <!-- 로그 뷰어 시트 -->
 <div class="log-bg" id="logBg" onclick="closeLog(event)">
@@ -2313,7 +2317,11 @@ function playStation(s, forceRefresh = false, isRetry = false) {
 
   if (S.hls) { S.hls.destroy(); S.hls = null; }
   S.userPaused = true;
-  audio.pause(); audio.src = '';
+  audio.pause();
+  // ★ src를 명시적으로 제거 후 load() 호출 — 브라우저가 "초기화 완료" 상태로 인식
+  //    이렇게 하지 않으면 이후 HLS.js가 src를 세팅하기 전에 error 이벤트가 발생할 수 있음
+  audio.removeAttribute('src');
+  audio.load();
 
   // Firebase 동기화
   if (typeof syncMode !== 'undefined' && syncMode && typeof fbDb !== 'undefined' && fbDb) {
@@ -2508,6 +2516,8 @@ audio.addEventListener('ended',   () => {
   }
 });
 audio.addEventListener('error',   () => {
+  // ★ src가 없거나 빈 문자열이면 HLS.js 세팅 전 초기 상태 — 무시
+  if (!audio.src || audio.src === '' || audio.src === location.href) return;
   if (S.current && S.playing && !S.loading && !S.hls) {
     RLog.kill('audio error (native) — 재연결');
     scheduleRetry();
@@ -4355,6 +4365,117 @@ function toggleTheme() {
 // 앱 시작 시 저장된 모드 적용 (기본값: auto)
 applyTheme(localStorage.getItem('radio_theme') || 'auto');
 
+
+/* ════════════════════════════════════════
+   드래그 가능한 FAB 버튼
+   — 탭(클릭)과 드래그를 구분: 5px 이상 움직이면 드래그로 간주
+   — 위치는 localStorage에 저장하여 앱 재시작 후에도 유지
+════════════════════════════════════════ */
+function makeDraggable(el, storageKey, onTap) {
+  const SIZE = 40;
+  const DRAG_THRESHOLD = 5; // px
+
+  function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+  function savePos(x, y) {
+    try { localStorage.setItem(storageKey, JSON.stringify({ x, y })); } catch(e) {}
+  }
+
+  function loadPos() {
+    try { return JSON.parse(localStorage.getItem(storageKey)); } catch(e) { return null; }
+  }
+
+  function applyPos(x, y) {
+    // right/bottom 기준으로 저장 — 화면 크기 달라져도 영역 벗어나지 않음
+    const maxX = window.innerWidth  - SIZE - 8;
+    const maxY = window.innerHeight - SIZE - 8;
+    x = clamp(x, 8, maxX);
+    y = clamp(y, 8, maxY);
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+    return { x, y };
+  }
+
+  // 저장된 위치 복원
+  const saved = loadPos();
+  if (saved) {
+    applyPos(saved.x, saved.y);
+  } else {
+    // 초기 위치를 CSS에서 계산해서 x/y로 변환
+    const r = el.getBoundingClientRect();
+    applyPos(r.left, r.top);
+  }
+
+  let startX, startY, startElX, startElY, moved, isDragging;
+
+  function onStart(cx, cy) {
+    const r = el.getBoundingClientRect();
+    startX   = cx;
+    startY   = cy;
+    startElX = r.left;
+    startElY = r.top;
+    moved    = false;
+    isDragging = false;
+    el.classList.remove('dragging');
+  }
+
+  function onMove(cx, cy) {
+    const dx = cx - startX;
+    const dy = cy - startY;
+    if (!isDragging && Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+      isDragging = true;
+      el.classList.add('dragging');
+    }
+    if (isDragging) {
+      moved = true;
+      const pos = applyPos(startElX + dx, startElY + dy);
+    }
+  }
+
+  function onEnd(cx, cy) {
+    el.classList.remove('dragging');
+    if (isDragging && moved) {
+      const r = el.getBoundingClientRect();
+      savePos(r.left, r.top);
+    } else {
+      onTap(); // 드래그 없으면 탭으로 처리
+    }
+    isDragging = false;
+    moved = false;
+  }
+
+  // 터치
+  el.addEventListener('touchstart', e => {
+    onStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  el.addEventListener('touchmove', e => {
+    if (isDragging) e.preventDefault();
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  el.addEventListener('touchend', e => {
+    onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  });
+
+  // 마우스
+  el.addEventListener('mousedown', e => {
+    e.preventDefault();
+    onStart(e.clientX, e.clientY);
+    function mm(e) { onMove(e.clientX, e.clientY); }
+    function mu(e) { onEnd(e.clientX, e.clientY); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); }
+    document.addEventListener('mousemove', mm);
+    document.addEventListener('mouseup', mu);
+  });
+}
+
+window.addEventListener('load', () => {
+  const addBtn = document.getElementById('addStationBtn');
+  const logBt  = document.getElementById('logBtn');
+  if (addBtn) makeDraggable(addBtn, 'fab_add_pos', () => openAddStation());
+  if (logBt)  makeDraggable(logBt,  'fab_log_pos', () => openLog());
+});
+
 /* ════════════════════════════════════════
    PWA
 ════════════════════════════════════════ */
@@ -4831,6 +4952,11 @@ window.addEventListener('pageshow', (e) => {
     if (!S.hls) { // HLS.js가 없는 경우(native)만 — HLS.js는 자체 에러 핸들러 사용
       const code = e.target?.error?.code;
       const msg  = e.target?.error?.message || '';
+      // ★ code=4 + src 없음 = HLS 세팅 전 빈 src 오감지 — 로그만 남기고 재연결 금지
+      if (code === 4 && (!audio.src || audio.src === '' || audio.src === location.href)) {
+        RLog.warn('audio error code=4 (Empty src) — HLS 세팅 전 오감지, 무시');
+        return;
+      }
       RLog.kill('audio error 이벤트 (native)', `code=${code} | ${msg}`);
     }
   });

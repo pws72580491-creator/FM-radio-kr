@@ -2403,6 +2403,31 @@ function playStation(s, forceRefresh = false, isRetry = false) {
           if (d.fatal) {
             RLog.error('HLS 네트워크 오류(치명)', `${d.details || ''}`);
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
+
+            // ★ 공공WiFi/네트워크 이식 감지 — 전환 직후 1500ms 이내 fatal이면
+            //    실제 연결 끊김이 아니라 인터페이스 전환 중 일시적 오류일 가능성 높음
+            //    이 경우 hls.destroy() + onFail 대신 startLoad() 재시도 1회 먼저 시도
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const isSwitching = conn && conn.type === 'unknown'; // WiFi 잡히는 순간 type=unknown
+            if (isSwitching && netErrCount === 0) {
+              netErrCount++;
+              RLog.warn('HLS 치명 오류 — 네트워크 전환 중 오감지 가능, 1500ms 후 재시도', `${d.details || ''}`);
+              netErrTimer = setTimeout(() => {
+                netErrTimer = null;
+                if (thisCall !== S.callId) { hls.destroy(); return; }
+                // 재시도 시점에도 재생이 안 됐으면 정상 onFail 처리
+                if (audio.paused || !audio.src || audio.src === location.href) {
+                  RLog.warn('HLS 치명 오류 재시도 — 복구 실패, onFail 처리');
+                  if (S.hls === hls) S.hls = null;
+                  hls.destroy(); onFail(true);
+                } else {
+                  RLog.info('HLS 치명 오류 재시도 — 재생 복구 확인, 정상 유지');
+                  netErrCount = 0;
+                }
+              }, 1500);
+              return;
+            }
+
             if (S.hls === hls) S.hls = null;
             hls.destroy();
             // ★ 치명 오류 — 백그라운드/포그라운드 모두 scheduleRetry로 처리
@@ -2606,16 +2631,25 @@ function _scheduleNetReconnect(reason) {
 
   conn.addEventListener('change', () => {
     const newKey = _getNetKey();
-    // ★ 타입 변화 없어도 lastKey 갱신만 하고 계속 진행
-    // effectiveType|type이 같아도 실제 인터페이스가 바뀌었을 수 있음
     const changed = newKey !== lastKey;
     if (changed) RLog.net(`네트워크 타입 전환: ${lastKey} → ${newKey}`);
     else RLog.net(`네트워크 change 이벤트 (타입 동일: ${newKey})`);
     lastKey = newKey;
-    // ★ wasPlaying || playing 외에 S.current만 있어도 재연결 시도
-    // offline이 먼저 와서 S.playing=false 된 뒤 change가 오면 wasPlaying으로 판단
+
     if (!S.current) return;
     if (!S.wasPlaying && !S.playing) return;
+
+    // ★ 공공WiFi 등 짧은 네트워크 이식 무시 로직
+    // 전환 시점에 HLS가 살아있고 audio가 실제로 재생 중이면 끊기지 않은 것 — 무시
+    // 단, manifestLoadError 등으로 이미 hls가 null이면 재연결 필요
+    const hlsAlive  = !!S.hls;
+    const audioOK   = !audio.paused && !!audio.src && audio.src !== location.href;
+    if (hlsAlive && audioOK) {
+      RLog.net(`네트워크 타입 전환 — 재생 유지 중, 재연결 스킵 (${newKey})`);
+      return;
+    }
+
+    // 재생이 실제로 끊긴 경우에만 재연결
     _scheduleNetReconnect('connection.change');
   });
 })();

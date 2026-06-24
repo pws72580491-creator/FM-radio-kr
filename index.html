@@ -684,6 +684,7 @@ input[type=range]::-webkit-slider-thumb {
   display: flex; align-items: center; justify-content: center;
   transition: background .2s, color .2s;
   touch-action: none; user-select: none;
+  visibility: hidden; /* ★ 위치 확정 후 표시 — 초기 튐 방지 */
 }
 #logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
 #logBtn:active { transform: scale(.92); }
@@ -785,6 +786,7 @@ input[type=range]::-webkit-slider-thumb {
   display: flex; align-items: center; justify-content: center;
   transition: transform .2s, box-shadow .2s;
   touch-action: none; user-select: none;
+  visibility: hidden; /* ★ 위치 확정 후 표시 — 초기 튐 방지 */
 }
 #addStationBtn:active { transform: scale(.92); }
 #addStationBtn.dragging { cursor: grabbing; transform: scale(1.1); opacity: .85; transition: none; }
@@ -4424,10 +4426,11 @@ function makeDraggable(el, storageKey, onTap) {
     const maxY = window.innerHeight - SIZE - 8;
     x = clamp(x, 8, maxX);
     y = clamp(y, 8, maxY);
-    el.style.left   = x + 'px';
-    el.style.top    = y + 'px';
-    el.style.right  = 'auto';
-    el.style.bottom = 'auto';
+    el.style.left       = x + 'px';
+    el.style.top        = y + 'px';
+    el.style.right      = 'auto';
+    el.style.bottom     = 'auto';
+    el.style.visibility = 'visible'; // ★ 위치 확정 후 표시
     return { x, y };
   }
 

@@ -4373,7 +4373,7 @@ applyTheme(localStorage.getItem('radio_theme') || 'auto');
 ════════════════════════════════════════ */
 function makeDraggable(el, storageKey, onTap) {
   const SIZE = 40;
-  const DRAG_THRESHOLD = 5; // px
+  const DRAG_THRESHOLD = 10; // px — 10px 미만은 탭으로 처리
 
   function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 
@@ -4386,7 +4386,6 @@ function makeDraggable(el, storageKey, onTap) {
   }
 
   function applyPos(x, y) {
-    // right/bottom 기준으로 저장 — 화면 크기 달라져도 영역 벗어나지 않음
     const maxX = window.innerWidth  - SIZE - 8;
     const maxY = window.innerHeight - SIZE - 8;
     x = clamp(x, 8, maxX);
@@ -4403,69 +4402,91 @@ function makeDraggable(el, storageKey, onTap) {
   if (saved) {
     applyPos(saved.x, saved.y);
   } else {
-    // 초기 위치를 CSS에서 계산해서 x/y로 변환
     const r = el.getBoundingClientRect();
     applyPos(r.left, r.top);
   }
 
-  let startX, startY, startElX, startElY, moved, isDragging;
+  let startX, startY, startElX, startElY, wasDragged;
 
-  function onStart(cx, cy) {
-    const r = el.getBoundingClientRect();
-    startX   = cx;
-    startY   = cy;
+  // ── 터치 이벤트 ──────────────────────────────
+  el.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startX   = t.clientX;
+    startY   = t.clientY;
+    const r  = el.getBoundingClientRect();
     startElX = r.left;
     startElY = r.top;
-    moved    = false;
-    isDragging = false;
+    wasDragged = false;
     el.classList.remove('dragging');
-  }
+  }, { passive: true });
 
-  function onMove(cx, cy) {
-    const dx = cx - startX;
-    const dy = cy - startY;
-    if (!isDragging && Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
-      isDragging = true;
+  el.addEventListener('touchmove', e => {
+    const t  = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+      wasDragged = true;
       el.classList.add('dragging');
+      e.preventDefault(); // 스크롤 방지
+      applyPos(startElX + dx, startElY + dy);
     }
-    if (isDragging) {
-      moved = true;
-      const pos = applyPos(startElX + dx, startElY + dy);
-    }
-  }
+  }, { passive: false });
 
-  function onEnd(cx, cy) {
+  el.addEventListener('touchend', e => {
     el.classList.remove('dragging');
-    if (isDragging && moved) {
+    if (wasDragged) {
       const r = el.getBoundingClientRect();
       savePos(r.left, r.top);
-    } else {
-      onTap(); // 드래그 없으면 탭으로 처리
     }
-    isDragging = false;
-    moved = false;
-  }
-
-  // 터치
-  el.addEventListener('touchstart', e => {
-    onStart(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-  el.addEventListener('touchmove', e => {
-    if (isDragging) e.preventDefault();
-    onMove(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
-  el.addEventListener('touchend', e => {
-    onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    // ★ 탭 여부는 click 이벤트에서 처리 (touchend에서 onTap 직접 호출 안 함)
+    // — touchend→click 300ms 지연을 피하기 위해 wasDragged=false일 때만 click 허용
+    wasDragged = false;
   });
 
-  // 마우스
+  // ── click 이벤트 — 탭 처리 ──────────────────
+  // touchend 후 브라우저가 자동 발생시키는 click을 그대로 활용
+  // 드래그 직후엔 wasDragged가 이미 false로 리셋되므로
+  // 드래그/탭 구분을 _lastDragTime으로 처리
+  let _lastDragTime = 0;
+  el.addEventListener('touchmove', () => { _lastDragTime = Date.now(); }, { passive: true });
+  el.addEventListener('click', e => {
+    if (Date.now() - _lastDragTime < 300) return; // 드래그 직후 click 무시
+    onTap();
+  });
+
+  // ── 마우스 이벤트 (데스크톱) ─────────────────
   el.addEventListener('mousedown', e => {
     e.preventDefault();
-    onStart(e.clientX, e.clientY);
-    function mm(e) { onMove(e.clientX, e.clientY); }
-    function mu(e) { onEnd(e.clientX, e.clientY); document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); }
-    document.addEventListener('mousemove', mm);
-    document.addEventListener('mouseup', mu);
+    const r  = el.getBoundingClientRect();
+    startX   = e.clientX;
+    startY   = e.clientY;
+    startElX = r.left;
+    startElY = r.top;
+    wasDragged = false;
+
+    function onMouseMove(e) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+        wasDragged = true;
+        el.classList.add('dragging');
+        applyPos(startElX + dx, startElY + dy);
+      }
+    }
+    function onMouseUp() {
+      el.classList.remove('dragging');
+      if (wasDragged) {
+        const r = el.getBoundingClientRect();
+        savePos(r.left, r.top);
+      } else {
+        onTap();
+      }
+      wasDragged = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+    }
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
   });
 }
 

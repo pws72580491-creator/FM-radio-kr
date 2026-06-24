@@ -40,11 +40,6 @@
 <style>
 /* ══ 리셋 & 변수 ══ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-  -webkit-text-size-adjust: 100%; /* iOS 텍스트 자동 확대 방지 */
-  text-size-adjust: 100%;
-  touch-action: pan-x pan-y;     /* 핀치줌 CSS 레벨 차단 */
-}
 
 :root {
   --bg:        #0d0d1a;
@@ -1253,20 +1248,8 @@ input[type=range]::-webkit-slider-thumb {
   </div>
 </div>
 
-<!-- 버전 뱃지 (길게 누르면 진단) -->
-<div id="versionBadge" onclick="openChangelog()" oncontextmenu="openDiag(event)" ontouchstart="diagTouchStart(event)" ontouchend="diagTouchEnd(event)">v2.8.35</div>
-
-<!-- 진단 모달 -->
-<div id="diagBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto" onclick="closeDiag(event)">
-  <div id="diagSheet" style="margin:40px auto;max-width:480px;background:#1a1a2e;border-radius:16px;padding:20px;color:#eee;font-size:13px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <b style="font-size:16px">&#128269; API 진단</b>
-      <button onclick="document.getElementById('diagBg').style.display='none'" style="background:none;border:none;color:#aaa;font-size:20px;cursor:pointer">X</button>
-    </div>
-    <button id="diagRunBtn" onclick="runDiag()" style="width:100%;padding:10px;background:#e74c3c;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:14px">전체 채널 테스트</button>
-    <div id="diagResult" style="display:flex;flex-direction:column;gap:8px"></div>
-  </div>
-</div>
+<!-- 버전 뱃지 -->
+<div id="versionBadge" onclick="openChangelog()">v2.8.15</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1331,7 +1314,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 오디오 -->
-<audio id="audioEl" style="display:none" playsinline webkit-playsinline x-webkit-airplay="allow" preload="none" crossorigin="anonymous"></audio>
+<audio id="audioEl" style="display:none" playsinline webkit-playsinline x-webkit-airplay="allow" preload="none"></audio>
 
 <!-- 외부 라이브러리 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js" crossorigin="anonymous"></script>
@@ -1348,75 +1331,8 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.35';
+const APP_VERSION = 'v2.8.15';
 const CHANGELOG = [
-  { version: 'v2.8.35', date: '2026-06-24', changes: [
-    '[버그수정 치명] CBS 음악FM/표준FM/Joy4U — manifestLoadError 반복 실패. aac.cbs.co.kr가 브라우저 직접 fetch를 CORS 차단해 HLS.js가 manifest를 읽지 못하던 원인. stream.js(v4)에서 CBS를 정적 URL 직접 반환에서 서버사이드 HEAD 검증 후 반환 방식으로 전환 (fetchStaticUrl). TBS/YTN/EBS도 동일 방식 적용',
-    '[버그수정] 채널 전환 시 audio.src=있음 상태에서 Empty src attribute 에러 — 이전 HLS destroy와 audio.src=\'\' 사이 타이밍 경쟁. destroy 직후 명시적으로 audio.src=\'\' 초기화하도록 playStation 수정',
-    '[개선] EBS 진단 테스트도 /api/stream?stn=ebs 경유로 통일 — 직접 fetch 방식 제거',
-  ]},
-  { version: 'v2.8.34', date: '2026-06-24', changes: [
-    '[긴급수정] 각 방송사 API 직접 호출 시 브라우저 CORS 차단 문제. Vercel Serverless Function(/api/stream.js) 추가 — KBS/MBC/SBS/CBS/TBS/YTN 모두 서버 사이드에서 API 호출 후 { url } JSON 반환. 극동방송/EBS는 CORS 허용이므로 직접 유지',
-  ]},
-  { version: 'v2.8.33', date: '2026-06-24', changes: [
-    '[긴급수정] radio.bsod.kr 프록시 서버 장애로 극동방송 2채널 외 전 채널 재생 불가. 프록시 의존 완전 제거 — KBS(cfpwwwapi JSON), MBC(sminiplay Plain Text), SBS(apis.sbs.co.kr Plain Text), CBS/TBS/YTN/EBS 정적 URL 직접 호출로 전환. resolveStreamUrl streamType별 파싱 로직 추가',
-  ]},
-  { version: 'v2.8.31', date: '2026-06-18', changes: [
-    '[버그수정] startAudioKeepAlive 중복 호출 — _keepAliveTimer로 가드했으나 함수 내부에서 _keepAliveTimer를 세팅하지 않아 가드가 항상 무효. WakeLock 실패 핸들러와 onOK()가 동시에 호출되면 오실레이터 노드가 2개 생성되어 AudioContext 부하 및 메모리 누수 발생. _keepAliveNode 기준으로 가드 수정',
-  ]},
-  { version: 'v2.8.30', date: '2026-06-13', changes: [
-    '[버그수정] LTE↔WiFi 전환 후 재시작 안 됨 — offline 핸들러에서 hls.stopLoad() 후 audio.paused=false+src=blob 상태 유지. scheduleRetry의 오디오 실제 재생 중 오판으로 재시도 건너뜀. 포그라운드에서 audio.pause() 명시 호출 및 S.hls=null 처리',
-    '[버그수정] LTE↔WiFi 전환 후 재시작 안 됨 — _scheduleNetReconnect 타이머 내 playStation 직전 audio/hls 명시 정리. offline 후 잔여 상태가 playStation 진입 조건을 오염시키던 문제 차단. 대기 시간 1500→2000ms로 상향',
-    '[버그수정] connection.change 이벤트 발화 시 타입 동일해도 로그 기록 — 감지 여부 추적 강화',
-  ]},
-  { version: 'v2.8.29', date: '2026-06-13', changes: [
-    '[버그수정 치명] _scheduleNetReconnect hidden 가드 누락 — 백그라운드 중 네트워크 전환(WiFi↔LTE) 시 _scheduleNetReconnect 1500ms 타이머 콜백이 hidden 상태에서 playStation() 호출. HLS 재초기화로 currentTime=0 리셋 → levelLoadTimeOut → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단. 로그에서 BG_PLAY [954] currentTime=0.00 직후 bufferStalledError/levelLoadTimeOut 패턴으로 확인됨. hidden이면 wasPlaying=true 보존 후 defer, 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리',
-  ]},
-  { version: 'v2.8.28', date: '2026-06-10', changes: [
-    '[개선] 로그 긴급 저장 — 앱 강제종료/OS kill 시 IndexedDB persist()가 완료되기 전에 프로세스가 죽으면 마지막 로그가 소실되던 문제. write()마다 localStorage에 최근 60개를 동기(setItem)로 즉시 백업. 앱 시작 시 localStorage tail과 IndexedDB를 ts 기준으로 병합 복원. 강제종료 직전 결정적 이벤트(네트워크 전환, KILL 등)를 로그에서 확인 가능',
-  ]},
-  { version: 'v2.8.27', date: '2026-06-10', changes: [
-    '[버그수정] WiFi→데이터 전환 시 재생 종료 — Android에서 offline은 발화하지만 online이 오지 않는 경우, connection.change도 effectiveType|type이 같으면 스킵되어 재연결 트리거가 없는 상태로 방치. offline 핸들러에서 3초 후 자체 재연결 폴백 추가 (online이 오면 디바운스로 통합)',
-    '[버그수정] _scheduleNetReconnect wasPlaying 보존 조건 강화 — offline 핸들러가 먼저 S.playing=false로 바꾼 뒤 connection.change 핸들러 진입 시 보존 조건 실패 가능성 차단',
-  ]},
-  { version: 'v2.8.26', date: '2026-06-10', changes: [
-    '[버그수정] 백그라운드 진입 시 재생 중단 오판 — startBgWatch가 OS pause로 인해 audio.currentTime이 멈추면 BG_FAIL로 오감지하여 scheduleRetry 호출. Android Chrome은 백그라운드에서 OS가 audio.pause()를 발화하지만 HLS 스트림 세션은 유지됨. audio.paused=true인 경우 BG_FAIL 판정을 건너뛰고 스트림 유지 중으로 처리. 포그라운드 복귀 시 불필요한 재연결(재생 중단 후 재개)이 발생하던 원인 제거',
-  ]},
-  { version: 'v2.8.25', date: '2026-06-09', changes: [
-    '[버그수정 치명] visibilitychange hidden에서 audio.pause()/hls.destroy()/src="" 완전 제거 — Android Chrome은 hidden 진입 시 OS가 직접 pause를 발화하므로 앱이 추가로 세션을 건드리면 재생이 완전 종료됨. loading 중이면 callId 증가로 비동기 콜백만 무효화. 포그라운드 복귀 시 audio 실제 상태 확인 후 재생 중이면 상태 복원만, 중단됐으면 재연결',
-    '[버그수정] pause 이벤트 hidden 처리 강화 — 백그라운드 OS pause를 명시적으로 무시하고 S.playing/S.loading 기준으로 wasPlaying 보존. 통화/인터럽트 감지는 포그라운드에서만 수행',
-    '[버그수정] scheduleRetry 타이머 hidden 가드 + forceRefresh=true — 백그라운드 중 playStation 호출 완전 차단, 만료 캐시 URL 재사용 방지',
-    '[버그수정] hls.destroy() hidden 보호 — scheduleRetry/playStation 진입부/_fullReconnect 등 hidden 상태에서 destroy 호출 시 stopLoad()만 실행',
-    '[개선] keepalive — 재생 성공(onOK) 즉시 항상 startAudioKeepAlive() 호출. WakeLock 획득 성공 시 자동 중단',
-    '[개선] audio element crossorigin="anonymous" 추가',
-    '[버그수정] scheduleRetry 재시도 forceRefresh=false → true (v2.8.23)',
-  ]},
-  { version: 'v2.8.22', date: '2026-06-08', changes: [
-    '[버그수정] startBgWatch tick===1 skip 제거 — lastTime을 audio.currentTime으로 초기화함에도 첫 tick을 기준값 수집만 하고 비교를 건너뛰어 백그라운드 재생 중단 감지가 실질적으로 6초 걸리던 문제. skip 조건 제거로 3초(1 tick) 만에 감지. BG_PLAY 카운터도 tick→bgTick으로 명칭 정리',
-  ]},
-  { version: 'v2.8.21', date: '2026-06-07', changes: [
-    '[버그수정] 백그라운드 중 scheduleRetry 타이머 콜백이 hidden 상태에서 playStation 호출 — visibilitychange 진입 시 clearRetryTimer()로 기존 타이머는 취소되지만, 백그라운드 진입 후 manifestLoadError→scheduleRetry로 새 타이머가 등록되면 hidden 상태에서 실행. 콜백에 hidden 가드 추가: 백그라운드이면 wasPlaying=true 보존 후 즉시 종료, 포그라운드 복귀 시 재연결에 위임',
-    '[버그수정] loading 중 백그라운드 진입 시 audio error code=4 (Empty src attribute) — HLS.js attachMedia 도중 src="" 동기 실행 시 타이밍 충돌. HLS destroy 후 Promise.resolve().then()으로 src 초기화를 마이크로태스크로 지연해 충돌 방지',
-  ]},
-  { version: 'v2.8.20', date: '2026-06-07', changes: [
-    '[개선] 재생 성공(onOK) 즉시 wasPlaying=true 세팅 — 재생 직후 화면 꺼짐/freeze 발생 시 wasPlaying=false 상태로 방치되어 재연결 포기하던 잠재적 위험 제거',
-  ]},
-  { version: 'v2.8.19', date: '2026-06-06', changes: [
-    '[개선] WakeLock release 시 wasPlaying 즉시 보존 — release 이벤트가 visibilitychange보다 먼저 실행되어 스냅샷에 wasPlaying=false로 찍히던 문제. 재생 중 해제 시 선점으로 wasPlaying=true 세팅',
-  ]},
-  { version: 'v2.8.18', date: '2026-06-05', changes: [
-    '[버그수정] WakeLock 권한 거부(permission denied) 시 백그라운드 재생 유지 실패 — WakeLock 획득 실패 후 아무 대응 없이 화면 꺼지면 재생 끊김. AudioContext 무음 keepalive(볼륨 0 오실레이터)로 대체해 Android이 탭을 오디오 활성 앱으로 유지하도록 보완',
-    '[개선] WakeLock 해제(화면 꺼짐) 시에도 keepalive 자동 시작 — WakeLock이 있다가 해제되는 경우도 keepalive로 이어서 보호',
-  ]},
-  { version: 'v2.8.17', date: '2026-06-05', changes: [
-    '[버그수정 치명] 백그라운드 재생이 조용히 멈추고 12분간 방치 — BG_PLAY [178] 이후 로그 공백 원인: (1) tryReconnect()가 재생 중 상태에서 wasPlaying=false로 덮어씀 (2) scheduleRetry 타이머 콜백이 wasPlaying=false라 재시도 포기. tryReconnect wasPlaying 덮어쓰기 제거, 콜백 조건을 userPaused로 교체',
-    '[버그수정] BG_FAIL 감지 후 재연결 없이 방치 — startBgWatch에서 currentTime 정지 감지 시 로그만 찍고 종료. scheduleRetry 호출 추가로 백그라운드 재생 멈춤 자동 복구',
-    '[개선] 백그라운드 비치명 네트워크 오류 처리 — hidden 상태에서는 startLoad 대신 onFail(true)→scheduleRetry 경로로 전환해 manifestLoadError 루프 예방. 오류 로그에 hidden 상태 추가',
-  ]},
-  { version: 'v2.8.16', date: '2026-06-04', changes: [
-    '[버그수정 치명] 백그라운드 재생 성공 후에도 계속 playStation 재호출 루프 — scheduleRetry 타이머가 쌓이면서 재생 성공 이후에도 계속 새 playStation 실행. onOK() 성공 시 clearRetryTimer() 추가로 남은 타이머 즉시 취소',
-    '[버그수정] freeze resume 후 audio 재생 중인데 불필요하게 재연결 — resume 핸들러에서 audio.paused=false이면 playStation 재호출하지 않고 상태만 복원하도록 수정',
-  ]},
   { version: 'v2.8.15', date: '2026-06-03', changes: [
     '[개선] 취침 타이머 카운트다운 Now Playing 영역에 상시 표시 — 시트를 닫아도 남은 시간을 바 형태로 항상 확인 가능. 탭하면 시트 다시 열림',
   ]},
@@ -1803,111 +1719,66 @@ let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 /* ══ stations.js ══ */
 /* ════════════════════════════════════════
    채널 데이터
-   ★ v2.8.34 — /api/stream Vercel Function 경유 (CORS 해결)
 ════════════════════════════════════════ */
-
-// ★ Vercel Function 엔드포인트 (같은 도메인이므로 CORS 없음)
-const API = '/api/stream';
-
+const P = 'https://radio.bsod.kr/stream/';
 const STATIONS = [
-  // ── KBS
-  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276',
-    stream:'', streamApi:`${API}?stn=kbs&ch=21` },
-  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449',
-    stream:'', streamApi:`${API}?stn=kbs&ch=22` },
-  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98',
-    stream:'', streamApi:`${API}?stn=kbs&ch=25` },
-  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212',
-    stream:'', streamApi:`${API}?stn=kbs&ch=24` },
-  // ── MBC
-  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b',
-    stream:'', streamApi:`${API}?stn=mbc&ch=sfm` },
-  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c',
-    stream:'', streamApi:`${API}?stn=mbc&ch=mfm` },
-  // ── SBS
-  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400',
-    stream:'', streamApi:`${API}?stn=sbs&ch=lovefm` },
-  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22',
-    stream:'', streamApi:`${API}?stn=sbs&ch=powerfm` },
-  // ── CBS
-  { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3',
-    stream:'', streamApi:`${API}?stn=cbs&ch=mfm` },
-  { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090',
-    stream:'', streamApi:`${API}?stn=cbs&ch=sfm` },
-  { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad',
-    stream:'', streamApi:`${API}?stn=cbs&ch=joy4u` },
-  // ── TBS
-  { id:10, name:'TBS 교통방송', freq:'95.1 MHz',  genre:'교통/정보',  color:'#17a589',
-    stream:'', streamApi:`${API}?stn=tbs` },
-  // ── YTN
-  { id:11, name:'YTN 라디오',   freq:'AM 1305',   genre:'뉴스',       color:'#1a252f',
-    stream:'', streamApi:`${API}?stn=ytn` },
-  // ── EBS (정적 직접 — CORS 허용됨)
+  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
+  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },
+  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98', stream:P+'?stn=kbs&ch=2fm'     },
+  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212', stream:P+'?stn=kbs&ch=1fm'     },
+  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b', stream:P+'?stn=mbc&ch=sfm'     },
+  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c', stream:P+'?stn=mbc&ch=fm4u'    },
+  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400', stream:P+'?stn=sbs&ch=lovefm'  },
+  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22', stream:P+'?stn=sbs&ch=powerfm' },
+  { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3', stream:P+'?stn=cbs&ch=mfm'     },
+  { id:10, name:'TBS 교통방송', freq:'95.1 MHz',  genre:'교통/정보',  color:'#17a589', stream:P+'?stn=tbs&ch=fm'      },
+  { id:11, name:'YTN 라디오',   freq:'AM 1305',   genre:'뉴스',       color:'#1a252f', stream:P+'?stn=ytn'            },
   { id:12, name:'EBS FM',       freq:'104.5 MHz', genre:'교육',       color:'#148f77',
     stream:'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8' },
-  // ── 극동방송 (febc API → m3u8, CORS 허용됨)
   { id:13, name:'서울극동방송', freq:'106.9 MHz', genre:'기독교',     color:'#1f618d',
     stream:'https://mlive3.febc.net/live5/seoulfm/playlist.m3u8',
-    streamApi:'https://seoul.febc.net/radio/schedule/live/1', streamType:'febc' },
+    streamApi:'https://seoul.febc.net/radio/schedule/live/1' },
   { id:26, name:'창원극동방송', freq:'98.1 MHz',  genre:'기독교',     color:'#154360',
     stream:'https://mlive3.febc.net/live5/cwlive/playlist.m3u8',
-    streamApi:'https://changwon.febc.net/radio/schedule/live/4', streamType:'febc' },
+    streamApi:'https://changwon.febc.net/radio/schedule/live/4' },
+  { id:14, name:'CBS 표준FM',   freq:'98.1 MHz',  genre:'기독교종합', color:'#1a6090', stream:P+'?stn=cbs&ch=sfm'     },
+  { id:15, name:'Joy4U',        freq:'99.1 MHz',  genre:'기독교음악', color:'#8e44ad', stream:P+'?stn=cbs&ch=joy4u'   },
 ];
 
 /* ════════════════════════════════════════
    스트림 URL 결정
-   /api/stream 응답: { url: "https://...m3u8" }
-   극동방송: HTML에서 m3u8 정규식 추출
-   EBS: 정적 URL 직접
+   streamApi 방송(극동방송): 캐시 재사용
+   일반 방송: 바로 stream URL 반환
 ════════════════════════════════════════ */
 const _streamCache = {}; // { [id]: { url, ts } }
-const CACHE_TTL_MS  = 20 * 60 * 1000; // 20분 TTL
+const CACHE_TTL_MS  = 30 * 60 * 1000; // ★ 30분 후 만료 — CDN URL 교체 대응
 
+/* ★ 캐시 버스팅 — CDN/프록시 캐시 강제 우회 */
 function bustUrl(url) {
   const sep = url.includes('?') ? '&' : '?';
   return url + sep + '_t=' + Date.now();
 }
 
 async function resolveStreamUrl(s, forceRefresh = false) {
-  // ── EBS: 정적 URL (streamApi 없음)
   if (!s.streamApi) {
     return forceRefresh ? bustUrl(s.stream) : s.stream;
   }
-
-  // ── 캐시 체크
+  // ★ 캐시 TTL 체크 — 만료됐거나 forceRefresh면 재요청
   const cached = _streamCache[s.id];
   if (!forceRefresh && cached && (Date.now() - cached.ts < CACHE_TTL_MS)) {
     return cached.url;
   }
-
   try {
-    let url = null;
-
-    if (s.streamType === 'febc') {
-      // 극동방송: febc API → HTML에서 m3u8 추출
-      const res  = await fetch(s.streamApi, { cache: 'no-store' });
-      const text = await res.text();
-      const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
-      if (m) url = m[0];
-    } else {
-      // KBS/MBC/SBS/CBS/TBS/YTN: /api/stream → { url }
-      const res  = await fetch(s.streamApi, { cache: 'no-store' });
-      const json = await res.json();
-      if (json.url) url = json.url;
-      else throw new Error(json.error || 'url 없음');
+    const res  = await fetch(s.streamApi, { cache: 'no-store' });
+    const text = await res.text();
+    const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
+    if (m) {
+      _streamCache[s.id] = { url: m[0], ts: Date.now() }; // ★ url + 타임스탬프 저장
+      return m[0];
     }
-
-    if (url) {
-      _streamCache[s.id] = { url, ts: Date.now() };
-      return url;
-    }
-    console.warn(`[resolveStreamUrl] ${s.name}: URL 추출 실패, 기본 URL 폴백`);
-  } catch(e) {
-    console.warn(`[resolveStreamUrl] ${s.name} 실패:`, e);
-  }
-
-  if (s.stream) return forceRefresh ? bustUrl(s.stream) : s.stream;
-  throw new Error(`${s.name}: 스트림 URL을 가져올 수 없습니다`);
+    console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
+  } catch(e) { console.warn('streamApi 실패:', e); }
+  return forceRefresh ? bustUrl(s.stream) : s.stream;
 }
 
 /* ══ player.js ══ */
@@ -1977,63 +1848,19 @@ function stopWatchdog() {
    재생 로그 시스템
    중단 원인 추적을 위해 주요 이벤트를 IndexedDB에 저장
 ════════════════════════════════════════ */
-const LOG_DB_KEY       = 'radio_play_log';
-const LOG_LS_KEY       = 'radio_play_log_tail'; // localStorage 긴급 백업용 키
-const LOG_MAX          = 1000; // 최대 1000개 유지 (IndexedDB)
-const LOG_LS_TAIL      = 60;   // localStorage에 보관할 최근 항목 수
-                                // 동기 write이므로 앱 강제종료 시에도 반드시 살아남음
+const LOG_DB_KEY  = 'radio_play_log';
+const LOG_MAX     = 1000; // 최대 1000개 유지 (상세 로깅 대응)
 
 const RLog = (() => {
   let _buf = [];
   let _loaded = false;
   let _bgWatchTimer = null; // 백그라운드 실제 재생 감시 타이머
 
-  // ── localStorage 동기 tail 저장 ──────────────────────────────────
-  // write()마다 동기로 호출 — async/await 없이 즉시 디스크 반영
-  // 앱이 OS에 의해 강제 종료돼도 이미 저장된 상태
-  function _persistTailSync() {
-    try {
-      const tail = _buf.slice(0, LOG_LS_TAIL); // 최신 60개
-      localStorage.setItem(LOG_LS_KEY, JSON.stringify(tail));
-    } catch(e) {
-      // localStorage 용량 초과 시 항목 수 줄여서 재시도
-      try {
-        const tail = _buf.slice(0, 20);
-        localStorage.setItem(LOG_LS_KEY, JSON.stringify(tail));
-      } catch(e2) {}
-    }
-  }
-
-  // IDB에서 기존 로그 로드 + localStorage tail 병합
+  // IDB에서 기존 로그 로드
   async function load() {
     try {
-      const idbRaw = await idbGet(LOG_DB_KEY);
-      const idbBuf = idbRaw ? JSON.parse(idbRaw) : [];
-
-      // ★ localStorage tail 병합 — IDB보다 최신 항목이 있을 수 있음
-      // 앱 강제종료 직전 write된 항목들이 여기에만 존재
-      let lsBuf = [];
-      try {
-        const lsRaw = localStorage.getItem(LOG_LS_KEY);
-        lsBuf = lsRaw ? JSON.parse(lsRaw) : [];
-      } catch(e) {}
-
-      if (lsBuf.length > 0 && idbBuf.length > 0) {
-        // ts 기준으로 중복 제거 후 병합
-        const idbTs = new Set(idbBuf.map(e => e.ts));
-        const newEntries = lsBuf.filter(e => !idbTs.has(e.ts));
-        if (newEntries.length > 0) {
-          // 새 항목을 앞에 추가 후 ts 내림차순 정렬
-          _buf = [...idbBuf, ...newEntries]
-            .sort((a, b) => b.ts - a.ts)
-            .slice(0, LOG_MAX);
-          console.info(`[RLog] localStorage tail에서 ${newEntries.length}개 복원`);
-        } else {
-          _buf = idbBuf;
-        }
-      } else {
-        _buf = lsBuf.length > idbBuf.length ? lsBuf : idbBuf;
-      }
+      const r = await idbGet(LOG_DB_KEY);
+      _buf = r ? JSON.parse(r) : [];
     } catch(e) { _buf = []; }
     _loaded = true;
   }
@@ -2049,10 +1876,7 @@ const RLog = (() => {
   // ★ 즉시 저장 (clear 전용 — 디바운스 없이 완료를 보장)
   async function persistNow() {
     if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
-    try {
-      await idbSet(LOG_DB_KEY, JSON.stringify(_buf));
-      localStorage.removeItem(LOG_LS_KEY); // IDB 저장 완료 후 tail 정리
-    } catch(e) {}
+    try { await idbSet(LOG_DB_KEY, JSON.stringify(_buf)); } catch(e) {}
   }
 
   // ★ 현재 핵심 상태 스냅샷 문자열 생성
@@ -2094,10 +1918,7 @@ const RLog = (() => {
       ts: now.getTime() };
     _buf.unshift(entry);
     if (_buf.length > LOG_MAX) _buf.pop();
-    // ★ localStorage 동기 tail 저장 — IndexedDB persist()보다 먼저 실행
-    // 앱 강제종료/OS kill 시에도 최근 60개는 반드시 살아남음
-    _persistTailSync();
-    persist(); // IndexedDB 비동기 저장 (전체 이력)
+    persist();
     if (level === 'ERROR' || level === 'WARN' || level === 'STOP' || level === 'BG_FAIL' || level === 'KILL') {
       document.getElementById('logBtn')?.classList.add('has-error');
     }
@@ -2110,12 +1931,8 @@ const RLog = (() => {
   // 백그라운드 진입 후 3초마다 실제로 오디오가 재생 중인지 확인
   function startBgWatch() {
     stopBgWatch();
-    let bgTick = 0;
+    let tick = 0;
     // ★ window.audio → 직접 스코프 참조 (const audio는 window에 없으므로 window.audio는 undefined)
-    // ★ lastTime을 호출 시점 currentTime으로 초기화 — tick=1 skip 조건 불필요
-    // 이전에 tick===1 skip이 있었던 이유: lastTime=-1 초기화 시 첫 tick이 항상 "진행 중"으로
-    // 오판하는 걸 막기 위해서였으나, 현재는 audio.currentTime으로 정확히 초기화하므로 불필요.
-    // skip 제거로 백그라운드 재생 중단을 3초(1 tick) 만에 감지 가능 (기존 6초에서 개선)
     let lastTime = (typeof audio !== 'undefined') ? (audio.currentTime ?? -1) : -1;
     _bgWatchTimer = setInterval(() => {
       if (document.visibilityState !== 'hidden') { stopBgWatch(); return; }
@@ -2123,31 +1940,15 @@ const RLog = (() => {
       const _S = (typeof S !== 'undefined') ? S : null;
       const _a = (typeof audio !== 'undefined') ? audio : null;
       if (!_a || !_S?.playing) { stopBgWatch(); return; }
-      bgTick++;
+      tick++;
       const curTime = _a.currentTime;
       const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
       lastTime = curTime;
+      if (tick === 1) return; // 첫 tick은 기준값 수집만
       if (progressing) {
-        write('BG_PLAY', `백그라운드 실제 재생 확인 [${bgTick}]`, `currentTime=${curTime.toFixed(2)}`);
+        write('BG_PLAY', `백그라운드 실제 재생 확인 [${tick}]`, `currentTime=${curTime.toFixed(2)}`);
       } else {
-        // ★ Android Chrome은 백그라운드 진입 시 OS가 audio.pause()를 발화하지만
-        // 실제 HLS 스트림 세션은 살아있음. audio.paused=true 상태에서는
-        // currentTime이 멈추므로 BG_FAIL로 오판 → scheduleRetry → 불필요한 재연결 발생.
-        // audio.paused=true(OS pause)인 경우는 BG_FAIL 처리를 건너뜀.
-        if (_a.paused) {
-          write('BG_PLAY', `백그라운드 OS pause 중 — 스트림 유지 확인 [${bgTick}]`, `currentTime=${curTime.toFixed(2)}`);
-        } else {
-          write('BG_FAIL', `백그라운드 재생 정지 감지 [${bgTick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
-          // ★ audio.paused=false인데 currentTime이 멈춘 것 = 실제 stall/끊김
-          if ((typeof S !== 'undefined' ? S : null)?.current) {
-            const _S2 = typeof S !== 'undefined' ? S : null;
-            if (_S2 && !_S2.userPaused && !_S2.sleepStopped) {
-              _S2.playing = false;
-              if (typeof scheduleRetry === 'function') scheduleRetry();
-            }
-          }
-          stopBgWatch();
-        }
+        write('BG_FAIL', `백그라운드 재생 정지 감지 [${tick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
       }
     }, 3000);
   }
@@ -2175,7 +1976,7 @@ const RLog = (() => {
     state   : (m, d)    => write('STATE',     m, d, true),  // 상태 스냅샷
     kill    : (m, d)    => write('KILL',      m, d, true),  // 앱 종료/동결/강제 중단
     getAll  : ()        => [..._buf],
-    clear   : async ()  => { _buf = []; try { localStorage.removeItem(LOG_LS_KEY); } catch(e) {} await persistNow(); },
+    clear   : async ()  => { _buf = []; await persistNow(); },
   };
 })();
 
@@ -2296,19 +2097,12 @@ function scheduleRetry() {
     return;
   }
 
-  // ★ HLS/src 정리 — hidden 상태에서는 destroy/src 초기화 금지
-  // Android Chrome은 hidden 중 destroy하면 오디오 세션이 완전 종료됨
-  if (document.visibilityState !== 'hidden') {
-    if (S.hls) {
-      try { S.hls.stopLoad(); } catch(e) {}
-      try { S.hls.detachMedia(); } catch(e) {}
-      try { S.hls.destroy(); } catch(e) {}
-      S.hls = null;
-    }
-    try { if (audio.src && audio.src !== location.href) audio.src = ''; } catch(e) {}
+  // ★ HLS/src 정리
+  if (S.hls) { S.hls.destroy(); S.hls = null; }
+  if (!audio.src || audio.src === location.href) {
+    // src가 이미 없으면 굳이 초기화 불필요
   } else {
-    // hidden 중에는 callId만 증가시켜 비동기 콜백 무효화
-    if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
+    audio.src = '';
   }
 
   if (S.retryCount >= 5) {
@@ -2336,24 +2130,8 @@ function scheduleRetry() {
   if (!isHidden) showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
 
   S.retryTimer = setTimeout(() => {
-    if (!S.current) return;
-    // ★ wasPlaying 체크 제거 — tryReconnect 등이 중간에 wasPlaying=false로 바꿔도
-    //    current가 있으면 재시도해야 함. 사용자 정지(userPaused)만 차단
-    if (S.userPaused) return;
-    // ★ 백그라운드 상태에서 타이머 콜백이 실행되면 playStation 금지
-    // visibilitychange hidden 진입 시 clearRetryTimer()로 취소하지만,
-    // 백그라운드 진입 후 새로 등록된 타이머(manifestLoadError → scheduleRetry)는 보호 안 됨
-    // → hidden이면 wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 위임
-    if (document.visibilityState === 'hidden') {
-      S.wasPlaying = true;
-      console.info('[BG] retry deferred — 백그라운드에서는 절대 playStation 호출 금지');
-      // ★ 백그라운드에서는 절대 playStation 호출 금지
-      // 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리
-      return;
-    }
-    // ★ forceRefresh=true — 재시도 시 만료된 캐시 URL 재사용 방지
-    // manifestLoadError 후 forceRefresh=false로 재시도하면 동일한 만료 URL로 재실패 반복
-    playStation(S.current, true, true);
+    if (!S.current || !S.wasPlaying) return;
+    playStation(S.current, false, true);
   }, delay);
 }
 
@@ -2386,23 +2164,9 @@ function playStation(s, forceRefresh = false, isRetry = false) {
   updateNowPlaying(); updateActiveCard();
   RLog.play(`채널 선택: ${s.name}`, `${s.freq} / forceRefresh=${forceRefresh}`);
 
-  // ★ hidden 상태에서는 destroy/pause/src='' 금지
-  if (document.visibilityState !== 'hidden') {
-    // ★ destroy 직후 즉시 audio.src='' — destroy 완료 전 audio error(code=4 Empty src) 발생 방지
-    // HLS.js destroy()가 내부적으로 audio.src를 비울 때 타이밍 경쟁이 생겨
-    // "audio.src=있음" 상태에서 "Empty src attribute" 에러가 찍히던 원인
-    if (S.hls) {
-      try { S.hls.stopLoad(); } catch(e) {}
-      try { S.hls.detachMedia(); } catch(e) {}
-      try { S.hls.destroy(); } catch(e) {}
-      S.hls = null;
-    }
-    S.userPaused = true;
-    audio.pause();
-    try { if (audio.src && audio.src !== location.href) audio.src = ''; } catch(e) {}
-  } else {
-    if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} S.hls = null; }
-  }
+  if (S.hls) { S.hls.destroy(); S.hls = null; }
+  S.userPaused = true;
+  audio.pause(); audio.src = '';
 
   // Firebase 동기화
   if (typeof syncMode !== 'undefined' && syncMode && typeof fbDb !== 'undefined' && fbDb) {
@@ -2417,17 +2181,10 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
-      S.wasPlaying = true;  // ★ 재생 성공 즉시 wasPlaying 보존 — 직후 화면 꺼짐/freeze 시 재연결 보장
       S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
-      // ★ 재생 성공 시 이전 scheduleRetry 타이머 즉시 취소
-      // 백그라운드 재시도 중 재생이 성공했는데 이전 타이머가 살아있어
-      // 계속 playStation을 재호출하며 불필요한 재연결 루프를 유발하던 핵심 원인
-      clearRetryTimer();
       RLog.play('재생 시작 성공');
-      // 재생 성공 시 실제 재생 감시 + keepalive 시작
-      // ★ keepalive는 항상 시작 — WakeLock 획득 성공 시 requestWakeLock()에서 stopAudioKeepAlive() 호출
+      // 백그라운드에서 재생 성공 시 실제 재생 감시 즉시 시작
       if (document.visibilityState === 'hidden') RLog.startBgWatch();
-      if (!_keepAliveNode) startAudioKeepAlive();
 
       // ★ 재생 시작 시 라이브 엣지 강제 동기화
       // HLS.js가 backBufferLength:0 + startPosition:-1 을 적용했지만
@@ -2502,21 +2259,12 @@ function playStation(s, forceRefresh = false, isRetry = false) {
               hls.destroy(); onFail(true); // scheduleRetry → 새 playStation 호출
               return;
             }
-            RLog.warn('HLS 네트워크 오류(복구 시도)', `${d.details || ''} [${netErrCount}/3] hidden=${document.visibilityState === 'hidden'}`);
-            // ★ 백그라운드에서 비치명 오류 발생 시 wasPlaying 보존
-            if (document.visibilityState === 'hidden' && S.current) S.wasPlaying = true;
+            RLog.warn('HLS 네트워크 오류(복구 시도)', `${d.details || ''} [${netErrCount}/3]`);
             // ★ startLoad를 500ms 디바운스로 제한 — 연속 오류 시 폭주 방지
             if (!netErrTimer) {
               netErrTimer = setTimeout(() => {
                 netErrTimer = null;
-                // 백그라운드에서는 startLoad 대신 scheduleRetry로 전환 (manifestLoadError 루프 방지)
-                if (document.visibilityState === 'hidden') {
-                  if (S.hls === hls) S.hls = null;
-                  hls.destroy();
-                  onFail(true);
-                } else {
-                  hls.startLoad();
-                }
+                hls.startLoad();
               }, 500);
             }
           }
@@ -2635,101 +2383,66 @@ audio.addEventListener('emptied', () => {
    — Android에서 online/offline 이벤트 없이
      IP만 바뀌는 경우를 Network Information API로 감지
 ════════════════════════════════════════ */
-
-// ★ 네트워크 재연결 디바운스 플래그
-// connection.change / online / offline 이벤트가 거의 동시에 발화하므로
-// 중복 playStation 호출을 방지하기 위한 공유 타이머
-let _netReconnectTimer = null;
-
-function _scheduleNetReconnect(reason) {
-  // 이미 예약됐으면 타이머 재설정 (디바운스)
-  if (_netReconnectTimer) { clearTimeout(_netReconnectTimer); _netReconnectTimer = null; }
-
-  // ★ wasPlaying 즉시 보존
-  // S.playing|S.loading이 이미 false여도(offline 핸들러가 먼저 처리) S.wasPlaying은 건드리지 않음
-  // || S.wasPlaying 조건으로 기존 true 값이 이 함수로 인해 덮어써지는 것 방지
-  if (S.playing || S.loading || S.wasPlaying) S.wasPlaying = true;
-
-  _netReconnectTimer = setTimeout(() => {
-    _netReconnectTimer = null;
-    if (!S.current || !S.wasPlaying) return;
-    if (S.playing || S.loading) return; // 이미 재생 중이면 스킵
-    // ★ 백그라운드에서는 playStation 절대 금지
-    // hidden 중 playStation → HLS 재초기화 → currentTime=0 리셋 → levelLoadTimeOut
-    // → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단
-    // visibilitychange visible 핸들러가 wasPlaying=true 보고 재연결 처리
-    if (document.visibilityState === 'hidden') {
-      RLog.net(`네트워크 전환 감지 — 백그라운드라 재연결 defer (${reason})`);
-      return;
-    }
-    RLog.net(`네트워크 전환 후 재연결 실행 (${reason})`);
-    S.needReconnect = false;
-    stopWatchdog();
-    clearRetryTimer();
-    // ★ playStation 전 audio 명시적 정리
-    // offline 후 hls.stopLoad()만 했으면 audio.paused=false + src=blob 상태일 수 있음
-    // playStation 진입부 hidden 체크 통과 후 정리되지만 명시적으로 먼저 처리
-    if (S.hls) { try { S.hls.destroy(); } catch(e) {} S.hls = null; }
-    try { audio.pause(); audio.src = ''; } catch(e) {}
-    playStation(S.current, true, true);
-  }, 2000); // ★ 2000ms — IP 재할당 대기 (1500ms에서 상향, 더 안정적)
-}
-
 (function initNetworkSwitchDetect() {
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   if (!conn) return; // 미지원 브라우저 (iOS 등)는 워치독으로 처리
 
-  // ★ effectiveType + type 결합 감지
-  // effectiveType만 쓰면 LTE↔WiFi 전환 시 둘 다 '4g'라 감지 실패
-  const _getNetKey = () => `${conn.effectiveType||''}|${conn.type||''}`;
-  let lastKey = _getNetKey();
+  let lastType = conn.effectiveType || conn.type || '';
 
   conn.addEventListener('change', () => {
-    const newKey = _getNetKey();
-    // ★ 타입 변화 없어도 lastKey 갱신만 하고 계속 진행
-    // effectiveType|type이 같아도 실제 인터페이스가 바뀌었을 수 있음
-    const changed = newKey !== lastKey;
-    if (changed) RLog.net(`네트워크 타입 전환: ${lastKey} → ${newKey}`);
-    else RLog.net(`네트워크 change 이벤트 (타입 동일: ${newKey})`);
-    lastKey = newKey;
-    // ★ wasPlaying || playing 외에 S.current만 있어도 재연결 시도
-    // offline이 먼저 와서 S.playing=false 된 뒤 change가 오면 wasPlaying으로 판단
-    if (!S.current) return;
-    if (!S.wasPlaying && !S.playing) return;
-    _scheduleNetReconnect('connection.change');
+    const newType = conn.effectiveType || conn.type || '';
+    if (newType === lastType) return;
+    console.info(`[네트워크] 전환 감지: ${lastType} → ${newType}`); // ★ lastType 갱신 전에 로그
+    lastType = newType;
+    if (!S.current || (!S.wasPlaying && !S.playing)) return; // ★ 연산자 우선순위 명확화
+
+    // 네트워크 전환 직후 잠깐 대기 후 재연결
+    // (새 인터페이스에 IP 할당되기 전에 재연결하면 또 실패하므로 500ms 대기)
+    setTimeout(() => {
+      if (S.current && (S.wasPlaying || S.playing)) {
+        console.info('[네트워크] 전환 후 재연결 실행');
+        S.wasPlaying = false;
+        S.needReconnect = false;
+        stopWatchdog();
+        clearRetryTimer();
+        playStation(S.current);
+      }
+    }, 500);
   });
 })();
 
 audio.addEventListener('pause', () => {
-  // 사용자가 직접 멈춘 경우
   if (S.userPaused) { S.userPaused = false; return; }
   if (S.sleepStopped) { RLog.info('pause 이벤트 무시 (취침 타이머 종료 상태)'); return; }
-  // 재생 직후 오발동 억제
+  // ★ 재생 시작 직후 1500ms 이내 pause는 HLS 버퍼링 시작 시 브라우저가
+  //    내부적으로 발화하는 오발동 — CALL로 오판하지 않도록 억제
   if (S.justStarted && (Date.now() - S.justStarted) < 1500) {
     RLog.info('pause 이벤트 억제 (재생 직후 오발동)', `elapsed=${Date.now()-S.justStarted}ms`);
     return;
   }
-  // audio.src 없는 상태는 무시
+  // ★ audio.src가 없는 상태에서의 pause는 재생 중이 아님 — 무시
   if (!audio.src || audio.src === '' || audio.src === location.href) {
     RLog.info('pause 이벤트 무시 (audio.src 없음 — 재생 중 아님)');
     return;
   }
-  // ★ 백그라운드 OS pause는 무시
-  // Android Chrome은 hidden 진입 시 OS가 audio.pause()를 직접 발화함
-  // 앱이 이를 "재생 종료"로 처리하면 방송이 끊김
+  // ★ 백그라운드(화면 잠금·앱 전환) 상태에서 OS가 발화하는 pause는 통화 감지 대상이 아님
+  // → 화면을 내리면 OS가 audio.pause()를 호출해 이 핸들러가 트리거되어 재생이 끊기는 핵심 원인
   if (document.visibilityState === 'hidden') {
-    console.info('[BG] OS pause ignored');
     RLog.info('pause 이벤트 무시 (백그라운드 — OS 발화)');
-    if (S.playing || S.loading) S.wasPlaying = true;
+    // 백그라운드에서 pause됐지만 재생 중이었다면 wasPlaying 보존
+    if (S.playing && S.current) {
+      S.wasPlaying = true;
+      S.playing    = false;
+      updateNowPlaying(); updateActiveCard();
+    }
     return;
   }
-  // ★ 실제 인터럽트(통화·음성입력)만 처리
-  if (S.playing || S.loading) {
+  if (S.playing && S.current && !S.loading) {
+    RLog.call('통화/음성입력으로 재생 중단 감지');
     S.wasPlaying = true;
     S.needReconnect = true;
     S.playing = false;
-    S.justStarted = 0;
-    RLog.call('통화/음성입력으로 재생 중단 감지');
+    S.justStarted = 0; // 가드 해제
     updateNowPlaying(); updateActiveCard();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
@@ -2833,9 +2546,8 @@ let stopCallWatch = () => {};
   function tryReconnect() {
     if (reconnectingCall || !S.current || !S.wasPlaying) return;
     if (S.sleepStopped) { RLog.info('tryReconnect 차단 (취침 타이머 종료)'); return; }
-    // ★ 수동 재생/로딩 중이면 중복 실행 방지 — wasPlaying은 건드리지 않음
-    // wasPlaying=false로 덮어쓰면 scheduleRetry 타이머 콜백이 재시도를 포기하는 원인이 됨
-    if (S.playing || S.loading) { return; }
+    // ★ 수동 재생/로딩 중이면 중복 실행 방지
+    if (S.playing || S.loading) { S.wasPlaying = false; return; }
     // ★ 백그라운드에서도 통화 종료 후 재연결 허용
     // manifestLoadError 루프는 scheduleRetry의 hidden 차단이 이미 보호하고 있음
     reconnectingCall = true;
@@ -2881,14 +2593,9 @@ let stopCallWatch = () => {};
 
     // ★ 대기 전에 기존 스트림 즉시 정리
     try {
-      // ★ hidden 상태에서는 destroy/pause/src='' 금지
-      if (document.visibilityState !== 'hidden') {
-        audio.pause();
-        if (S.hls) { S.hls.destroy(); S.hls = null; }
-        audio.src = '';
-      } else {
-        if (S.hls) { S.hls.stopLoad(); }
-      }
+      audio.pause();
+      if (S.hls) { S.hls.destroy(); S.hls = null; }
+      audio.src = '';
     } catch(e) {
       console.warn('[fullReconnect] 기존 스트림 정리 실패:', e);
     }
@@ -2939,84 +2646,103 @@ let stopCallWatch = () => {};
   audio.addEventListener('play', () => stopWatch());
 
   document.addEventListener('visibilitychange', () => {
-    const hidden = document.visibilityState === 'hidden';
-
-    // ─────────────────────────────
-    // 백그라운드 진입
-    // ─────────────────────────────
-    if (hidden) {
-      // 상태 보존
+    if (document.visibilityState === 'hidden') {
+      // ★ 재생/로딩 중이면 wasPlaying 보존 (복귀 시 재연결 트리거)
       if (S.playing || S.loading) S.wasPlaying = true;
+      // ★ 백그라운드 진입 시 재생/로딩 상태 저장 — onFail 타이밍 레이스 대비
       S._hiddenWasActive = S.playing || S.loading || S.wasPlaying;
-
-      // 로그 (wasPlaying 보존 후)
+      // ★ 로그는 wasPlaying 보존 후 출력 — 정확한 상태 반영
       RLog.infoS('앱 백그라운드 진입');
+      // ★ 백그라운드 실제 재생 감시 시작 (3초마다 currentTime 변화 체크)
       if (S.playing) RLog.startBgWatch();
 
-      // watchdog / retry / 폴링 중단
-      stopWatchdog();
-      stopCallWatch();
+      // ★ 백그라운드 진입 시 재시도·폴링 중단 (manifest 루프 방지)
       clearRetryTimer();
+      stopCallWatch();
+      stopWatchdog();
       if (typeof S._stopVoiceTimer === 'function') S._stopVoiceTimer();
 
-      // ★ 핵심 정책: hidden 상태에서는 절대
-      //   audio.pause() / hls.destroy() / src='' 하지 않는다.
-      // Android Chrome은 hidden 진입 시 OS가 직접 pause를 발화하며
-      // 앱이 추가로 건드리면 재생 세션이 완전히 종료된다.
-      // callId만 증가시켜 진행 중인 비동기 콜백을 무효화
-      if (S.loading && !S.playing) {
-        S.callId++;
-        S.wasPlaying = true;
-      }
+      // ★ 재생 중 백그라운드 진입 시 WakeLock 재확인
+      // 화면이 꺼지면 WakeLock이 자동 해제되므로 재획득 시도는 의미 없음
+      // 대신 WakeLock 상태를 기록해 추후 분석에 활용 (위 visibilitychange 핸들러에서 처리)
 
-      console.info('[BG] background enter');
+      // ★ playing 또는 loading 중이었으면 복귀 시 워치독 재시작
+      S._watchdogPaused = S.playing || S.loading;
+
+      // ★ 로딩 중(아직 재생 안 된 상태)일 때만 HLS 정리 — 이미 재생 성공 중인 audio는 절대 건드리지 않음
+      // → S.playing=true인 상태에서 pause()/src='' 하면 백그라운드 오디오가 즉시 끊김
+      if (S.loading && !S.playing) {
+        // ★ callId 증가 — 진행 중인 resolveStreamUrl().then() 비동기 콜백의 thisCall 가드를 무효화
+        // 백그라운드 진입 후 뒤늦게 실행된 콜백이 HLS를 재시작 → manifestLoadError 유발하던 핵심 원인
+        S.callId++;
+        if (S.hls) { S.hls.destroy(); S.hls = null; }
+        S.wasPlaying = true;
+        S.userPaused = true;
+        audio.pause(); audio.src = '';
+        S.loading = false;
+        S.retryCount = 0;
+        updateNowPlaying(); updateActiveCard();
+      }
       return;
     }
 
-    // ─────────────────────────────
-    // 포그라운드 복귀
-    // ─────────────────────────────
+    // ★ 포그라운드 복귀
     RLog.stopBgWatch();
     RLog.infoS('앱 포그라운드 복귀');
-    console.info('[BG] foreground resume');
 
-    if (S.current && S.wasPlaying && !S.playing && !S.loading) {
-      setTimeout(() => {
-        // 실제 재생 중이면 상태만 복원
-        if (!audio.paused && audio.src && audio.src !== location.href) {
-          RLog.info('포그라운드 복귀 — 오디오 실제 재생 중, 상태 복원만');
-          S.playing = true; S.loading = false; S.wasPlaying = false;
-          updateNowPlaying(); updateActiveCard(); updateMediaSession();
-          startWatchdog();
-          return;
-        }
-        // 실제 중단된 경우만 재연결
-        if (!S.playing && !S.loading && S.current) {
-          if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
-          RLog.reconnect('포그라운드 복귀 → 재연결');
-          S.wasPlaying = false;
-          S._hiddenWasActive = false;
-          S.retryCount = 0;
-          clearRetryTimer();
-          playStation(S.current, true);
-        }
-      }, 500);
-    } else if (S.current && !audio.paused && audio.src && audio.src !== location.href && !S.playing) {
-      // wasPlaying=false였지만 audio는 살아있는 케이스 — 상태 복원
-      RLog.info('포그라운드 복귀 — 오디오 실제 재생 중(wasPlaying=false), S.playing 복원');
-      S.playing = true; S.loading = false;
-      updateNowPlaying(); updateActiveCard(); updateMediaSession();
-      startWatchdog();
+    // 1) 오디오 실제 상태와 S.playing 동기화
+    // → 백그라운드에서 onFail로 S.playing=false가 됐지만 audio는 살아있는 경우 복원
+    if (!audio.paused && audio.src && audio.src !== location.href && S.current) {
+      if (!S.playing) {
+        RLog.info('포그라운드 복귀 — 오디오 실제 재생 중, S.playing 복원');
+        S.playing = true; S.loading = false;
+        updateNowPlaying(); updateActiveCard(); updateMediaSession();
+      }
+    }
+
+    // 2) 워치독 재시작 — S.playing 또는 실제 오디오 재생 중이면 시작
+    if (S._watchdogPaused) {
+      S._watchdogPaused = false;
+      if (S.playing || (!audio.paused && audio.src && audio.src !== location.href)) {
+        startWatchdog();
+      }
+    }
+
+    // 3) 이미 재생/로딩 중이면 스킵
+    if (S.playing || S.loading) return;
+    if (reconnectingCall) {
+      RLog.info('visibilitychange 재연결 스킵 (tryReconnect 진행 중)');
+      return;
+    }
+
+    // 4) 재연결 필요 여부 판단
+    // wasPlaying=true: 정상 경로
+    // _hiddenWasActive=true + wasPlaying=false: 백그라운드에서 재시도 전부 실패했지만 포그라운드 복귀 — 무조건 재시도
+    const needReconnect = S.wasPlaying || (S._hiddenWasActive && S.current);
+    if (needReconnect && S.current) {
+      if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
+      if (!S.wasPlaying) RLog.warn('포그라운드 복귀 — wasPlaying=false였으나 강제 재연결 (백그라운드 재연결 실패 복구)');
+      RLog.reconnect('포그라운드 복귀 → 재연결');
+      S.wasPlaying = false;
+      S._hiddenWasActive = false;
+      S.retryCount = 0;
+      clearRetryTimer();
+      playStation(S.current, true);
     }
     S._hiddenWasActive = false;
   });
 
   window.addEventListener('online', () => {
     if (!S.current) return;
-    if (!S.wasPlaying && !S.playing) return;
-    RLog.net('네트워크 온라인 복귀 감지');
-    // ★ _scheduleNetReconnect에 위임 — connection.change와 중복 실행 방지 (디바운스)
-    _scheduleNetReconnect('online');
+    // ★ wasPlaying 뿐 아니라 playing 상태(스트림이 끊긴 경우)도 재연결
+    if (S.wasPlaying || S.playing) {
+      RLog.net('네트워크 온라인 복귀 → 재연결 시도');
+      setTimeout(() => {
+        stopWatchdog(); clearRetryTimer();
+        S.wasPlaying = false; S.needReconnect = false;
+        playStation(S.current);
+      }, 500);
+    }
   });
 })();
 
@@ -3087,31 +2813,12 @@ window.addEventListener('offline', () => {
     return;
   }
 
-  RLog.net('네트워크 오프라인 감지 (LTE↔WiFi 전환 또는 실제 단절)');
-  // ★ wasPlaying 즉시 보존
-  if (S.playing || S.loading) { S.wasPlaying = true; S.playing = false; S.loading = false; }
-  clearRetryTimer(); stopWatchdog();
-  // ★ hls.stopLoad() 후 audio는 paused=false + src=blob 상태를 유지
-  // scheduleRetry의 "오디오 실제 재생 중" 오판 방지를 위해 포그라운드에서 명시적 pause
-  // (hidden 중에는 pause 금지 정책 유지)
-  if (document.visibilityState !== 'hidden') {
-    try { audio.pause(); } catch(e) {}
-  }
-  if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} S.hls = null; }
+  RLog.net('네트워크 오프라인 감지 — 방송 중단');
+  if (S.playing) { S.wasPlaying = true; S.playing = false; }
+  clearRetryTimer(); stopWatchdog(); // ★ 워치독 즉시 정리
+  if (S.hls) S.hls.stopLoad();
   updateNowPlaying(); updateActiveCard();
-  if (document.visibilityState !== 'hidden') {
-    showError('네트워크가 끊겼습니다. 연결을 확인 중...');
-  }
-
-  // ★ online 이벤트가 발화하지 않는 케이스 대비 자체 재연결 예약
-  // Android에서 WiFi→데이터 전환 시 offline은 오지만 online이 안 오는 경우 있음
-  // connection.change도 effectiveType|type이 같으면 스킵됨
-  // → 3초 후 직접 _scheduleNetReconnect 호출 (online이 오면 디바운스로 통합됨)
-  setTimeout(() => {
-    if (!S.current || !S.wasPlaying || S.playing || S.loading) return;
-    RLog.net('offline 후 online 미수신 — 자체 재연결 시도');
-    _scheduleNetReconnect('offline-fallback');
-  }, 3000);
+  showError('네트워크가 끊겼습니다. 연결을 확인 중...');
 });
 
 /* ════════════════════════════════════════
@@ -3267,73 +2974,23 @@ function updateMediaSession() {
 ════════════════════════════════════════ */
 let _wakeLock = null;
 
-// ★ AudioContext 무음 keepalive — WakeLock 권한 거부 시 대체 수단
-// Android이 백그라운드 탭을 "오디오 활성" 앱으로 인식해 메모리에서 해제하지 않도록 함
-let _keepAliveNode = null;
-let _keepAliveTimer = null;
-
-function startAudioKeepAlive() {
-  // ★ _keepAliveNode로 가드 — _keepAliveTimer는 이 함수에서 세팅하지 않으므로 항상 null
-  // WakeLock 실패 핸들러와 onOK()가 거의 동시에 호출되면 오실레이터 노드가 2개 생성됨
-  if (_keepAliveNode) return; // 이미 실행 중
-  const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
-  if (!ctx) return;
-  try {
-    // 볼륨 0의 무음 오실레이터 — 재생 중인 audio와 겹치지 않음
-    const oscillator = ctx.createOscillator();
-    const gainNode   = ctx.createGain();
-    gainNode.gain.value = 0; // 완전 무음
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.start();
-    _keepAliveNode = oscillator;
-    RLog.info('AudioContext keepalive 시작 (WakeLock 대체)');
-  } catch(e) {
-    console.warn('[keepalive] 시작 실패:', e);
-  }
-}
-
-function stopAudioKeepAlive() {
-  if (_keepAliveNode) {
-    try { _keepAliveNode.stop(); } catch(_) {}
-    _keepAliveNode = null;
-  }
-  if (_keepAliveTimer) { clearInterval(_keepAliveTimer); _keepAliveTimer = null; }
-}
-
-let _wakeLockDenied = false; // 권한 거부 상태 추적
-
 async function requestWakeLock() {
-  if (!('wakeLock' in navigator)) {
-    // WakeLock 자체 미지원 → keepalive만 사용
-    if (S.playing) startAudioKeepAlive();
-    return;
-  }
-  if (_wakeLockDenied) {
-    // 이미 권한 거부됨 — 재시도하지 않고 keepalive만 유지
-    if (S.playing && !_keepAliveNode) startAudioKeepAlive();
-    return;
-  }
+  if (!('wakeLock' in navigator)) return;
   try {
     if (_wakeLock && !_wakeLock.released) return;
     _wakeLock = await navigator.wakeLock.request('screen');
-    _wakeLockDenied = false;
-    stopAudioKeepAlive(); // WakeLock 획득 성공 시 keepalive 불필요
     RLog.info('WakeLock 획득');
     _wakeLock.addEventListener('release', () => {
       const wasPlaying = S.playing || S.loading;
       const hidden     = document.visibilityState === 'hidden';
-      // ★ 재생 중 WakeLock 해제 시 wasPlaying 즉시 보존
-      // visibilitychange보다 release가 먼저 실행되므로 여기서 선점 세팅
-      if (wasPlaying && S.current) S.wasPlaying = true;
+      // ★ WakeLock은 화면이 꺼지거나 탭이 백그라운드로 가면 OS가 강제 해제
+      // hidden=true + playing=true 조합은 "화면 꺼짐으로 재생 중단 위험" 신호
       if (wasPlaying) {
         RLog.kill(
           hidden ? 'WakeLock 강제 해제 (화면 꺼짐/백그라운드) — 재생 중단 위험'
                  : 'WakeLock 해제 (포그라운드 — 정상)',
           `playing=${S.playing} | loading=${S.loading} | hidden=${hidden}`
         );
-        // WakeLock 해제 후 keepalive로 대체
-        if (hidden) startAudioKeepAlive();
       } else {
         RLog.info('WakeLock 해제 (재생 없음)');
       }
@@ -3343,15 +3000,8 @@ async function requestWakeLock() {
       }
     });
   } catch(e) {
-    const msg = e.message || String(e);
-    RLog.warn('WakeLock 획득 실패', msg);
-    console.warn('[WakeLock] 획득 실패:', msg);
-    // 권한 거부 시 재시도 막고 keepalive로 전환
-    if (msg.includes('denied') || msg.includes('permission')) {
-      _wakeLockDenied = true;
-      RLog.warn('WakeLock 권한 거부 — AudioContext keepalive로 전환');
-      if (S.playing) startAudioKeepAlive();
-    }
+    RLog.warn('WakeLock 획득 실패', e.message || String(e));
+    console.warn('[WakeLock] 획득 실패:', e.message);
   }
 }
 
@@ -3360,7 +3010,6 @@ function releaseWakeLock() {
     _wakeLock.release().catch(() => {});
     _wakeLock = null;
   }
-  stopAudioKeepAlive(); // ★ 재생 정지 시 keepalive도 함께 중단
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -4691,16 +4340,6 @@ function closeChangelog(e) {
     if (now - _lastTap < 300) e.preventDefault();
     _lastTap = now;
   }, { passive: false });
-
-  // iOS Safari 제스처 이벤트 차단
-  document.addEventListener('gesturestart',  (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
-  document.addEventListener('gestureend',    (e) => e.preventDefault(), { passive: false });
-
-  // Ctrl+스크롤 줌 차단 (키보드 연결 시)
-  document.addEventListener('wheel', (e) => {
-    if (e.ctrlKey) e.preventDefault();
-  }, { passive: false });
 })();
 
 /* ════════════════════════════════════════
@@ -4877,14 +4516,6 @@ window.addEventListener('pageshow', (e) => {
     // freeze 후 복귀 시 재연결 필요 여부 확인
     if (S.current && (S.wasPlaying || S.playing) && !S.sleepStopped) {
       setTimeout(() => {
-        // ★ audio가 실제로 재생 중이면 재연결 불필요 — 상태만 복원
-        if (!audio.paused && audio.src && audio.src !== location.href) {
-          RLog.info('resume — audio 실제 재생 중, 재연결 스킵 (상태 복원만)');
-          S.playing = true; S.loading = false; S.wasPlaying = false;
-          clearRetryTimer();
-          updateNowPlaying(); updateActiveCard();
-          return;
-        }
         if (!S.playing && !S.loading && S.current) {
           RLog.reconnect('resume 후 재연결');
           S.wasPlaying = false;
@@ -4919,71 +4550,6 @@ window.addEventListener('pageshow', (e) => {
   // 여기서는 중복 등록하지 않음 — scheduleRetry 이중 호출 방지
 
 })();
-
-/* ══════════════════════════════════════════
-   진단 도구 — 버전 뱃지 길게 누르면 열림
-══════════════════════════════════════════ */
-let _diagTimer = null;
-function diagTouchStart(e) { _diagTimer = setTimeout(() => openDiag(e), 800); }
-function diagTouchEnd() { clearTimeout(_diagTimer); }
-function openDiag(e) {
-  if (e) e.preventDefault();
-  document.getElementById('diagBg').style.display = 'block';
-  document.getElementById('diagResult').innerHTML = '<p style="color:#888;text-align:center">위 버튼을 눌러 테스트 시작</p>';
-}
-function closeDiag(e) {
-  if (e && e.target !== document.getElementById('diagBg')) return;
-  document.getElementById('diagBg').style.display = 'none';
-}
-async function runDiag() {
-  const btn = document.getElementById('diagRunBtn');
-  const out = document.getElementById('diagResult');
-  btn.disabled = true; btn.textContent = '테스트 중...';
-  out.innerHTML = '';
-  const tests = [
-    { label:'KBS 1라디오',  url:'/api/stream?stn=kbs&ch=21' },
-    { label:'KBS 해피FM',   url:'/api/stream?stn=kbs&ch=22' },
-    { label:'KBS 쿨FM',     url:'/api/stream?stn=kbs&ch=25' },
-    { label:'KBS 클래식FM', url:'/api/stream?stn=kbs&ch=24' },
-    { label:'MBC 표준FM',   url:'/api/stream?stn=mbc&ch=sfm' },
-    { label:'MBC FM4U',     url:'/api/stream?stn=mbc&ch=mfm' },
-    { label:'SBS 러브FM',   url:'/api/stream?stn=sbs&ch=lovefm' },
-    { label:'SBS 파워FM',   url:'/api/stream?stn=sbs&ch=powerfm' },
-    { label:'CBS 음악FM',   url:'/api/stream?stn=cbs&ch=mfm' },
-    { label:'CBS 표준FM',   url:'/api/stream?stn=cbs&ch=sfm' },
-    { label:'Joy4U',        url:'/api/stream?stn=cbs&ch=joy4u' },
-    { label:'TBS',          url:'/api/stream?stn=tbs' },
-    { label:'YTN',          url:'/api/stream?stn=ytn' },
-    { label:'EBS FM',        url:'/api/stream?stn=ebs' },
-  ];
-  for (const t of tests) {
-    const row = document.createElement('div');
-    row.style.cssText = 'background:#0d0d1a;border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:3px';
-    row.innerHTML = '<span style="font-weight:bold">' + t.label + '</span><span id="diag_' + t.label + '" style="color:#888;font-size:11px;word-break:break-all">확인 중...</span>';
-    out.appendChild(row);
-    try {
-      const res = await fetch(t.url, { cache:'no-store' });
-      const info = document.getElementById('diag_' + t.label);
-      if (t.direct) {
-        info.style.color = res.ok ? '#2ecc71' : '#e74c3c';
-        info.textContent = res.ok ? 'OK (HTTP ' + res.status + ')' : '실패 HTTP ' + res.status;
-        continue;
-      }
-      const json = await res.json();
-      if (json.url) {
-        info.style.color = '#2ecc71';
-        info.textContent = 'OK — ' + (json.url.length > 60 ? json.url.slice(0,60)+'…' : json.url);
-      } else {
-        info.style.color = '#e74c3c';
-        info.textContent = '실패: ' + (json.error || JSON.stringify(json));
-      }
-    } catch(e) {
-      const info = document.getElementById('diag_' + t.label);
-      if (info) { info.style.color = '#e74c3c'; info.textContent = '오류: ' + e.message; }
-    }
-  }
-  btn.disabled = false; btn.textContent = '다시 테스트';
-}
 
 </script>
 

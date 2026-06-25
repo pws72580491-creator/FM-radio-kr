@@ -27,7 +27,9 @@
   if (t === 'light') {
     document.documentElement.setAttribute('data-theme','light');
   } else if (t === 'auto') {
-    // 자동: 시스템 설정 우선, 없으면 시간대(6시~18시 라이트)
+    // 자동: 시스템 prefers-color-scheme 우선.
+    // prefers-color-scheme:dark이면 무조건 다크.
+    // 시스템 설정이 없거나 light이면 시간대(6시~18시 라이트)로 판단.
     var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     var h = new Date().getHours();
     var isDay = h >= 6 && h < 18;
@@ -682,13 +684,15 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   z-index: 150;
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s, color .2s;
+  transition: background .2s, color .2s, opacity .15s;
   touch-action: none; user-select: none;
-  visibility: hidden; /* ★ 위치 확정 후 표시 — 초기 튐 방지 */
+  opacity: 0; /* ★ 위치 확정 후 표시 — visibility:hidden 대신 opacity:0 사용 */
+  will-change: transform; /* ★ 드래그 중 GPU 레이어 승격 — 깜빡임 방지 */
 }
 #logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
-#logBtn:active { transform: scale(.92); }
-#logBtn.dragging { cursor: grabbing; transform: scale(1.1); opacity: .85; transition: none; }
+#logBtn:active:not(.dragging) { transform: scale(.92); }
+/* ★ dragging 종료 시 scale 튐 방지 — transition:none 제거, scale을 1.05로 줄임 */
+#logBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85; transition: transform 0s, opacity 0s; }
 
 .log-bg {
   display: none; position: fixed; inset: 0;
@@ -784,12 +788,14 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: 0 4px 16px var(--red-glow);
   z-index: 150;
   display: flex; align-items: center; justify-content: center;
-  transition: transform .2s, box-shadow .2s;
+  transition: transform .2s, box-shadow .2s, opacity .15s;
   touch-action: none; user-select: none;
-  visibility: hidden; /* ★ 위치 확정 후 표시 — 초기 튐 방지 */
+  opacity: 0; /* ★ 위치 확정 후 표시 — visibility:hidden 대신 opacity:0 사용 */
+  will-change: transform; /* ★ 드래그 중 GPU 레이어 승격 — 깜빡임 방지 */
 }
-#addStationBtn:active { transform: scale(.92); }
-#addStationBtn.dragging { cursor: grabbing; transform: scale(1.1); opacity: .85; transition: none; }
+#addStationBtn:active:not(.dragging) { transform: scale(.92); }
+/* ★ dragging 종료 시 scale 튐 방지 — transition:none 제거, scale을 1.05로 줄임 */
+#addStationBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85; transition: transform 0s, opacity 0s; }
 
 /* ══ 방송 추가 시트 ══ */
 .add-station-bg {
@@ -1342,8 +1348,40 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.31';
+const APP_VERSION = 'v2.8.36';
 const CHANGELOG = [
+  { version: 'v2.8.36', date: '2026-06-25', changes: [
+    '[버그수정] FAB 버튼 초기 깜빡임 (주원인) — load 이벤트에서 위치 확정하던 것을 DOMContentLoaded로 앞당김. load는 폰트·이미지 로드까지 기다려 수백ms 지연되는 동안 CSS 기본 위치(bottom/right)가 렌더링되어 깜빡임 발생. DOMContentLoaded는 DOM 파싱 완료 직후 실행되어 지연 없음',
+    '[버그수정] FAB 버튼 visibility:hidden → opacity:0 으로 변경 — visibility:hidden은 레이아웃 공간을 점유한 채 숨기므로 CSS 기본 위치가 순간 렌더링됨. opacity:0으로 시작해 위치 확정 후 opacity:1로 전환, 0.15s 부드러운 페이드인',
+    '[버그수정] FAB 초기 위치 오류 — 저장 위치 없을 때 getBoundingClientRect()로 읽던 방식 제거. DOMContentLoaded 시점은 렌더링 완료 전이라 부정확. CSS 변수(--sab)와 storageKey로 logBtn/addStationBtn 기본 위치를 직접 계산하도록 변경',
+    '[버그수정] dragging 클래스 제거 시 scale 튐 — .dragging에 transition:none 상태에서 scale(1.1)이고 클래스 제거 시 transition이 복원되며 scale(1.1)→기본값 애니메이션 발생. transition:0s로 변경하고 scale을 1.05로 줄여 시각적 충격 감소',
+    '[버그수정] touchmove 리스너 중복 등록 — passive:false와 passive:true 두 개 등록. _lastDragTime 갱신을 passive:false touchmove 핸들러 내부에서 처리하도록 통합, 중복 리스너 제거',
+    '[개선] 터치 탭 처리 touchend로 이전 — touchend에서 preventDefault()로 브라우저 합성 click 차단 후 직접 onTap() 호출. 기존 touchend→click 300ms 지연 제거, 반응성 향상. 마우스 click은 e.detail===0(합성 이벤트) 체크로 중복 실행 방지',
+  ]},
+  { version: 'v2.8.35', date: '2026-06-25', changes: [
+    '[버그수정 치명] play 이벤트 needReconnect 분기 — ctx.state=running 감지 시 ensureAudioCtxWatch statechange도 동시에 running 이벤트 큐에 있으면 playStation이 2회 호출. running 분기 진입 시 reconnectingCall=true로 statechange 경로 즉시 차단 후 재연결 완료 2초 후 해제',
+    '[버그수정] visibilitychange 포그라운드 복귀 playStation isRetry=false 오류 — isRetry=false이면 playStation 내부에서 retryCount=0 + wasPlaying=false가 발생해 지수 백오프 초기화 및 재연결 실패 시 wasPlaying 복원 타이밍 불일치. isRetry=true로 변경, retryCount는 visibilitychange 핸들러에서 직접 0으로 리셋',
+    '[버그수정] connection.change — LTE↔WiFi 전환 직후 버퍼 리필 대기 중 audio.paused=true인 순간에 이벤트 발화 시 재생 유지 중인데도 재연결 강제 실행. HLS가 살아있을 때는 즉시 판단 대신 1초 후 실제 상태 재확인 후 결정',
+    '[버그수정] offline-fallback 타이머 중복 실행 — offline 후 connection.change(2초)가 _netReconnectTimer를 소비한 뒤 offline-fallback(3초)이 또 _scheduleNetReconnect를 호출해 재연결 2회 발생. _offlineFallbackTimer 변수 분리 및 _netReconnectTimer 체크 추가',
+  ]},
+  { version: 'v2.8.34', date: '2026-06-25', changes: [
+    '[버그수정 치명] 통화 종료 후 중복 재연결 — 통화 종료 시 재연결 경로가 5개(AudioContext statechange / startWatch 폴링 / _voiceTimer 폴링 / initCallReconnect visibilitychange / initVoiceInputReconnect visibilitychange)이며 이 중 2개 이상이 동시에 playStation을 호출할 수 있었음',
+    '[버그수정] doReconnect에 reconnectingCall 가드 누락 — visibilitychange 경로에서 tryReconnect(reconnectingCall=true)와 doReconnect가 동시에 playStation 호출 가능. doReconnect 진입부에 reconnectingCall 체크 추가',
+    '[버그수정] initCallReconnect visibilitychange와 initVoiceInputReconnect visibilitychange 경쟁 조건 — 포그라운드 복귀 시 두 핸들러가 동시에 wasPlaying=true 조건 통과 후 각각 재연결. initCallReconnect visibilitychange 진입 즉시 S.wasPlaying=false를 선점 세팅해 doReconnect의 wasPlaying 조건으로 중복 차단',
+  ]},
+  { version: 'v2.8.33', date: '2026-06-25', changes: [
+    '[버그수정 치명] startWatch 스코프 버그 — play 이벤트 핸들러(클로저 바깥)에서 initCallReconnect 내부의 startWatch()를 직접 참조. tryReconnect와 동일한 패턴의 스코프 오류. 외부 변수 _startCallWatch를 추가하고 initCallReconnect 초기화 시 실제 함수로 교체하는 방식으로 수정',
+    '[버그수정] audio.ended 이중 등록 — 메인 핸들러(scheduleRetry 포함)와 lifecycle 핸들러가 동일한 ended 이벤트에 각각 리스너 등록. 동시 발동 시 scheduleRetry가 2회 호출될 수 있음. lifecycle 쪽 ended 리스너 제거, 메인 핸들러로 통합',
+    '[버그수정] _snap()의 ctx 상태 항상 "없음" 표시 — window._sharedAudioCtx로 참조했으나 let 선언 변수는 window에 없어 항상 undefined. 직접 스코프 참조(_sharedAudioCtx)로 수정. 로그 스냅샷의 ctx 필드가 실제 상태를 정확히 표시',
+  ]},
+  { version: 'v2.8.32', date: '2026-06-25', changes: [
+    '[버그수정 치명] tryReconnect 스코프 버그 — ensureAudioCtxWatch의 statechange 핸들러에서 initCallReconnect 클로저 내부의 tryReconnect()를 직접 참조해 ReferenceError 위험. 외부 변수 _tryReconnectFromCtx를 두고 initCallReconnect 초기화 시 실제 함수로 교체하는 방식으로 수정',
+    '[버그수정] offline 핸들러 hls.destroy() 누락 — 포그라운드에서 hls.stopLoad()만 하고 destroy()를 호출하지 않아 내부 이벤트 리스너·세그먼트 요청이 계속 살아있던 문제. 포그라운드에서는 destroy()까지 호출, 백그라운드에서는 기존 stopLoad() 정책 유지',
+    '[버그수정] 블루투스 devicechange 재연결 forceRefresh 누락 — 블루투스 전환 후 만료된 캐시 URL로 재연결해 manifestParsingError 발생 가능. forceRefresh=true로 변경',
+    '[버그수정] pause 이중 폴링 경쟁 조건 — initVoiceInputReconnect와 initCallReconnect가 동일한 pause 이벤트에서 각각 2초 폴링을 시작해 doReconnect/tryReconnect를 거의 동시에 호출 가능. _voiceTimer 폴링에 reconnectingCall 플래그 체크 추가',
+    '[코드] AppState에 _hiddenWasActive: false 초기값 명시 — 동적 프로퍼티 추가 패턴 제거',
+    '[코드] FOUC auto 모드 주석 명확화 — prefers-color-scheme:dark이면 무조건 다크, 없으면 시간대 판단으로 동작 명시',
+  ]},
   { version: 'v2.8.31', date: '2026-06-18', changes: [
     '[버그수정] startAudioKeepAlive 중복 호출 — _keepAliveTimer로 가드했으나 함수 내부에서 _keepAliveTimer를 세팅하지 않아 가드가 항상 무효. WakeLock 실패 핸들러와 onOK()가 동시에 호출되면 오실레이터 노드가 2개 생성되어 AudioContext 부하 및 메모리 누수 발생. _keepAliveNode 기준으로 가드 수정',
   ]},
@@ -1776,6 +1814,7 @@ const AppState = {
   needReconnect: false,
   userPaused:    false,
   sleepStopped:  false,  // ★ 취침 타이머 종료 후 모든 자동 재연결 차단 플래그
+  _hiddenWasActive: false, // ★ 백그라운드 진입 시 활성 여부 저장 (포그라운드 복귀 재연결 보조)
 };
 
 const S = AppState;
@@ -1787,6 +1826,7 @@ let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 /* ════════════════════════════════════════
    채널 데이터
 ════════════════════════════════════════ */
+// ★ bsod.kr 프록시 경유 — CORS 우회 및 토큰 갱신 처리
 const P = 'https://radio.bsod.kr/stream/';
 const STATIONS = [
   { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
@@ -1837,10 +1877,46 @@ async function resolveStreamUrl(s, forceRefresh = false) {
   }
   try {
     const res  = await fetch(s.streamApi, { cache: 'no-store' });
+
+    // KBS — JSON 응답에서 service_url 추출
+    if (s.streamApiType === 'kbs') {
+      const json = await res.json();
+      const url  = json?.channel_item?.[0]?.service_url || json?.channel?.item?.[0]?.service_url;
+      if (url) {
+        _streamCache[s.id] = { url, ts: Date.now() };
+        return url;
+      }
+      console.warn('KBS API: service_url을 찾지 못했습니다.');
+      return s.stream;
+    }
+
+    // MBC — 응답 텍스트가 곧 m3u8 URL
+    if (s.streamApiType === 'mbc') {
+      const url = (await res.text()).trim();
+      if (url && url.includes('.m3u8')) {
+        _streamCache[s.id] = { url, ts: Date.now() };
+        return url;
+      }
+      console.warn('MBC API: m3u8 URL을 찾지 못했습니다.');
+      return s.stream;
+    }
+
+    // SBS — 응답 텍스트가 곧 m3u8 URL
+    if (s.streamApiType === 'sbs') {
+      const url = (await res.text()).trim();
+      if (url && url.includes('.m3u8')) {
+        _streamCache[s.id] = { url, ts: Date.now() };
+        return url;
+      }
+      console.warn('SBS API: m3u8 URL을 찾지 못했습니다.');
+      return s.stream;
+    }
+
+    // 극동방송(기존) — 텍스트에서 m3u8 URL 정규식 추출
     const text = await res.text();
     const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
     if (m) {
-      _streamCache[s.id] = { url: m[0], ts: Date.now() }; // ★ url + 타임스탬프 저장
+      _streamCache[s.id] = { url: m[0], ts: Date.now() };
       return m[0];
     }
     console.warn('streamApi: m3u8 URL을 찾지 못했습니다. 기본 URL로 폴백합니다.');
@@ -2000,7 +2076,9 @@ const RLog = (() => {
     const _S   = (typeof S     !== 'undefined') ? S     : {};
     const _a   = (typeof audio !== 'undefined') ? audio : {};
     const hidden = document.visibilityState === 'hidden';
-    const ctx = window._sharedAudioCtx;
+    // ★ window._sharedAudioCtx → 직접 스코프 참조
+    // let _sharedAudioCtx는 window에 없으므로 window._sharedAudioCtx는 항상 undefined
+    const ctx = (typeof _sharedAudioCtx !== 'undefined') ? _sharedAudioCtx : null;
     const parts = [
       `playing=${_S.playing||false}`,
       `loading=${_S.loading||false}`,
@@ -2426,6 +2504,19 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             RLog.error('HLS 네트워크 오류(치명)', `${d.details || ''}`);
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
 
+            // ★ manifestParsingError — 캐시된 URL이 만료돼 서버가 잘못된 manifest 반환
+            //    같은 URL로 재시도해도 동일 실패 → forceRefresh=true로 새 URL 즉시 재요청
+            if (d.details === 'manifestParsingError') {
+              RLog.warn('manifestParsingError — URL 만료 가능성, forceRefresh=true 재시도');
+              if (S.hls === hls) S.hls = null;
+              hls.destroy();
+              if (thisCall === S.callId && S.current) {
+                S.wasPlaying = true;
+                playStation(S.current, true, true); // forceRefresh=true
+              }
+              return;
+            }
+
             // ★ 공공WiFi/네트워크 이식 감지 — 전환 직후 1500ms 이내 fatal이면
             //    실제 연결 끊김이 아니라 인터페이스 전환 중 일시적 오류일 가능성 높음
             //    이 경우 hls.destroy() + onFail 대신 startLoad() 재시도 1회 먼저 시도
@@ -2608,6 +2699,11 @@ audio.addEventListener('emptied', () => {
 // 중복 playStation 호출을 방지하기 위한 공유 타이머
 let _netReconnectTimer = null;
 
+// ★ offline-fallback 전용 타이머 — _netReconnectTimer와 별도로 관리
+// offline 후 online/connection.change가 와서 _netReconnectTimer를 소비한 뒤
+// offline-fallback이 또 _scheduleNetReconnect를 호출하는 중복 실행 방지
+let _offlineFallbackTimer = null;
+
 function _scheduleNetReconnect(reason) {
   // 이미 예약됐으면 타이머 재설정 (디바운스)
   if (_netReconnectTimer) { clearTimeout(_netReconnectTimer); _netReconnectTimer = null; }
@@ -2661,17 +2757,26 @@ function _scheduleNetReconnect(reason) {
     if (!S.current) return;
     if (!S.wasPlaying && !S.playing) return;
 
-    // ★ 공공WiFi 등 짧은 네트워크 이식 무시 로직
-    // 전환 시점에 HLS가 살아있고 audio가 실제로 재생 중이면 끊기지 않은 것 — 무시
-    // 단, manifestLoadError 등으로 이미 hls가 null이면 재연결 필요
-    const hlsAlive  = !!S.hls;
-    const audioOK   = !audio.paused && !!audio.src && audio.src !== location.href;
-    if (hlsAlive && audioOK) {
-      RLog.net(`네트워크 타입 전환 — 재생 유지 중, 재연결 스킵 (${newKey})`);
+    // ★ HLS가 살아있으면 즉시 재연결 대신 1초 후 실제 상태 재확인
+    // LTE→WiFi 전환 직후 audio.paused=true인 순간이 있어 즉시 체크 시 오판 가능
+    // (버퍼 리필 대기 중인데 끊긴 것으로 잘못 판단 → 불필요한 강제 재연결)
+    // 1초 후에도 여전히 멈춰있으면 실제 끊김으로 판단
+    if (S.hls) {
+      setTimeout(() => {
+        if (!S.current || (!S.wasPlaying && !S.playing)) return;
+        if (S.playing) return; // 이미 재생 복구됨
+        const audioStillOK = !audio.paused && !!audio.src && audio.src !== location.href;
+        if (audioStillOK) {
+          RLog.net(`네트워크 타입 전환 — 1초 후 재생 유지 확인, 재연결 스킵 (${newKey})`);
+          return;
+        }
+        RLog.net(`네트워크 타입 전환 — 1초 후 재생 중단 확인, 재연결 실행 (${newKey})`);
+        _scheduleNetReconnect('connection.change');
+      }, 1000);
       return;
     }
 
-    // 재생이 실제로 끊긴 경우에만 재연결
+    // HLS가 없는 경우(이미 끊긴 상태) — 즉시 재연결
     _scheduleNetReconnect('connection.change');
   });
 })();
@@ -2731,10 +2836,18 @@ audio.addEventListener('play', () => {
     // 백그라운드/포그라운드 모두 동일하게 AudioContext 상태로 판단
     const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
     if (ctx && ctx.state === 'running') {
-      // 포그라운드면 즉시, 백그라운드면 tryReconnect가 처리
+      // ★ reconnectingCall=true로 ensureAudioCtxWatch statechange 경로 차단
+      // play 이벤트와 statechange가 동시에 running을 감지해 playStation이 2회 호출되는 경쟁 조건 방지
+      reconnectingCall = true;
       S.wasPlaying = false; S.needReconnect = false;
-      if (document.visibilityState !== 'hidden') playStation(S.current);
-      else { S.wasPlaying = true; startWatch(); } // ★ 백그라운드: 통화 감지 폴링 시작
+      if (document.visibilityState !== 'hidden') {
+        playStation(S.current);
+        setTimeout(() => { reconnectingCall = false; }, 2000);
+      } else {
+        S.wasPlaying = true;
+        reconnectingCall = false;
+        _startCallWatch(); // ★ 백그라운드: 통화 감지 폴링 시작
+      }
     } else if (ctx && ctx.state === 'suspended') {
       ctx.resume().catch(() => {}); // statechange → tryReconnect 흐름
     } else {
@@ -2783,7 +2896,7 @@ function ensureAudioCtxWatch() {
         S.wasPlaying = false; S.needReconnect = false;
         playStation(S.current);
       } else {
-        tryReconnect(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
+        _tryReconnectFromCtx(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
       }
     }
   });
@@ -2801,6 +2914,15 @@ let reconnectingCall = false;
 
 // ★ playStation 내부에서 통화감지 인터벌을 즉시 멈추기 위한 외부 참조
 let stopCallWatch = () => {};
+
+// ★ ensureAudioCtxWatch에서 호출하는 tryReconnect 외부 참조
+// initCallReconnect 클로저 안의 tryReconnect는 외부에서 직접 접근 불가 —
+// initCallReconnect가 초기화되면서 이 변수를 실제 함수로 교체
+let _tryReconnectFromCtx = () => {};
+
+// ★ play 이벤트 핸들러(클로저 바깥)에서 initCallReconnect 내부의 startWatch() 호출용
+// tryReconnect와 동일한 스코프 문제 — 외부 참조 변수로 해결
+let _startCallWatch = () => {};
 
 (function initCallReconnect() {
   let watchTimer  = null;
@@ -2903,6 +3025,8 @@ let stopCallWatch = () => {};
     callSuspect = false;
   }
   stopCallWatch = stopWatch; // ★ playStation에서 인터벌 경쟁 차단용으로 외부 노출
+  _tryReconnectFromCtx = tryReconnect; // ★ ensureAudioCtxWatch에서 클로저 내부 tryReconnect 호출용
+  _startCallWatch = startWatch;        // ★ play 이벤트 핸들러(클로저 바깥)에서 startWatch 호출용
 
   audio.addEventListener('pause', () => {
     if (document.visibilityState === 'hidden') return;
@@ -2957,11 +3081,15 @@ let stopCallWatch = () => {};
     console.info('[BG] foreground resume');
 
     if (S.current && S.wasPlaying && !S.playing && !S.loading) {
+      // ★ wasPlaying을 즉시 false로 — initVoiceInputReconnect의 visibilitychange가
+      // 동일한 조건으로 동시에 doReconnect를 호출하는 경쟁 조건 차단
+      // (setTimeout 안에서 playStation이 실패해도 scheduleRetry가 wasPlaying=true 복원)
+      S.wasPlaying = false;
       setTimeout(() => {
         // 실제 재생 중이면 상태만 복원
         if (!audio.paused && audio.src && audio.src !== location.href) {
           RLog.info('포그라운드 복귀 — 오디오 실제 재생 중, 상태 복원만');
-          S.playing = true; S.loading = false; S.wasPlaying = false;
+          S.playing = true; S.loading = false;
           updateNowPlaying(); updateActiveCard(); updateMediaSession();
           startWatchdog();
           return;
@@ -2970,11 +3098,13 @@ let stopCallWatch = () => {};
         if (!S.playing && !S.loading && S.current) {
           if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
           RLog.reconnect('포그라운드 복귀 → 재연결');
-          S.wasPlaying = false;
           S._hiddenWasActive = false;
-          S.retryCount = 0;
+          // ★ isRetry=true — retryCount 리셋 방지 + wasPlaying 덮어쓰기 방지
+          // isRetry=false이면 playStation 내부에서 retryCount=0 + wasPlaying=false가 발생해
+          // scheduleRetry 지수 백오프가 초기화되고 재연결 실패 시 wasPlaying 복원 타이밍 꼬임
+          S.retryCount = 0; // 포그라운드 복귀는 새 시작 — 여기서만 리셋
           clearRetryTimer();
-          playStation(S.current, true);
+          playStation(S.current, true, true);
         }
       }, 500);
     } else if (S.current && !audio.paused && audio.src && audio.src !== location.href && !S.playing) {
@@ -3016,7 +3146,8 @@ let stopCallWatch = () => {};
       setTimeout(() => {
         if (S.wasPlaying && S.current) {
           S.wasPlaying = false; S.needReconnect = false;
-          playStation(S.current);
+          // ★ forceRefresh=true — 블루투스 전환 후 캐시 URL이 만료됐을 경우 manifestParsingError 방지
+          playStation(S.current, true);
         }
       }, 300);
     }
@@ -3073,7 +3204,18 @@ window.addEventListener('offline', () => {
   if (document.visibilityState !== 'hidden') {
     try { audio.pause(); } catch(e) {}
   }
-  if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} S.hls = null; }
+  if (S.hls) {
+    try {
+      if (document.visibilityState !== 'hidden') {
+        // ★ 포그라운드: destroy()까지 — stopLoad()만으론 내부 리스너·세그먼트 요청이 계속 살아있음
+        S.hls.destroy();
+      } else {
+        // ★ 백그라운드: destroy 금지 정책 — stopLoad()만 호출
+        S.hls.stopLoad();
+      }
+    } catch(e) {}
+    S.hls = null;
+  }
   updateNowPlaying(); updateActiveCard();
   if (document.visibilityState !== 'hidden') {
     showError('네트워크가 끊겼습니다. 연결을 확인 중...');
@@ -3083,8 +3225,12 @@ window.addEventListener('offline', () => {
   // Android에서 WiFi→데이터 전환 시 offline은 오지만 online이 안 오는 경우 있음
   // connection.change도 effectiveType|type이 같으면 스킵됨
   // → 3초 후 직접 _scheduleNetReconnect 호출 (online이 오면 디바운스로 통합됨)
-  setTimeout(() => {
+  if (_offlineFallbackTimer) { clearTimeout(_offlineFallbackTimer); _offlineFallbackTimer = null; }
+  _offlineFallbackTimer = setTimeout(() => {
+    _offlineFallbackTimer = null;
     if (!S.current || !S.wasPlaying || S.playing || S.loading) return;
+    // ★ _netReconnectTimer가 이미 실행 예약됐으면 중복 실행 방지
+    if (_netReconnectTimer) { RLog.net('offline-fallback: _netReconnectTimer 이미 예약됨, 스킵'); return; }
     RLog.net('offline 후 online 미수신 — 자체 재연결 시도');
     _scheduleNetReconnect('offline-fallback');
   }, 3000);
@@ -3108,6 +3254,9 @@ window.addEventListener('offline', () => {
   function doReconnect(reason) {
     if (S.sleepStopped) { RLog.info(`doReconnect 차단 (취침 타이머 종료) — ${reason}`); return; }
     if (!S.current || S.playing || S.loading || !S.wasPlaying) return;
+    // ★ initCallReconnect가 이미 재연결 처리 중이면 중복 실행 방지
+    // visibilitychange 경로에서 tryReconnect와 doReconnect가 동시에 playStation을 호출하는 경쟁 차단
+    if (reconnectingCall) { RLog.info(`doReconnect 차단 (reconnectingCall 진행 중) — ${reason}`); return; }
     stopVoiceTimer();
     console.info('[VoiceInput]', reason, '→ 재연결');
     const ctx = getSharedAudioCtx();
@@ -3144,6 +3293,8 @@ window.addEventListener('offline', () => {
       if (S.playing || S.loading || !S.current) { stopVoiceTimer(); return; }
       if (!S.wasPlaying) { stopVoiceTimer(); return; }
       if (tick > 60) { stopVoiceTimer(); return; } // 최대 2분 감지
+      // ★ initCallReconnect가 이미 재연결 처리 중이면 중복 실행 방지
+      if (reconnectingCall) { stopVoiceTimer(); return; }
       // AudioContext가 running이면 마이크 사용이 종료된 것
       const ctx = getSharedAudioCtx();
       if (!ctx) return;
@@ -4441,29 +4592,44 @@ function makeDraggable(el, storageKey, onTap) {
     try { return JSON.parse(localStorage.getItem(storageKey)); } catch(e) { return null; }
   }
 
-  function applyPos(x, y) {
+  function applyPos(x, y, show) {
     const maxX = window.innerWidth  - SIZE - 8;
     const maxY = window.innerHeight - SIZE - 8;
     x = clamp(x, 8, maxX);
     y = clamp(y, 8, maxY);
-    el.style.left       = x + 'px';
-    el.style.top        = y + 'px';
-    el.style.right      = 'auto';
-    el.style.bottom     = 'auto';
-    el.style.visibility = 'visible'; // ★ 위치 확정 후 표시
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+    // ★ show=true일 때만 opacity:1로 전환 — 드래그 중 재호출 시 불필요한 transition 방지
+    if (show) el.style.opacity = '1';
     return { x, y };
   }
 
-  // 저장된 위치 복원
+  // ★ 저장된 위치 복원 — DOMContentLoaded 직후 실행이므로 getBoundingClientRect가 CSS 기본값 반환
+  // 저장 위치 없을 때 CSS bottom/right 기본값을 left/top으로 변환해 적용
   const saved = loadPos();
   if (saved) {
-    applyPos(saved.x, saved.y);
+    applyPos(saved.x, saved.y, true);
   } else {
-    const r = el.getBoundingClientRect();
-    applyPos(r.left, r.top);
+    // ★ CSS 기본 위치(bottom/right)를 left/top 좌표로 변환
+    // getBoundingClientRect()는 렌더링 완료 전이라 부정확할 수 있으므로
+    // CSS 변수를 직접 계산해 초기 위치 설정
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const sab = parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue('--sab')) || 0;
+    const defaultBottom = sab + 36;
+    // logBtn은 right:16, addStationBtn은 left:16 — storageKey로 구분
+    const defaultLeft = storageKey === 'fab_log_pos'
+      ? vw - SIZE - 16          // right:16 → left 환산
+      : 16;                     // left:16 그대로
+    const defaultTop = vh - SIZE - defaultBottom;
+    applyPos(defaultLeft, defaultTop, true);
   }
 
   let startX, startY, startElX, startElY, wasDragged;
+  let _lastDragTime = 0; // ★ 드래그/탭 구분용 타임스탬프
 
   // ── 터치 이벤트 ──────────────────────────────
   el.addEventListener('touchstart', e => {
@@ -4483,9 +4649,10 @@ function makeDraggable(el, storageKey, onTap) {
     const dy = t.clientY - startY;
     if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
       wasDragged = true;
+      _lastDragTime = Date.now(); // ★ 드래그 시간 기록 (중복 리스너 제거 — 단일 touchmove에서 처리)
       el.classList.add('dragging');
       e.preventDefault(); // 스크롤 방지
-      applyPos(startElX + dx, startElY + dy);
+      applyPos(startElX + dx, startElY + dy, false);
     }
   }, { passive: false });
 
@@ -4495,24 +4662,27 @@ function makeDraggable(el, storageKey, onTap) {
       const r = el.getBoundingClientRect();
       savePos(r.left, r.top);
     }
-    // ★ 탭 여부는 click 이벤트에서 처리 (touchend에서 onTap 직접 호출 안 함)
-    // — touchend→click 300ms 지연을 피하기 위해 wasDragged=false일 때만 click 허용
     wasDragged = false;
+    // ★ touchend→click 300ms 지연 방지 — 탭이면 직접 onTap() 호출 후 click 억제
+    // _lastDragTime 체크로 드래그 직후 탭 오인식 방지
+    if (Date.now() - _lastDragTime >= 300) {
+      e.preventDefault(); // 브라우저 자동 click 이벤트 차단
+      onTap();
+    }
   });
 
-  // ── click 이벤트 — 탭 처리 ──────────────────
-  // touchend 후 브라우저가 자동 발생시키는 click을 그대로 활용
-  // 드래그 직후엔 wasDragged가 이미 false로 리셋되므로
-  // 드래그/탭 구분을 _lastDragTime으로 처리
-  let _lastDragTime = 0;
-  el.addEventListener('touchmove', () => { _lastDragTime = Date.now(); }, { passive: true });
+  // ★ click 이벤트 — 마우스 탭 전용 (터치는 touchend에서 처리)
+  // touchend에서 preventDefault()했으므로 터치 탭 시 click은 발화하지 않음
   el.addEventListener('click', e => {
     if (Date.now() - _lastDragTime < 300) return; // 드래그 직후 click 무시
+    // 터치 이벤트가 처리한 경우는 e.detail이 0 (합성 이벤트)
+    if (e.detail === 0) return;
     onTap();
   });
 
   // ── 마우스 이벤트 (데스크톱) ─────────────────
   el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return; // 좌클릭만
     e.preventDefault();
     const r  = el.getBoundingClientRect();
     startX   = e.clientX;
@@ -4526,8 +4696,9 @@ function makeDraggable(el, storageKey, onTap) {
       const dy = e.clientY - startY;
       if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
         wasDragged = true;
+        _lastDragTime = Date.now();
         el.classList.add('dragging');
-        applyPos(startElX + dx, startElY + dy);
+        applyPos(startElX + dx, startElY + dy, false);
       }
     }
     function onMouseUp() {
@@ -4547,7 +4718,9 @@ function makeDraggable(el, storageKey, onTap) {
   });
 }
 
-window.addEventListener('load', () => {
+// ★ load 대신 DOMContentLoaded — 폰트/이미지 로드를 기다리지 않고 즉시 위치 확정
+// load 이벤트 지연(수백ms) 동안 CSS 초기 위치가 렌더링되어 깜빡임 발생하던 원인 제거
+document.addEventListener('DOMContentLoaded', () => {
   const addBtn = document.getElementById('addStationBtn');
   const logBt  = document.getElementById('logBtn');
   if (addBtn) makeDraggable(addBtn, 'fab_add_pos', () => openAddStation());
@@ -4863,14 +5036,15 @@ if (_lastId) {
   if (S.current) {
     updateNowPlaying(); renderStations();
     if (localStorage.getItem('radio_playing') === '1') {
-      playStation(S.current);
+      // ★ 앱 재시작 시 forceRefresh=true — 이전 세션의 만료된 URL 재사용 방지
+      playStation(S.current, true);
       let _gestureUsed = false;
       const resumeOnGesture = () => {
         if (_gestureUsed) return;
         _gestureUsed = true;
         document.removeEventListener('touchstart', resumeOnGesture, true);
         document.removeEventListener('click',      resumeOnGesture, true);
-        if (!S.playing && !S.loading && S.current) playStation(S.current);
+        if (!S.playing && !S.loading && S.current) playStation(S.current, true);
       };
       document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true, capture: true });
       document.addEventListener('click',      resumeOnGesture, { once: true, passive: true, capture: true });
@@ -5023,9 +5197,8 @@ window.addEventListener('pageshow', (e) => {
   });
 
   // ⑤ audio 종료 이벤트 — HLS 외부에서 발생하는 중단 기록
-  audio.addEventListener('ended', () => {
-    if (S.current) RLog.kill('audio ended 이벤트 (스트림 예기치 않게 종료)');
-  });
+  // ★ audio.ended는 메인 핸들러(scheduleRetry 포함)에서 이미 처리 — 여기서 중복 등록하지 않음
+  // audio.error(native)만 lifecycle에서 추가 처리 (code=4 오감지 필터 포함)
   audio.addEventListener('error', (e) => {
     if (!S.hls) { // HLS.js가 없는 경우(native)만 — HLS.js는 자체 에러 핸들러 사용
       const code = e.target?.error?.code;

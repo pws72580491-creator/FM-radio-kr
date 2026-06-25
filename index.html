@@ -18,11 +18,24 @@
 <!-- 폰트 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- ★ 렌더 블로킹 제거 — media="print" onload 패턴으로 비동기 로드
+     로컬: 캐시 히트로 차이 없음
+     Vercel(첫 방문): 폰트 다운로드를 기다리지 않고 즉시 렌더링 시작
+     → DOMContentLoaded 시점에 FAB 위치 확정, 깜빡임 제거 -->
+<link rel="preload" as="style"
+  href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap">
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+  media="print" onload="this.media='all'">
+<noscript>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap">
+</noscript>
 
-<!-- FOUC 방지 (테마 깜빡임 차단) -->
+<!-- FOUC 방지 (테마 깜빡임 차단) + FAB 초기 위치 선확정 -->
 <script>
 (function(){
+  /* ── 테마 ── */
   var t = localStorage.getItem('radio_theme') || 'auto';
   if (t === 'light') {
     document.documentElement.setAttribute('data-theme','light');
@@ -36,6 +49,60 @@
     var autoLight = prefersDark ? false : isDay;
     if (autoLight) document.documentElement.setAttribute('data-theme','light');
   }  // dark는 기본값이므로 setAttribute 불필요
+
+  /* ── FAB 초기 위치 선확정 ──
+     DOMContentLoaded보다 훨씬 이른 시점(파싱 중)에 실행.
+     폰트·이미지 로드 지연과 완전히 무관하게 위치를 확정해
+     Vercel 배포 환경의 깜빡임을 제거한다.
+
+     DOM이 아직 없으므로 <style> 주입으로 위치를 고정.
+     makeDraggable이 나중에 실행되면 이 style을 덮어씀.          */
+  var SIZE  = 40;
+  var EDGE  = 16;
+  var vw    = window.innerWidth;
+  var vh    = window.innerHeight;
+  // --sab CSS 변수는 아직 계산 불가 → 안전값 0으로 폴백
+  var sab   = 0;
+  try {
+    var sabPx = getComputedStyle(document.documentElement).getPropertyValue('--sab');
+    sab = parseFloat(sabPx) || 0;
+  } catch(e) {}
+  var defaultBottom = sab + 36;
+
+  function fabStyle(key, left, top) {
+    // localStorage에 저장된 위치 우선 적용
+    try {
+      var saved = JSON.parse(localStorage.getItem(key));
+      if (saved && typeof saved.x === 'number') {
+        left = Math.min(Math.max(saved.x, EDGE), vw - SIZE - EDGE);
+        top  = Math.min(Math.max(saved.y, EDGE), vh - SIZE - EDGE);
+      }
+    } catch(e) {}
+    return 'left:' + left + 'px;top:' + top + 'px;right:auto;bottom:auto;opacity:1';
+  }
+
+  var addLeft = EDGE;
+  var logLeft = vw - SIZE - EDGE;
+  var fabTop  = vh - SIZE - defaultBottom;
+
+  // <style> 태그 주입 — DOM 파싱 중이지만 document.write 없이 안전하게 처리
+  var css = '#addStationBtn{' + fabStyle('fab_add_pos', addLeft, fabTop) + '}'
+          + '#logBtn{'        + fabStyle('fab_log_pos', logLeft, fabTop) + '}';
+  document.addEventListener('DOMContentLoaded', function() {
+    // style 태그를 head에 추가 (DOMContentLoaded 전에는 head가 없을 수 있음)
+    var s = document.createElement('style');
+    s.id = '_fab_init_pos';
+    s.textContent = css;
+    document.head.appendChild(s);
+  });
+  // ★ 더 이른 시점 — currentScript 바로 다음에 style 삽입 시도
+  // (파싱 중이므로 document.head는 존재)
+  try {
+    var s2 = document.createElement('style');
+    s2.id  = '_fab_init_pos_early';
+    s2.textContent = css;
+    document.head.appendChild(s2);
+  } catch(e) {}
 })();
 </script>
 
@@ -1349,8 +1416,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.37';
+const APP_VERSION = 'v2.8.38';
 const CHANGELOG = [
+  { version: 'v2.8.38', date: '2026-06-26', changes: [
+    '[버그수정] Vercel 배포 환경 FAB 깜빡임 — 로컬은 Google Fonts가 캐시 히트라 즉시 렌더링되지만 Vercel 첫 방문 시 fonts.googleapis.com CSS가 렌더 블로킹 리소스로 작동해 DOMContentLoaded 도달 전 첫 페인트가 지연, CSS 기본 위치(bottom/right)가 순간 렌더링됨. 두 가지 수정: (1) Google Fonts를 media=print onload 패턴으로 비렌더블로킹 비동기 로드, (2) FOUC 방지 인라인 스크립트에 FAB 위치 확정 로직 추가 — DOM 파싱 중 즉시 <style> 태그를 head에 주입해 폰트·네트워크 지연과 완전히 무관하게 위치를 선확정',
+  ]},
   { version: 'v2.8.37', date: '2026-06-25', changes: [
     '[버그수정] FAB 드래그 중 이퀄라이저 깜빡임 — will-change:transform을 항상 켜두면 Android Chrome이 새 GPU 컴포지팅 레이어를 생성/파괴하며 같은 스태킹 컨텍스트의 waveform 애니메이션 레이어를 재구성. will-change를 드래그 시작 시점에만 동적으로 설정하고 touchend에서 즉시 해제',
     '[버그수정] FAB left/top 직접 변경으로 인한 reflow → 이퀄라이저 애니메이션 중단 — 드래그 중 applyPos에서 left/top을 매 프레임 변경해 레이아웃 재계산 발생. 드래그 중에는 transform:translate만 사용해 컴포지팅 단계만 실행, touchend에서 left/top으로 1회 커밋',
@@ -4740,6 +4810,12 @@ function makeDraggable(el, storageKey, onTap) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ★ 인라인 FOUC 방지 스크립트가 주입한 임시 style 태그 제거
+  // makeDraggable이 직접 el.style로 위치를 확정하므로 더 이상 불필요
+  ['_fab_init_pos', '_fab_init_pos_early'].forEach(id => {
+    const s = document.getElementById(id);
+    if (s) s.remove();
+  });
   const addBtn = document.getElementById('addStationBtn');
   const logBt  = document.getElementById('logBtn');
   if (addBtn) makeDraggable(addBtn, 'fab_add_pos', () => openAddStation());

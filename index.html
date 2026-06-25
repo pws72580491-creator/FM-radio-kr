@@ -747,20 +747,21 @@ input[type=range]::-webkit-slider-thumb {
   right: 16px;
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--bg3); color: var(--muted);
-  font-size: 16px; line-height: 1;
+  font-size: 22px; line-height: 1; /* ★ addStationBtn과 동일한 크기로 통일 */
   border: 1px solid var(--border); cursor: grab;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   z-index: 150;
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s, color .2s, opacity .15s;
+  transition: background .2s, color .2s, border-color .2s, opacity .15s;
   touch-action: none; user-select: none;
-  opacity: 0; /* ★ 위치 확정 후 표시 — visibility:hidden 대신 opacity:0 사용 */
-  contain: layout style; /* ★ will-change:transform 대신 — GPU 레이어 생성 없이 레이아웃 격리 */
+  opacity: 0;
+  contain: layout style;
 }
 #logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
 #logBtn:active:not(.dragging) { transform: scale(.92); }
-/* ★ dragging 종료 시 scale 튐 방지 — transition:none 제거, scale을 1.05로 줄임 */
-#logBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85; transition: transform 0s, opacity 0s; }
+/* ★ transition을 전체 명시 — 일부만 쓰면 나머지가 'all 0s'로 리셋되어 border 등이 순간 사라짐 */
+#logBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85;
+  transition: transform 0s, opacity 0s, background .2s, color .2s, border-color .2s; }
 
 .log-bg {
   display: none; position: fixed; inset: 0;
@@ -862,8 +863,9 @@ input[type=range]::-webkit-slider-thumb {
   contain: layout style; /* ★ will-change:transform 대신 — GPU 레이어 생성 없이 레이아웃 격리 */
 }
 #addStationBtn:active:not(.dragging) { transform: scale(.92); }
-/* ★ dragging 종료 시 scale 튐 방지 — transition:none 제거, scale을 1.05로 줄임 */
-#addStationBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85; transition: transform 0s, opacity 0s; }
+/* ★ transition을 전체 명시 — 일부만 쓰면 나머지가 'all 0s'로 리셋되어 box-shadow 등이 순간 사라짐 */
+#addStationBtn.dragging { cursor: grabbing; transform: scale(1.05); opacity: .85;
+  transition: transform 0s, opacity 0s, box-shadow .2s; }
 
 /* ══ 방송 추가 시트 ══ */
 .add-station-bg {
@@ -1416,8 +1418,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.38';
+const APP_VERSION = 'v2.8.39';
 const CHANGELOG = [
+  { version: 'v2.8.39', date: '2026-06-26', changes: [
+    '[버그수정] 로그 버튼 크기 — font-size 16px → 22px, addStationBtn과 동일하게 통일',
+    '[버그수정] 드래그 중 테두리 사라짐 — .dragging에 transition 일부만 명시(transform 0s, opacity 0s)하면 나머지 속성이 all 0s로 리셋되어 border, box-shadow가 순간 누락. logBtn·addStationBtn 모두 .dragging에 transition 전체 명시',
+  ]},
   { version: 'v2.8.38', date: '2026-06-26', changes: [
     '[버그수정] Vercel 배포 환경 FAB 깜빡임 — 로컬은 Google Fonts가 캐시 히트라 즉시 렌더링되지만 Vercel 첫 방문 시 fonts.googleapis.com CSS가 렌더 블로킹 리소스로 작동해 DOMContentLoaded 도달 전 첫 페인트가 지연, CSS 기본 위치(bottom/right)가 순간 렌더링됨. 두 가지 수정: (1) Google Fonts를 media=print onload 패턴으로 비렌더블로킹 비동기 로드, (2) FOUC 방지 인라인 스크립트에 FAB 위치 확정 로직 추가 — DOM 파싱 중 즉시 <style> 태그를 head에 주입해 폰트·네트워크 지연과 완전히 무관하게 위치를 선확정',
   ]},

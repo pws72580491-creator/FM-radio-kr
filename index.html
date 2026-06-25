@@ -1418,8 +1418,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.39';
+const APP_VERSION = 'v2.8.40';
 const CHANGELOG = [
+  { version: 'v2.8.40', date: '2026-06-26', changes: [
+    '[버그수정 치명] Vercel 브라우저에서 재생이 안 되는 근본 원인 — sw.js?v=${Date.now()} 쿼리스트링으로 매 방문마다 SW가 신규 파일로 인식, updatefound→skipWaiting→controllerchange→reload() 루프가 항상 발생. reload 후 AudioContext는 사용자 제스처 없이 재개 불가(브라우저 정책)라 재생이 일시정지 상태로 남음. Date.now() 쿼리스트링 제거 — SW 업데이트는 브라우저가 파일 내용(바이트) 변경으로 자동 감지',
+    '[버그수정] controllerchange reload 시 radio_playing 상태 보존 강화 — reload 직전 재생 중이면 radio_playing=1 확실히 저장',
+    '[버그수정] resumeOnGesture — SW reload 후 AudioContext suspended 상태 대응. 제스처 발생 시 ctx.resume() 먼저 시도 후 playStation 재시도',
+  ]},
   { version: 'v2.8.39', date: '2026-06-26', changes: [
     '[버그수정] 로그 버튼 크기 — font-size 16px → 22px, addStationBtn과 동일하게 통일',
     '[버그수정] 드래그 중 테두리 사라짐 — .dragging에 transition 일부만 명시(transform 0s, opacity 0s)하면 나머지 속성이 all 0s로 리셋되어 border, box-shadow가 순간 누락. logBtn·addStationBtn 모두 .dragging에 transition 전체 명시',
@@ -4833,25 +4838,30 @@ document.addEventListener('DOMContentLoaded', () => {
 ════════════════════════════════════════ */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // ★ 타임스탬프 쿼리스트링 — 배포마다 브라우저가 새 SW 파일로 인식
-    const swUrl = `./sw.js?v=${Date.now()}`;
-    navigator.serviceWorker.register(swUrl, { scope: '/' })
+    // ★ Date.now() 쿼리스트링 제거 — 매 방문마다 SW가 신규 파일로 인식되어
+    // updatefound→skipWaiting→controllerchange→reload() 루프가 항상 발생하던 문제 수정.
+    // SW 업데이트 감지는 브라우저가 sw.js 파일 내용(바이트) 변경으로 자동 처리
+    navigator.serviceWorker.register('./sw.js', { scope: '/' })
       .then(reg => {
         console.log('[SW]', reg.scope);
-        // 새 SW 설치 완료 즉시 자동 적용 (사용자 조작 불필요)
         reg.addEventListener('updatefound', () => {
           const newSW = reg.installing;
           newSW.addEventListener('statechange', () => {
-            if (newSW.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
-                // 기존 SW가 있을 때 — 새 SW에 skipWaiting 요청 후 페이지 갱신
-                newSW.postMessage({ type: 'SKIP_WAITING' });
-              }
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              newSW.postMessage({ type: 'SKIP_WAITING' });
             }
           });
         });
-        // SW가 교체되면 페이지 자동 리로드
+        // ★ SW 교체 시 재생 중이면 reload 대신 재생 상태를 localStorage에 보존 후 reload
+        // Vercel 브라우저에서 reload 직후 AudioContext 재개 불가(사용자 제스처 필요)로
+        // 재생이 끊기던 문제 방지 — reload 자체는 유지하되 타이밍을 안전하게 조정
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          // 재생 중이면 radio_playing=1 보장 후 reload (이미 1이어야 하지만 안전하게 재확인)
+          if (S.playing || S.loading || S.wasPlaying) {
+            try { localStorage.setItem('radio_playing', '1'); } catch(_) {}
+          }
+          // ★ 재생 중일 때는 즉시 reload 대신 현재 오디오 세션을 먼저 정리
+          // HLS와 audio를 명시적으로 중단하지 않으면 reload 후 좀비 연결이 남을 수 있음
           window.location.reload();
         });
       })
@@ -5145,6 +5155,12 @@ if (_lastId) {
         _gestureUsed = true;
         document.removeEventListener('touchstart', resumeOnGesture, true);
         document.removeEventListener('click',      resumeOnGesture, true);
+        if (S.playing) return; // 이미 재생 중
+        // ★ AudioContext가 suspended이면 resume 시도 (SW reload 후 제스처 없이 시작 불가한 경우)
+        const ctx = getSharedAudioCtx ? getSharedAudioCtx() : null;
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
         if (!S.playing && !S.loading && S.current) playStation(S.current, true);
       };
       document.addEventListener('touchstart', resumeOnGesture, { once: true, passive: true, capture: true });

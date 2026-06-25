@@ -401,6 +401,7 @@ header {
   display: flex; align-items: flex-end;
   gap: 3px; height: 36px;
   flex: 1;
+  contain: layout; /* ★ FAB 드래그 reflow가 이퀄라이저 애니메이션에 영향주는 것 차단 */
 }
 .wave-bar {
   width: 4px; background: var(--red);
@@ -687,7 +688,7 @@ input[type=range]::-webkit-slider-thumb {
   transition: background .2s, color .2s, opacity .15s;
   touch-action: none; user-select: none;
   opacity: 0; /* ★ 위치 확정 후 표시 — visibility:hidden 대신 opacity:0 사용 */
-  will-change: transform; /* ★ 드래그 중 GPU 레이어 승격 — 깜빡임 방지 */
+  contain: layout style; /* ★ will-change:transform 대신 — GPU 레이어 생성 없이 레이아웃 격리 */
 }
 #logBtn.has-error { background: var(--err-bg); color: var(--amber); border-color: var(--amber); }
 #logBtn:active:not(.dragging) { transform: scale(.92); }
@@ -791,7 +792,7 @@ input[type=range]::-webkit-slider-thumb {
   transition: transform .2s, box-shadow .2s, opacity .15s;
   touch-action: none; user-select: none;
   opacity: 0; /* ★ 위치 확정 후 표시 — visibility:hidden 대신 opacity:0 사용 */
-  will-change: transform; /* ★ 드래그 중 GPU 레이어 승격 — 깜빡임 방지 */
+  contain: layout style; /* ★ will-change:transform 대신 — GPU 레이어 생성 없이 레이아웃 격리 */
 }
 #addStationBtn:active:not(.dragging) { transform: scale(.92); }
 /* ★ dragging 종료 시 scale 튐 방지 — transition:none 제거, scale을 1.05로 줄임 */
@@ -1348,8 +1349,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.36';
+const APP_VERSION = 'v2.8.37';
 const CHANGELOG = [
+  { version: 'v2.8.37', date: '2026-06-25', changes: [
+    '[버그수정] FAB 드래그 중 이퀄라이저 깜빡임 — will-change:transform을 항상 켜두면 Android Chrome이 새 GPU 컴포지팅 레이어를 생성/파괴하며 같은 스태킹 컨텍스트의 waveform 애니메이션 레이어를 재구성. will-change를 드래그 시작 시점에만 동적으로 설정하고 touchend에서 즉시 해제',
+    '[버그수정] FAB left/top 직접 변경으로 인한 reflow → 이퀄라이저 애니메이션 중단 — 드래그 중 applyPos에서 left/top을 매 프레임 변경해 레이아웃 재계산 발생. 드래그 중에는 transform:translate만 사용해 컴포지팅 단계만 실행, touchend에서 left/top으로 1회 커밋',
+    '[버그수정] CSS contain 추가 — waveform에 contain:layout, FAB에 contain:layout style 적용해 외부 reflow 격리',
+  ]},
   { version: 'v2.8.36', date: '2026-06-25', changes: [
     '[버그수정] FAB 버튼 초기 깜빡임 (주원인) — load 이벤트에서 위치 확정하던 것을 DOMContentLoaded로 앞당김. load는 폰트·이미지 로드까지 기다려 수백ms 지연되는 동안 CSS 기본 위치(bottom/right)가 렌더링되어 깜빡임 발생. DOMContentLoaded는 DOM 파싱 완료 직후 실행되어 지연 없음',
     '[버그수정] FAB 버튼 visibility:hidden → opacity:0 으로 변경 — visibility:hidden은 레이아웃 공간을 점유한 채 숨기므로 CSS 기본 위치가 순간 렌더링됨. opacity:0으로 시작해 위치 확정 후 opacity:1로 전환, 0.15s 부드러운 페이드인',
@@ -4580,60 +4586,67 @@ applyTheme(localStorage.getItem('radio_theme') || 'auto');
 ════════════════════════════════════════ */
 function makeDraggable(el, storageKey, onTap) {
   const SIZE = 40;
-  const DRAG_THRESHOLD = 10; // px — 10px 미만은 탭으로 처리
+  const DRAG_THRESHOLD = 10;
 
   function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
 
   function savePos(x, y) {
     try { localStorage.setItem(storageKey, JSON.stringify({ x, y })); } catch(e) {}
   }
-
   function loadPos() {
     try { return JSON.parse(localStorage.getItem(storageKey)); } catch(e) { return null; }
   }
 
-  function applyPos(x, y, show) {
+  // ★ 위치 적용 — left/top으로 기준점 고정, translate(0,0)은 드래그 중에만 사용
+  // left/top 직접 변경은 reflow 유발 → waveform 애니메이션 중단/깜빡임 원인
+  // 드래그 중에만 translate로 이동, touchend에서 실제 left/top으로 커밋
+  function setBase(x, y, show) {
     const maxX = window.innerWidth  - SIZE - 8;
     const maxY = window.innerHeight - SIZE - 8;
     x = clamp(x, 8, maxX);
     y = clamp(y, 8, maxY);
-    el.style.left   = x + 'px';
-    el.style.top    = y + 'px';
-    el.style.right  = 'auto';
-    el.style.bottom = 'auto';
-    // ★ show=true일 때만 opacity:1로 전환 — 드래그 중 재호출 시 불필요한 transition 방지
+    el.style.left      = x + 'px';
+    el.style.top       = y + 'px';
+    el.style.right     = 'auto';
+    el.style.bottom    = 'auto';
+    el.style.transform = ''; // translate 초기화
     if (show) el.style.opacity = '1';
     return { x, y };
   }
 
-  // ★ 저장된 위치 복원 — DOMContentLoaded 직후 실행이므로 getBoundingClientRect가 CSS 기본값 반환
-  // 저장 위치 없을 때 CSS bottom/right 기본값을 left/top으로 변환해 적용
+  function moveTo(baseX, baseY, dx, dy) {
+    // ★ translate만 변경 — reflow 없음, 컴포지팅 단계만 재실행
+    const maxX = window.innerWidth  - SIZE - 8;
+    const maxY = window.innerHeight - SIZE - 8;
+    const nx = clamp(baseX + dx, 8, maxX);
+    const ny = clamp(baseY + dy, 8, maxY);
+    el.style.transform = `translate(${nx - baseX}px,${ny - baseY}px)`;
+    return { x: nx, y: ny };
+  }
+
+  // 저장된 위치 복원
   const saved = loadPos();
   if (saved) {
-    applyPos(saved.x, saved.y, true);
+    setBase(saved.x, saved.y, true);
   } else {
-    // ★ CSS 기본 위치(bottom/right)를 left/top 좌표로 변환
-    // getBoundingClientRect()는 렌더링 완료 전이라 부정확할 수 있으므로
-    // CSS 변수를 직접 계산해 초기 위치 설정
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const sab = parseFloat(getComputedStyle(document.documentElement)
       .getPropertyValue('--sab')) || 0;
     const defaultBottom = sab + 36;
-    // logBtn은 right:16, addStationBtn은 left:16 — storageKey로 구분
     const defaultLeft = storageKey === 'fab_log_pos'
-      ? vw - SIZE - 16          // right:16 → left 환산
-      : 16;                     // left:16 그대로
+      ? vw - SIZE - 16
+      : 16;
     const defaultTop = vh - SIZE - defaultBottom;
-    applyPos(defaultLeft, defaultTop, true);
+    setBase(defaultLeft, defaultTop, true);
   }
 
-  let startX, startY, startElX, startElY, wasDragged;
-  let _lastDragTime = 0; // ★ 드래그/탭 구분용 타임스탬프
+  let startX, startY, startElX, startElY, wasDragged, _curX, _curY;
+  let _lastDragTime = 0;
 
-  // ── 터치 이벤트 ──────────────────────────────
+  // ── 터치 ──────────────────────────────────
   el.addEventListener('touchstart', e => {
-    const t = e.touches[0];
+    const t  = e.touches[0];
     startX   = t.clientX;
     startY   = t.clientY;
     const r  = el.getBoundingClientRect();
@@ -4648,41 +4661,45 @@ function makeDraggable(el, storageKey, onTap) {
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
     if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+      if (!wasDragged) {
+        // ★ 드래그 시작 시점에만 will-change 설정 — 항상 켜두면 다른 요소 레이어 재구성 유발
+        el.style.willChange = 'transform';
+      }
       wasDragged = true;
-      _lastDragTime = Date.now(); // ★ 드래그 시간 기록 (중복 리스너 제거 — 단일 touchmove에서 처리)
+      _lastDragTime = Date.now();
       el.classList.add('dragging');
-      e.preventDefault(); // 스크롤 방지
-      applyPos(startElX + dx, startElY + dy, false);
+      e.preventDefault();
+      const pos = moveTo(startElX, startElY, dx, dy);
+      _curX = pos.x; _curY = pos.y;
     }
   }, { passive: false });
 
-  el.addEventListener('touchend', e => {
+  el.addEventListener('touchend', () => {
     el.classList.remove('dragging');
-    if (wasDragged) {
-      const r = el.getBoundingClientRect();
-      savePos(r.left, r.top);
+    // ★ will-change 즉시 해제 — 드래그 종료 후 GPU 레이어 유지 비용 제거
+    el.style.willChange = '';
+    if (wasDragged && _curX !== undefined) {
+      // translate → left/top 커밋 (이 시점은 드래그 끝이라 reflow 1회는 허용)
+      setBase(_curX, _curY, true);
+      savePos(_curX, _curY);
+      _curX = undefined; _curY = undefined;
     }
     wasDragged = false;
-    // ★ touchend→click 300ms 지연 방지 — 탭이면 직접 onTap() 호출 후 click 억제
-    // _lastDragTime 체크로 드래그 직후 탭 오인식 방지
     if (Date.now() - _lastDragTime >= 300) {
-      e.preventDefault(); // 브라우저 자동 click 이벤트 차단
+      e.preventDefault?.();
       onTap();
     }
   });
 
-  // ★ click 이벤트 — 마우스 탭 전용 (터치는 touchend에서 처리)
-  // touchend에서 preventDefault()했으므로 터치 탭 시 click은 발화하지 않음
   el.addEventListener('click', e => {
-    if (Date.now() - _lastDragTime < 300) return; // 드래그 직후 click 무시
-    // 터치 이벤트가 처리한 경우는 e.detail이 0 (합성 이벤트)
+    if (Date.now() - _lastDragTime < 300) return;
     if (e.detail === 0) return;
     onTap();
   });
 
-  // ── 마우스 이벤트 (데스크톱) ─────────────────
+  // ── 마우스 (데스크톱) ─────────────────────
   el.addEventListener('mousedown', e => {
-    if (e.button !== 0) return; // 좌클릭만
+    if (e.button !== 0) return;
     e.preventDefault();
     const r  = el.getBoundingClientRect();
     startX   = e.clientX;
@@ -4695,17 +4712,21 @@ function makeDraggable(el, storageKey, onTap) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+        if (!wasDragged) el.style.willChange = 'transform';
         wasDragged = true;
         _lastDragTime = Date.now();
         el.classList.add('dragging');
-        applyPos(startElX + dx, startElY + dy, false);
+        const pos = moveTo(startElX, startElY, dx, dy);
+        _curX = pos.x; _curY = pos.y;
       }
     }
     function onMouseUp() {
       el.classList.remove('dragging');
-      if (wasDragged) {
-        const r = el.getBoundingClientRect();
-        savePos(r.left, r.top);
+      el.style.willChange = '';
+      if (wasDragged && _curX !== undefined) {
+        setBase(_curX, _curY, true);
+        savePos(_curX, _curY);
+        _curX = undefined; _curY = undefined;
       } else {
         onTap();
       }
@@ -4718,8 +4739,6 @@ function makeDraggable(el, storageKey, onTap) {
   });
 }
 
-// ★ load 대신 DOMContentLoaded — 폰트/이미지 로드를 기다리지 않고 즉시 위치 확정
-// load 이벤트 지연(수백ms) 동안 CSS 초기 위치가 렌더링되어 깜빡임 발생하던 원인 제거
 document.addEventListener('DOMContentLoaded', () => {
   const addBtn = document.getElementById('addStationBtn');
   const logBt  = document.getElementById('logBtn');

@@ -180,7 +180,7 @@ html, body {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;       /* ★ 뷰포트 꽉 채우기 */
+  height: 100dvh;       /* ★ Dynamic Viewport Height — 브라우저 UI(주소창 등) 제외한 실제 보이는 영역 */
   max-width: 520px;
   margin: 0 auto;
   padding-top: var(--sat);
@@ -600,7 +600,7 @@ input[type=range]::-webkit-slider-thumb {
   overflow-y: auto;     /* ★ 채널 목록만 스크롤 */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--sab) + 80px); /* ★ 하단 여백 */
+  padding-bottom: calc(var(--sab) + 120px); /* ★ FAB(40) + 여백(80) — 브라우저/PWA 모두 리스트 마지막 항목 아래 여백 확보 */
 }
 .swipe-track {
   display: flex; width: 200%;
@@ -1418,8 +1418,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.40';
+const APP_VERSION = 'v2.8.41';
 const CHANGELOG = [
+  { version: 'v2.8.41', date: '2026-06-26', changes: [
+    '[개선] 채널 목록 하단 여백 확대 — padding-bottom 80px → 120px. FAB 버튼 아래 브라우저 탭/PWA 모두 리스트 마지막 항목과 FAB 사이 여백 확보',
+  ]},
   { version: 'v2.8.40', date: '2026-06-26', changes: [
     '[버그수정 치명] Vercel 브라우저에서 재생이 안 되는 근본 원인 — sw.js?v=${Date.now()} 쿼리스트링으로 매 방문마다 SW가 신규 파일로 인식, updatefound→skipWaiting→controllerchange→reload() 루프가 항상 발생. reload 후 AudioContext는 사용자 제스처 없이 재개 불가(브라우저 정책)라 재생이 일시정지 상태로 남음. Date.now() 쿼리스트링 제거 — SW 업데이트는 브라우저가 파일 내용(바이트) 변경으로 자동 감지',
     '[버그수정] controllerchange reload 시 radio_playing 상태 보존 강화 — reload 직전 재생 중이면 radio_playing=1 확실히 저장',

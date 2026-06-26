@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.31</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.42</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1418,8 +1418,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.41';
+const APP_VERSION = 'v2.8.42';
 const CHANGELOG = [
+  { version: 'v2.8.42', date: '2026-06-26', changes: [
+    '[버그수정] 간헐적 미세 끊김(뚝뚝) 3가지 원인 수정 — ① 워치독 stallTick=0 첫 틱에 HLS 모드에서 audio.play() 즉시 개입 제거: 세그먼트 경계/ABR 전환 중 HLS.js 내부 버퍼 흐름을 외부에서 깨뜨리던 직접 원인 제거 ② liveSyncDurationCount 2→3, liveMaxLatencyDurationCount 4→6: 라이브 엣지 강제 currentTime 점프 빈도 감소 ③ backBufferLength 1→2: 세그먼트 경계 GC/flush 빈도 감소',
+  ]},
   { version: 'v2.8.41', date: '2026-06-26', changes: [
     '[개선] 채널 목록 하단 여백 확대 — padding-bottom 80px → 120px. FAB 버튼 아래 브라우저 탭/PWA 모두 리스트 마지막 항목과 FAB 사이 여백 확보',
   ]},
@@ -2052,11 +2055,11 @@ function startWatchdog() {
 
     const cur = audio.currentTime;
     if (audio.paused || cur === lastTime) {
-      // ★ HLS 모드에서 audio.paused 상태는 recoverMediaError() 복구 중일 수 있음
-      // → paused이면 바로 stallTick 누적 전에 play() 재시도 (1회만)
-      if (audio.paused && S.hls && stallTick === 0) {
-        audio.play().catch(() => {});
-      }
+      // ★ HLS 모드에서는 즉시 play() 개입 금지
+      // HLS.js가 세그먼트 경계/ABR 전환 중 아주 짧게 paused=true가 되는 순간
+      // 외부에서 audio.play()를 강제 호출하면 HLS 내부 버퍼 관리 흐름이 끊겨
+      // 미세 끊김(뚝뚝) 발생의 직접 원인 → stallTick 누적 후 임계치 도달 시에만 개입
+      // native 모드(S.hls 없음)는 기존대로 stallTick >= 4 에서 scheduleRetry
       stallTick++;
       // ★ 포그라운드 기준 8초(4틱×2초), 백그라운드는 위에서 스킵
       if (stallTick >= 4) {
@@ -2542,9 +2545,9 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         // ★ 라이브 엣지 즉시 재생 설정 — 버퍼를 최소화해 항상 현재 시점 방송 재생
         maxBufferLength:              10,  // ★ 5→10: bufferStalledError 반복 방지 (Joy4U 세그먼트 여유)
         maxMaxBufferLength:           15,  // ★ 8→15: 버퍼 자동 확장 상한
-        backBufferLength:             1,   // ★ 0→1: 완전 제거 시 세그먼트 경계 미세 끊김 발생
-        liveSyncDurationCount:        2,   // ★ 1→2: 라이브 엣지 2세그먼트 뒤 재생 (bufferStall 방지)
-        liveMaxLatencyDurationCount:  4,   // ★ 2→4: 급격한 엣지 점프 억제
+        backBufferLength:             2,   // ★ 1→2: 세그먼트 경계 GC/flush 빈도 감소 → 미세 끊김 완화
+        liveSyncDurationCount:        3,   // ★ 2→3: 라이브 엣지 점프 발생 빈도 감소
+        liveMaxLatencyDurationCount:  6,   // ★ 4→6: 강제 currentTime 점프 임계치 상향 → 뚝뚝 끊김 방지
         liveDurationInfinity:        true, // 라이브 스트림 duration을 Infinity로 유지
         startPosition:               -1,   // 항상 라이브 엣지에서 시작 (-1 = 최신 위치)
         enableWorker:                true,

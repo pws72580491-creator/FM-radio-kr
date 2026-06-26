@@ -1418,8 +1418,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.42';
+const APP_VERSION = 'v2.8.43';
 const CHANGELOG = [
+  { version: 'v2.8.43', date: '2026-06-26', changes: [
+    '[버그수정] bfcache 복원(pageshow) 시 forceRefresh=false로 playStation 호출 — 만료된 캐시 URL로 재연결해 levelLoadTimeOut → onFail → scheduleRetry 연쇄 발생. forceRefresh=true, isRetry=true로 변경',
+    '[버그수정] MediaSession play 핸들러(잠금화면 컨트롤) forceRefresh=false — 동일 원인. forceRefresh=true로 변경',
+  ]},
   { version: 'v2.8.42', date: '2026-06-26', changes: [
     '[버그수정] 간헐적 미세 끊김(뚝뚝) 3가지 원인 수정 — ① 워치독 stallTick=0 첫 틱에 HLS 모드에서 audio.play() 즉시 개입 제거: 세그먼트 경계/ABR 전환 중 HLS.js 내부 버퍼 흐름을 외부에서 깨뜨리던 직접 원인 제거 ② liveSyncDurationCount 2→3, liveMaxLatencyDurationCount 4→6: 라이브 엣지 강제 currentTime 점프 빈도 감소 ③ backBufferLength 1→2: 세그먼트 경계 GC/flush 빈도 감소',
   ]},
@@ -3451,7 +3455,7 @@ function updateMediaSession() {
   });
 
   navigator.mediaSession.setActionHandler('play', () => {
-    playStation(S.current);
+    playStation(S.current, true);
   });
 
   navigator.mediaSession.setActionHandler('pause', () => {
@@ -5250,7 +5254,7 @@ window.addEventListener('pageshow', (e) => {
   if (S.sleepStopped) { RLog.info('bfcache 복원 재연결 차단 (취침 타이머 종료)'); return; }
   if (S.current && (S.wasPlaying || localStorage.getItem('radio_playing') === '1')) {
     S.wasPlaying = false;
-    setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current); }, 300);
+    setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current, true, true); }, 300);
   }
 });
 

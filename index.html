@@ -1418,8 +1418,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.43';
+const APP_VERSION = 'v2.8.44';
 const CHANGELOG = [
+  { version: 'v2.8.44', date: '2026-06-27', changes: [
+    '[버그수정] 통화 종료 후 재생→즉시 종료 현상 — audio ended/stalled 핸들러에 reconnectingCall 가드 추가: 재연결 진행 중 ended·stalled가 scheduleRetry를 덮어쓰는 경쟁 조건 차단',
+    '[버그수정] play 이벤트 핸들러 needReconnect 경로 — playStation 진입 전 userPaused=false 누락: userPaused=true인 채로 재연결해 scheduleRetry 타이머 콜백이 조기 return하던 문제 수정',
+  ]},
   { version: 'v2.8.43', date: '2026-06-26', changes: [
     '[버그수정] bfcache 복원(pageshow) 시 forceRefresh=false로 playStation 호출 — 만료된 캐시 URL로 재연결해 levelLoadTimeOut → onFail → scheduleRetry 연쇄 발생. forceRefresh=true, isRetry=true로 변경',
     '[버그수정] MediaSession play 핸들러(잠금화면 컨트롤) forceRefresh=false — 동일 원인. forceRefresh=true로 변경',
@@ -2745,7 +2749,7 @@ function togglePlay() {
    오디오 이벤트 (전화/인터럽트 처리)
 ════════════════════════════════════════ */
 audio.addEventListener('ended',   () => {
-  if (S.current && S.playing) {
+  if (S.current && S.playing && !reconnectingCall) {
     RLog.kill('audio ended — 스트림 종료 감지, 재연결');
     scheduleRetry();
   }
@@ -2764,6 +2768,7 @@ audio.addEventListener('error',   () => {
 audio.addEventListener('stalled', () => {
   if (!S.current || !S.playing || S.loading) return;
   if (S.hls) return; // ★ HLS.js가 자체 복구 처리 중 — 외부 재시작 금지
+  if (reconnectingCall) return; // ★ 통화 종료 재연결 진행 중 — 간섭 금지
   RLog.kill('audio stalled (native) — 재연결');
   scheduleRetry();
 });
@@ -2938,6 +2943,7 @@ audio.addEventListener('play', () => {
       reconnectingCall = true;
       S.wasPlaying = false; S.needReconnect = false;
       if (document.visibilityState !== 'hidden') {
+        S.userPaused = false; // ★ pause 핸들러 차단용 플래그 해제 후 재연결
         playStation(S.current);
         setTimeout(() => { reconnectingCall = false; }, 2000);
       } else {

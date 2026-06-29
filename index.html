@@ -1418,8 +1418,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.44';
+const APP_VERSION = 'v2.8.45';
 const CHANGELOG = [
+  { version: 'v2.8.45', date: '2026-06-30', changes: [
+    '[버그수정 치명] 통화 종료 후 재생 정지 — bufferStalledError 복구 중 HLS.js가 currentTime=0으로 리셋된 dead 상태를 scheduleRetry가 "오디오 실제 재생 중"으로 오판해 재연결 건너뜀. audio.currentTime > 0 조건 추가로 수정',
+    '[버그수정] BG_FAIL 감지 시 currentTime=0이면 reconnectingCall 중에도 scheduleRetry 강제 실행 — currentTime=0 리셋은 통화 종료 후 stall 복구 실패이므로 통화 재연결 흐름에 맡기지 않고 즉시 재시작',
+  ]},
   { version: 'v2.8.44', date: '2026-06-27', changes: [
     '[버그수정] 통화 종료 후 재생→즉시 종료 현상 — audio ended/stalled 핸들러에 reconnectingCall 가드 추가: 재연결 진행 중 ended·stalled가 scheduleRetry를 덮어쓰는 경쟁 조건 차단',
     '[버그수정] play 이벤트 핸들러 needReconnect 경로 — playStation 진입 전 userPaused=false 누락: userPaused=true인 채로 재연결해 scheduleRetry 타이머 콜백이 조기 return하던 문제 수정',
@@ -2256,11 +2260,16 @@ const RLog = (() => {
         } else {
           write('BG_FAIL', `백그라운드 재생 정지 감지 [${bgTick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
           // ★ audio.paused=false인데 currentTime이 멈춘 것 = 실제 stall/끊김
+          // ★ currentTime=0은 HLS.js bufferStall 복구 중 스트림 리셋 — reconnectingCall 중에도 강제 재연결
           if ((typeof S !== 'undefined' ? S : null)?.current) {
             const _S2 = typeof S !== 'undefined' ? S : null;
             if (_S2 && !_S2.userPaused && !_S2.sleepStopped) {
               _S2.playing = false;
-              if (typeof scheduleRetry === 'function') scheduleRetry();
+              if (typeof reconnectingCall !== 'undefined' && reconnectingCall && curTime > 0) {
+                // reconnectingCall 중이고 currentTime > 0 이면 재연결 로직에 맡김
+              } else {
+                if (typeof scheduleRetry === 'function') scheduleRetry();
+              }
             }
           }
           stopBgWatch();
@@ -2408,7 +2417,8 @@ function scheduleRetry() {
   updateNowPlaying(); updateActiveCard();
 
   // ★ 오디오가 실제로 재생 중이면 HLS 에러에도 audio 자체는 살아있을 수 있음 — 건드리지 않음
-  if (!audio.paused && audio.src && audio.src !== location.href) {
+  // ★ 단, currentTime=0은 HLS.js bufferStall 복구 중 스트림 리셋된 dead 상태 — 재연결 필요
+  if (!audio.paused && audio.src && audio.src !== location.href && audio.currentTime > 0) {
     RLog.info('재시도 건너뜀 — 오디오 실제 재생 중, src 유지');
     return;
   }

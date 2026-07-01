@@ -1412,16 +1412,22 @@ input[type=range]::-webkit-slider-thumb {
 
 /* SW registered via sw.js */
 
-/* ══ state.js ══ */
 'use strict';
 
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.47';
+const APP_VERSION = 'v2.8.48';
 const CHANGELOG = [
-  { version: 'v2.8.47', date: '2026-07-01', changes: [
-    '[버그수정 치명] 네트워크 전환 후 재생 복구 안 됨 — OS freeze 후 포그라운드 복귀 시 S.playing=true + audio.paused=true 조합 미처리: freeze 직전 OS pause로 audio가 멈췄으나 S.playing=true로 저장된 채 JS가 정지, 복귀 후 visibilitychange 재연결 분기 진입 실패 + connection.change 핸들러도 S.playing=true로 스킵. 복귀 시 해당 조합 감지 즉시 S.playing=false 보정 후 재연결 진입하도록 수정',
+  { version: 'v2.8.48', date: '2026-07-01', changes: [
+    '[버그수정] 네트워크 전환 후 중복 재연결 — connection.change 1초 후 체크에 S.loading 가드 추가',
+    '[버그수정] freeze 복귀 후 재연결 미실행 — S.playing=true + audio.paused=true 조합 감지 후 강제 재연결 진입',
+    '[버그수정] 통화 종료 후 재생 정지(표시만 재생) — tryReconnect 소프트 재연결 catch/fullReconnect 경로에서 userPaused=false 누락 수정, scheduleRetry 진입 시 reconnectingCall 강제 해제',
+    '[버그수정] 통화 종료 후 currentTime=0 dead 상태 오판 — scheduleRetry audio.currentTime > 0 조건 추가, BG_FAIL reconnectingCall 중 curTime=0 즉시 재연결',
+    '[버그수정] 통화 종료 후 재생→즉시 종료 — audio ended/stalled 핸들러 reconnectingCall 가드 추가, play 이벤트 핸들러 playStation 전 userPaused=false 해제',
+  ]},
+  { version: 'v2.8.48', date: '2026-07-01', changes: [
+    '[버그수정] 네트워크 전환 후 중복 재연결 — connection.change 핸들러 1초 후 체크에 S.loading 가드 없음: 포그라운드 복귀 재연결(loading=true)이 진행 중인데 _scheduleNetReconnect가 추가로 실행돼 2초 후 playStation이 중복 호출되는 경쟁 조건 차단',
   ]},
   { version: 'v2.8.44', date: '2026-06-27', changes: [
     '[버그수정] 통화 종료 후 재생→즉시 종료 현상 — audio ended/stalled 핸들러에 reconnectingCall 가드 추가: 재연결 진행 중 ended·stalled가 scheduleRetry를 덮어쓰는 경쟁 조건 차단',
@@ -1926,7 +1932,6 @@ const S = AppState;
 // 즐겨찾기 잠금 상태 (toggleFav TDZ 방지를 위해 상태 블록에 선언)
 let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 
-/* ══ stations.js ══ */
 /* ════════════════════════════════════════
    채널 데이터
 ════════════════════════════════════════ */
@@ -2028,7 +2033,6 @@ async function resolveStreamUrl(s, forceRefresh = false) {
   return forceRefresh ? bustUrl(s.stream) : s.stream;
 }
 
-/* ══ player.js ══ */
 /* ════════════════════════════════════════
    오디오 엘리먼트
 ════════════════════════════════════════ */
@@ -2259,11 +2263,13 @@ const RLog = (() => {
         } else {
           write('BG_FAIL', `백그라운드 재생 정지 감지 [${bgTick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
           // ★ audio.paused=false인데 currentTime이 멈춘 것 = 실제 stall/끊김
+          // ★ currentTime=0은 HLS.js bufferStall 복구 중 스트림 리셋 — reconnectingCall 중에도 강제 재연결
           if ((typeof S !== 'undefined' ? S : null)?.current) {
             const _S2 = typeof S !== 'undefined' ? S : null;
             if (_S2 && !_S2.userPaused && !_S2.sleepStopped) {
               _S2.playing = false;
-              if (typeof scheduleRetry === 'function') scheduleRetry();
+              const _callActive = (typeof reconnectingCall !== 'undefined') && reconnectingCall && curTime > 0;
+              if (!_callActive && typeof scheduleRetry === 'function') scheduleRetry();
             }
           }
           stopBgWatch();
@@ -2405,6 +2411,9 @@ function clearRetryTimer() {
 function scheduleRetry() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 
+  // playStation 실패 시 reconnectingCall 락 해제 — 이후 재연결 경로 차단 방지
+  if (reconnectingCall) reconnectingCall = false;
+
   S.playing = false;
   S.loading = false;
   if (S.current) S.wasPlaying = true; // ★ 항상 보존 — 포그라운드/백그라운드 모두
@@ -2459,8 +2468,6 @@ function scheduleRetry() {
     // → hidden이면 wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 위임
     if (document.visibilityState === 'hidden') {
       S.wasPlaying = true;
-      console.info('[BG] retry deferred — 백그라운드에서는 절대 playStation 호출 금지');
-      // ★ 백그라운드에서는 절대 playStation 호출 금지
       // 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리
       return;
     }
@@ -2821,11 +2828,8 @@ function _scheduleNetReconnect(reason) {
   _netReconnectTimer = setTimeout(() => {
     _netReconnectTimer = null;
     if (!S.current || !S.wasPlaying) return;
-    if (S.playing || S.loading) return; // 이미 재생 중이면 스킵
-    // ★ 백그라운드에서는 playStation 절대 금지
-    // hidden 중 playStation → HLS 재초기화 → currentTime=0 리셋 → levelLoadTimeOut
-    // → onFail → scheduleRetry defer → 포그라운드 복귀까지 재생 중단
-    // visibilitychange visible 핸들러가 wasPlaying=true 보고 재연결 처리
+    if (S.playing || S.loading) return;
+    // ★ 백그라운드에서는 playStation 금지 — 포그라운드 복귀 시 visibilitychange가 처리
     if (document.visibilityState === 'hidden') {
       RLog.net(`네트워크 전환 감지 — 백그라운드라 재연결 defer (${reason})`);
       return;
@@ -2862,14 +2866,12 @@ function _scheduleNetReconnect(reason) {
     if (!S.current) return;
     if (!S.wasPlaying && !S.playing) return;
 
-    // ★ HLS가 살아있으면 즉시 재연결 대신 1초 후 실제 상태 재확인
-    // LTE→WiFi 전환 직후 audio.paused=true인 순간이 있어 즉시 체크 시 오판 가능
-    // (버퍼 리필 대기 중인데 끊긴 것으로 잘못 판단 → 불필요한 강제 재연결)
-    // 1초 후에도 여전히 멈춰있으면 실제 끊김으로 판단
+    // ★ HLS 활성 시 즉시 재연결 대신 1초 후 재확인 (전환 직후 일시 paused 오판 방지)
     if (S.hls) {
       setTimeout(() => {
         if (!S.current || (!S.wasPlaying && !S.playing)) return;
         if (S.playing) return; // 이미 재생 복구됨
+        if (S.loading) return; // ★ 이미 재연결 로딩 중 — 중복 재연결 차단
         const audioStillOK = !audio.paused && !!audio.src && audio.src !== location.href;
         if (audioStillOK) {
           RLog.net(`네트워크 타입 전환 — 1초 후 재생 유지 확인, 재연결 스킵 (${newKey})`);
@@ -2900,11 +2902,9 @@ audio.addEventListener('pause', () => {
     RLog.info('pause 이벤트 무시 (audio.src 없음 — 재생 중 아님)');
     return;
   }
-  // ★ 백그라운드 OS pause는 무시
   // Android Chrome은 hidden 진입 시 OS가 audio.pause()를 직접 발화함
   // 앱이 이를 "재생 종료"로 처리하면 방송이 끊김
   if (document.visibilityState === 'hidden') {
-    console.info('[BG] OS pause ignored');
     RLog.info('pause 이벤트 무시 (백그라운드 — OS 발화)');
     if (S.playing || S.loading) S.wasPlaying = true;
     return;
@@ -3064,6 +3064,7 @@ let _startCallWatch = () => {};
           startWatchdog();
         }).catch(() => {
           // ★ play() 실패 → 전체 재연결로 폴백
+          S.userPaused = false; // ★ 누락 시 userPaused 영구 잠금 방지
           reconnectingCall = false;
           RLog.call('소프트 재연결 실패 → 전체 재연결 전환');
           _fullReconnect();
@@ -3098,8 +3099,7 @@ let _startCallWatch = () => {};
     }
 
     setTimeout(() => {
-      // ★ 백그라운드에서도 통화 종료 후 전체 재연결 허용
-      // scheduleRetry가 hidden 상태에서 wasPlaying=true를 보존하므로 루프 안전
+      S.userPaused = false; // 소프트 재연결 실패 경로에서 true 잔류 방지
       RLog.call('통화 종료 → 전체 재연결 실행' + (document.visibilityState === 'hidden' ? ' (백그라운드에서 재생 복구)' : ' (포그라운드)'));
       playStation(S.current, true);  // 긴 통화 후 URL 강제 갱신
       setTimeout(() => { reconnectingCall = false; }, 2000);
@@ -3175,7 +3175,6 @@ let _startCallWatch = () => {};
         S.wasPlaying = true;
       }
 
-      console.info('[BG] background enter');
       return;
     }
 
@@ -3184,11 +3183,11 @@ let _startCallWatch = () => {};
     // ─────────────────────────────
     RLog.stopBgWatch();
     RLog.infoS('앱 포그라운드 복귀');
-    console.info('[BG] foreground resume');
+    if (S.playing || S.loading) requestWakeLock(); // WakeLock 복원
 
-    // ★ freeze 후 복귀 시 S.playing=true로 저장됐으나 audio.paused=true인 케이스 감지
-    // OS freeze 직전 OS pause 이벤트가 오면 audio.paused=true인 채로 JS가 멈춤
-    // 복귀 후 S.playing=true라 아래 분기에 진입 못하고 재연결이 전혀 실행되지 않음
+    // ★ freeze 후 복귀 시 S.playing=true지만 audio.paused=true 케이스 감지
+    // OS freeze 직전 OS pause 이벤트 → audio.paused=true인 채로 JS 정지
+    // 복귀 후 S.playing=true라 아래 분기에 진입 못하고 재연결 미실행
     if (S.current && S.playing && audio.paused && !S.loading && !S.userPaused && !S.sleepStopped) {
       RLog.warn('포그라운드 복귀 — S.playing=true지만 audio.paused=true (freeze 잔류) → 강제 재연결');
       S.playing = false;
@@ -3434,17 +3433,8 @@ window.addEventListener('offline', () => {
     doReconnect('visibilitychange(voice)');
   });
 
-  // ③ pageshow — 백/포워드 캐시로 복귀 시 (bfcache)
-  window.addEventListener('pageshow', (e) => {
-    if (!e.persisted) return;
-    doReconnect('pageshow(bfcache)');
-  });
-
 })();
 
-/* ════════════════════════════════════════
-   볼륨
-════════════════════════════════════════ */
 function handleVolume(val) {
   const parsed = parseFloat(val);
   if (isNaN(parsed)) return;
@@ -3604,12 +3594,6 @@ function releaseWakeLock() {
   }
   stopAudioKeepAlive(); // ★ 재생 정지 시 keepalive도 함께 중단
 }
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && (S.playing || S.loading)) {
-    requestWakeLock();
-  }
-});
 
 /* ════════════════════════════════════════
    취침 타이머
@@ -3821,7 +3805,6 @@ function cancelSleepTimer() {
   closeSleepTimer();
 }
 
-/* ══ firebase.js ══ */
 /* ════════════════════════════════════════
    IndexedDB 백업
    localStorage 삭제 시에도 IndexedDB에서 복원
@@ -4401,7 +4384,6 @@ document.getElementById('nickInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmSync();
 });
 
-/* ══ ui.js ══ */
 /* 뷰포트 높이 동기화 — 활성 패널의 콘텐츠 높이를 swipeViewport에 반영해 빈 영역 터치/스크롤 방지 */
 function syncViewportHeight() {
   const vp = document.getElementById('swipeViewport');
@@ -4925,9 +4907,6 @@ function installApp() {
   });
 })();
 
-/* ════════════════════════════════════════
-   즐겨찾기 잠금
-════════════════════════════════════════ */
 function applyFavLock() {
   const btn = document.getElementById('favLockBtn');
   if (!btn) return;

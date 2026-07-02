@@ -1417,8 +1417,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.48';
+const APP_VERSION = 'v2.8.50';
 const CHANGELOG = [
+  { version: 'v2.8.50', date: '2026-07-02', changes: [
+    '[버그수정] 자동재생 차단 추가 경로 2곳 — initCallReconnect startWatch 폴링의 tryReconnect 진입 시 userPaused 체크 제거, audio emptied 핸들러 userPaused 차단 제거. 취침 타이머 이외 모든 자동 재연결 경로에서 userPaused 무력화 완료',
+  ]},
+  { version: 'v2.8.49', date: '2026-07-02', changes: [
+    '[개선] 어떤 상황에서도 자동 재연결 — userPaused가 통화/네트워크 전환/freeze 후 잔류해 재연결을 차단하던 5개 경로 수정: scheduleRetry 타이머 콜백, AudioContext statechange(통화 종료 감지), BG_FAIL 백그라운드 정지 감지, freeze 포그라운드 복귀, 포그라운드 복귀 visibilitychange. 각 경로 진입 시 userPaused=false 강제 해제 후 재연결',
+    '[버그수정] wifi→LTE 전환 시 scheduleRetry 진행 중 connection.change가 _scheduleNetReconnect 중복 호출 — retryTimer/loading 체크로 차단',
+    '[버그수정] online 이벤트 재연결 시 userPaused 잔류 해제 누락',
+  ]},
   { version: 'v2.8.48', date: '2026-07-01', changes: [
     '[버그수정] 네트워크 전환 후 중복 재연결 — connection.change 1초 후 체크에 S.loading 가드 추가',
     '[버그수정] freeze 복귀 후 재연결 미실행 — S.playing=true + audio.paused=true 조합 감지 후 강제 재연결 진입',
@@ -2266,8 +2274,9 @@ const RLog = (() => {
           // ★ currentTime=0은 HLS.js bufferStall 복구 중 스트림 리셋 — reconnectingCall 중에도 강제 재연결
           if ((typeof S !== 'undefined' ? S : null)?.current) {
             const _S2 = typeof S !== 'undefined' ? S : null;
-            if (_S2 && !_S2.userPaused && !_S2.sleepStopped) {
+            if (_S2 && !_S2.sleepStopped) {
               _S2.playing = false;
+              _S2.userPaused = false; // 잔류 해제 — 통화/인터럽트 후 잔류 방지
               const _callActive = (typeof reconnectingCall !== 'undefined') && reconnectingCall && curTime > 0;
               if (!_callActive && typeof scheduleRetry === 'function') scheduleRetry();
             }
@@ -2461,7 +2470,6 @@ function scheduleRetry() {
 
   S.retryTimer = setTimeout(() => {
     if (!S.current || !S.wasPlaying) return;
-    if (S.userPaused) return;
     // ★ 백그라운드 상태에서 타이머 콜백이 실행되면 playStation 금지
     // visibilitychange hidden 진입 시 clearRetryTimer()로 취소하지만,
     // 백그라운드 진입 후 새로 등록된 타이머(manifestLoadError → scheduleRetry)는 보호 안 됨
@@ -2787,7 +2795,7 @@ audio.addEventListener('stalled', () => {
 // Android은 화면 꺼짐 + WakeLock 없으면 오디오 세션을 OS가 종료시킬 수 있음
 // pause 이벤트는 기존 핸들러가 처리하지만, emptied(src 강제 초기화)는 별도 대응 필요
 audio.addEventListener('emptied', () => {
-  if (!S.current || !S.playing || S.userPaused) return;
+  if (!S.current || !S.playing) return;
   // ★ emptied는 HLS.js 내부 동작 중에도 발생 가능 (src 재설정 등)
   // → audio가 실제로 살아있으면 (paused=false, src 있음) OS 강제종료가 아님 — 건드리지 않음
   if (!audio.paused && audio.src && audio.src !== location.href) {
@@ -2883,8 +2891,8 @@ function _scheduleNetReconnect(reason) {
       return;
     }
 
-    // HLS가 없는 경우(이미 끊긴 상태) — 즉시 재연결
-    _scheduleNetReconnect('connection.change');
+    // HLS 없음(이미 끊긴 상태) — scheduleRetry가 처리 중이 아닐 때만 재연결
+    if (!S.retryTimer && !S.loading) _scheduleNetReconnect('connection.change');
   });
 })();
 
@@ -2991,10 +2999,9 @@ function ensureAudioCtxWatch() {
     // play 이벤트 중 suspended → resume 시도
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     // running 복귀 = 통화/음성입력 종료 → 재연결
-    // ★ userPaused 체크 — 사용자가 직접 정지한 상태에서 크롬 등 타 앱 실행 시
-    //    AudioContext suspended→running 전환이 발생해 의도치 않게 재생되는 버그 차단
-    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading && !S.userPaused) {
-      if (S.sleepStopped) return; // ★ 취침 타이머 종료 후 AudioContext 복귀로 재생 재시작 차단
+    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
+      if (S.sleepStopped) return; // 취침 타이머 종료 후 재시작 차단
+      S.userPaused = false; // 통화/외부 인터럽트 종료 — userPaused 잔류 해제
       RLog.call('AudioContext running 복귀 (통화 종료 감지)');
       // ★ 포그라운드: 즉시 재연결
       // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
@@ -3122,7 +3129,7 @@ let _startCallWatch = () => {};
       if (!ctx) return;
       // suspended면 resume 시도 → statechange → tryReconnect 흐름으로 이어짐
       if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
-      if (ctx.state === 'running' && !S.userPaused) { tryReconnect(); } // ★ userPaused 체크 추가
+      if (ctx.state === 'running') { S.userPaused = false; tryReconnect(); }
     }, 2000);
   }
 
@@ -3188,10 +3195,11 @@ let _startCallWatch = () => {};
     // ★ freeze 후 복귀 시 S.playing=true지만 audio.paused=true 케이스 감지
     // OS freeze 직전 OS pause 이벤트 → audio.paused=true인 채로 JS 정지
     // 복귀 후 S.playing=true라 아래 분기에 진입 못하고 재연결 미실행
-    if (S.current && S.playing && audio.paused && !S.loading && !S.userPaused && !S.sleepStopped) {
+    if (S.current && S.playing && audio.paused && !S.loading && !S.sleepStopped) {
       RLog.warn('포그라운드 복귀 — S.playing=true지만 audio.paused=true (freeze 잔류) → 강제 재연결');
       S.playing = false;
       S.wasPlaying = true;
+      S.userPaused = false; // 잔류 해제
     }
 
     if (S.current && S.wasPlaying && !S.playing && !S.loading) {
@@ -3211,6 +3219,7 @@ let _startCallWatch = () => {};
         // 실제 중단된 경우만 재연결
         if (!S.playing && !S.loading && S.current) {
           if (S.sleepStopped) { RLog.info('포그라운드 복귀 재연결 차단 (취침 타이머 종료)'); return; }
+          S.userPaused = false; // 잔류 해제 — 통화/인터럽트 후 userPaused 남아있을 수 있음
           RLog.reconnect('포그라운드 복귀 → 재연결');
           S._hiddenWasActive = false;
           // ★ isRetry=true — retryCount 리셋 방지 + wasPlaying 덮어쓰기 방지
@@ -3234,8 +3243,8 @@ let _startCallWatch = () => {};
   window.addEventListener('online', () => {
     if (!S.current) return;
     if (!S.wasPlaying && !S.playing) return;
+    S.userPaused = false; // 잔류 해제
     RLog.net('네트워크 온라인 복귀 감지');
-    // ★ _scheduleNetReconnect에 위임 — connection.change와 중복 실행 방지 (디바운스)
     _scheduleNetReconnect('online');
   });
 })();

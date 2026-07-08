@@ -1417,8 +1417,13 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.50';
+const APP_VERSION = 'v2.8.51';
 const CHANGELOG = [
+  { version: 'v2.8.51', date: '2026-07-08', changes: [
+    '[개선 핵심] 백그라운드 자동 재연결 — 지금까지 hidden 상태에서는 scheduleRetry·_scheduleNetReconnect가 항상 defer만 하고 포그라운드 복귀를 기다렸음(끊기면 앱을 직접 열어야 복구). 이미 완전히 끊긴 세션(hls 없음+src 없음, 또는 audio.paused=true)이면 살아있는 세션을 파괴할 위험이 없으므로 hidden 상태에서도 playStation 재시도 허용. 실제 재생 흔적이 남아있는 경우(audio.paused=false+src 있음)만 안전을 위해 계속 defer',
+    '[개선] audio.play() 자동재생 차단 시 — 백그라운드에서는 사용자가 탭할 수 없으므로 무한 탭 대기 대신 즉시 onFail→scheduleRetry로 전환',
+    '[참고] 5회 실패 후 60초 재시도는 기존부터 백그라운드 포함 무조건 실행 중이었음 — 1~5회차 구간의 백그라운드 defer만 이번에 제거해 일관성 확보',
+  ]},
   { version: 'v2.8.50', date: '2026-07-02', changes: [
     '[버그수정] 자동재생 차단 추가 경로 2곳 — initCallReconnect startWatch 폴링의 tryReconnect 진입 시 userPaused 체크 제거, audio emptied 핸들러 userPaused 차단 제거. 취침 타이머 이외 모든 자동 재연결 경로에서 userPaused 무력화 완료',
   ]},
@@ -2470,17 +2475,23 @@ function scheduleRetry() {
 
   S.retryTimer = setTimeout(() => {
     if (!S.current || !S.wasPlaying) return;
-    // ★ 백그라운드 상태에서 타이머 콜백이 실행되면 playStation 금지
-    // visibilitychange hidden 진입 시 clearRetryTimer()로 취소하지만,
-    // 백그라운드 진입 후 새로 등록된 타이머(manifestLoadError → scheduleRetry)는 보호 안 됨
-    // → hidden이면 wasPlaying 보존만 하고 포그라운드 복귀 시 재연결에 위임
     if (document.visibilityState === 'hidden') {
       S.wasPlaying = true;
-      // 포그라운드 복귀 시 visibilitychange 핸들러가 재연결 처리
+      // ★ 이미 완전히 죽은 세션(hls 없음 + src 없음)만 백그라운드에서 재시작 허용
+      // 살아있는 hls를 destroy하는 게 위험한 것이지, 죽은 걸 살리는 건 안전함
+      // Android는 hidden 중 오디오 세션이 이미 종료된 상태이므로
+      // 새 오디오 세션을 여는 것 자체는 destroy 문제와 무관
+      const isDead = !S.hls && (!audio.src || audio.src === location.href);
+      if (isDead) {
+        RLog.warn('백그라운드 재연결 시도 — 세션 완전 종료 상태 감지', `retry=${S.retryCount}`);
+        playStation(S.current, true, true);
+      } else {
+        // 살아있는 것처럼 보이면 건드리지 않고 포그라운드 복귀에 위임
+        RLog.info('백그라운드 재연결 defer — 세션 흔적 남아있음, 포그라운드 복귀 대기');
+      }
       return;
     }
-    // ★ forceRefresh=true — 재시도 시 만료된 캐시 URL 재사용 방지
-    // manifestLoadError 후 forceRefresh=false로 재시도하면 동일한 만료 URL로 재실패 반복
+    // forceRefresh=true — 재시도 시 만료된 캐시 URL 재사용 방지
     playStation(S.current, true, true);
   }, delay);
 }
@@ -2585,10 +2596,17 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         hls.startLoad(-1);
         audio.volume = S.volume;
         audio.play().then(onOK).catch(() => {
+          // ★ 백그라운드에서는 사용자가 탭할 수 없으므로 탭 대기 대신 즉시 재시도로 전환
+          if (document.visibilityState === 'hidden') {
+            RLog.warn('자동재생 차단 (백그라운드) — 탭 대기 대신 재시도 전환');
+            if (S.hls === hls) S.hls = null;
+            hls.destroy();
+            onFail(true);
+            return;
+          }
           RLog.warn('자동재생 차단 (브라우저 정책) — HLS 유지, 탭 대기');
           showToast('▶ 화면을 탭하면 재생됩니다');
-          // ★ HLS를 destroy하지 않고 대기
-          // 사용자가 탭하는 순간 audio.play()만 호출하면 바로 재생 가능
+          // HLS를 destroy하지 않고 대기 — 사용자가 탭하면 audio.play()만으로 재생 가능
           S.loading = false;
           updateNowPlaying(); updateActiveCard();
 
@@ -2837,22 +2855,26 @@ function _scheduleNetReconnect(reason) {
     _netReconnectTimer = null;
     if (!S.current || !S.wasPlaying) return;
     if (S.playing || S.loading) return;
-    // ★ 백그라운드에서는 playStation 금지 — 포그라운드 복귀 시 visibilitychange가 처리
     if (document.visibilityState === 'hidden') {
-      RLog.net(`네트워크 전환 감지 — 백그라운드라 재연결 defer (${reason})`);
-      return;
+      // ★ 실제 재생 흔적(audio.paused=false + src 있음)이 남아있으면 살아있는 세션을
+      // destroy하는 위험을 피하기 위해 defer. 이미 끊긴 상태(paused=true 또는 src 없음)면
+      // 파괴할 게 없으므로 안전하게 재연결 진행 — 포그라운드 복귀까지 무한정 끊긴 채 두지 않음
+      const audioAlive = !audio.paused && !!audio.src && audio.src !== location.href;
+      if (audioAlive) {
+        RLog.net(`네트워크 전환 감지 — 백그라운드+재생 흔적 있음, defer (${reason})`);
+        return;
+      }
+      RLog.net(`네트워크 전환 후 백그라운드 재연결 실행 — 세션 종료 상태 (${reason})`);
+    } else {
+      RLog.net(`네트워크 전환 후 재연결 실행 (${reason})`);
     }
-    RLog.net(`네트워크 전환 후 재연결 실행 (${reason})`);
     S.needReconnect = false;
     stopWatchdog();
     clearRetryTimer();
-    // ★ playStation 전 audio 명시적 정리
-    // offline 후 hls.stopLoad()만 했으면 audio.paused=false + src=blob 상태일 수 있음
-    // playStation 진입부 hidden 체크 통과 후 정리되지만 명시적으로 먼저 처리
     if (S.hls) { try { S.hls.destroy(); } catch(e) {} S.hls = null; }
     try { audio.pause(); audio.src = ''; } catch(e) {}
     playStation(S.current, true, true);
-  }, 2000); // ★ 2000ms — IP 재할당 대기 (1500ms에서 상향, 더 안정적)
+  }, 2000); // ★ 2000ms — IP 재할당 대기
 }
 
 (function initNetworkSwitchDetect() {

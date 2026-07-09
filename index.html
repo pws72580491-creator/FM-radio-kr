@@ -1417,8 +1417,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.51';
+const APP_VERSION = 'v2.8.52';
 const CHANGELOG = [
+  { version: 'v2.8.52', date: '2026-07-09', changes: [
+    '[버그수정] audio emptied 오판으로 인한 불필요한 재연결 — HLS 미디어 오류(bufferStalledError) 복구 시 hls.recoverMediaError()가 audio.src를 재설정하며 emptied를 자연 발생시키는데, 기존 emptied 핸들러가 audio.paused=true만 보고 즉시 OS 강제종료로 단정해 scheduleRetry를 호출. BG_PLAY 워치독은 동일 상황을 "정상 대기"로 판단하는 것과 모순됐음. emptied 핸들러에 2초 유예를 추가해 recoverMediaError의 자연 복구를 기다린 후에도 여전히 죽어있을 때만 재연결하도록 수정. 실사용 로그에서 재생 성공 0.4초 만에 재오류가 반복되던 현상의 원인',
+  ]},
   { version: 'v2.8.51', date: '2026-07-08', changes: [
     '[개선 핵심] 백그라운드 자동 재연결 — 지금까지 hidden 상태에서는 scheduleRetry·_scheduleNetReconnect가 항상 defer만 하고 포그라운드 복귀를 기다렸음(끊기면 앱을 직접 열어야 복구). 이미 완전히 끊긴 세션(hls 없음+src 없음, 또는 audio.paused=true)이면 살아있는 세션을 파괴할 위험이 없으므로 hidden 상태에서도 playStation 재시도 허용. 실제 재생 흔적이 남아있는 경우(audio.paused=false+src 있음)만 안전을 위해 계속 defer',
     '[개선] audio.play() 자동재생 차단 시 — 백그라운드에서는 사용자가 탭할 수 없으므로 무한 탭 대기 대신 즉시 onFail→scheduleRetry로 전환',
@@ -2812,18 +2815,33 @@ audio.addEventListener('stalled', () => {
 // ★ 화면 꺼짐 후 오디오 강제 종료 감지
 // Android은 화면 꺼짐 + WakeLock 없으면 오디오 세션을 OS가 종료시킬 수 있음
 // pause 이벤트는 기존 핸들러가 처리하지만, emptied(src 강제 초기화)는 별도 대응 필요
+let _emptiedGraceTimer = null;
 audio.addEventListener('emptied', () => {
   if (!S.current || !S.playing) return;
-  // ★ emptied는 HLS.js 내부 동작 중에도 발생 가능 (src 재설정 등)
-  // → audio가 실제로 살아있으면 (paused=false, src 있음) OS 강제종료가 아님 — 건드리지 않음
+  // ★ emptied는 HLS.js 내부 동작 중에도 발생 가능 (세그먼트 교체 등 정상 동작)
   if (!audio.paused && audio.src && audio.src !== location.href) {
     RLog.kill('audio emptied (src 재설정 감지 — audio는 재생 중, 무시)');
     return;
   }
-  // 실제로 src가 비워지고 재생이 멈춘 경우만 재연결
-  RLog.kill('audio emptied (재생 중 src 강제 초기화) — OS 강제 종료 의심, 재연결');
-  S.playing = false;
-  scheduleRetry();
+  // ★ audio.paused=true라도 즉시 죽음으로 단정하지 않음
+  // BG_PLAY 워치독은 동일 상황(audio.paused=true)을 "OS가 잠깐 멈춘 것"으로 보고
+  // 재연결 안 함 — emptied만 정반대로 즉시 재연결하면 두 로직이 충돌해
+  // 정상 세그먼트 교체 중 순간적 paused를 오판해 불필요한 재연결을 유발할 수 있음
+  // → 2초 유예 후에도 여전히 죽어있으면 그때 재연결
+  if (_emptiedGraceTimer) return; // 이미 유예 대기 중
+  RLog.kill('audio emptied (src 초기화 감지) — 2초 유예 후 재확인');
+  _emptiedGraceTimer = setTimeout(() => {
+    _emptiedGraceTimer = null;
+    if (!S.current) return;
+    const stillDead = audio.paused && (!audio.src || audio.src === location.href || audio.readyState === 0);
+    if (stillDead) {
+      RLog.kill('audio emptied — 2초 후에도 세션 종료 상태, 재연결');
+      S.playing = false;
+      scheduleRetry();
+    } else {
+      RLog.kill('audio emptied — 2초 후 자연 회복 확인, 재연결 생략');
+    }
+  }, 2000);
 });
 
 /* ════════════════════════════════════════

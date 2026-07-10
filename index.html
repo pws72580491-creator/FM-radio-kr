@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.56</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.58</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,15 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.56';
+const APP_VERSION = 'v2.8.58';
 const CHANGELOG = [
+  { version: 'v2.8.58', date: '2026-07-11', changes: [
+    '[버그수정 치명] 통화 종료 후 정상 재생되다가 몇 초~몇 분 뒤 다시 무음으로 멈추던 문제 — 원인은 tryReconnect()의 소프트 재연결(HLS 인스턴스 재사용, play()만 재호출) 성공 경로가 공용 성공 처리 함수 onOK()를 거치지 않고 상태만 직접 갱신하다 보니, onOK()에만 있던 "백그라운드면 RLog.startBgWatch() 재시작" 호출이 누락됨. v2.8.56에서 추가한 백그라운드 감시(pausedStreak 안전망)는 통화 감지 시 stopBgWatch()로 이미 꺼진 상태였는데, 소프트 재연결 성공 후에도 다시 켜지지 않아 그 뒤에 이어진 두 번째 끊김은 아무도 감시하지 못한 채 방치되었음 — 실측 로그(radio-log-2026-07-11)에서 소프트 재연결 성공 후 BG_PLAY 로그가 완전히 끊기고, 3분 39초 뒤 앱을 열자마자 새 HLS 오류가 확인되며 발견. 소프트 재연결 성공 시에도 hidden 상태면 startBgWatch()를 재시작하도록 수정',
+  ]},
+  { version: 'v2.8.57', date: '2026-07-10', changes: [
+    '[분석] 사용자 제보 로그 실측 분석 — 통화 후 무음 지속 사례를 재구성한 결과, 이번 건은 v2.8.56에서 다룬 "AudioContext는 running으로 유지된 채 S.playing만 잔류"하는 경로가 아니라, HLS 스트림 자체가 fragLoadError/manifestLoadError로 끊긴 뒤 기존 scheduleRetry 백그라운드 재시도(5초→10초→20초 간격)가 정상 작동하며 재시도하던 중이었음. 3회차(20초 대기) 도중 사용자가 참지 못하고 앱을 수동 재실행 — 그 시점은 예정된 4회차 재시도보다 약 10.5초 앞서 있었고, 수동 재연결이 즉시 성공한 것으로 보아 통화는 이미 그 전에 끝나있었던 것으로 추정됨. 즉 자동 복구가 "안 되는" 게 아니라 무음 구간(최대 20~30초)이 체감상 너무 길어 재실행 없이는 기다리기 어려웠던 것',
+    '[개선] 백그라운드 재시도 상한 지연시간을 hidden 여부에 따라 다시 분리 (v2.8.55에서 항상 동일값이라 죽은 코드로 보고 제거했던 부분을 실측 근거로 재도입, 이번엔 실제로 다른 값) — 백그라운드는 화면이 꺼져 카운트다운이 보이지 않으므로 상한을 30초→12초로 낮춰 무음 구간 단축 (5초→10초→12초→12초→12초, 5회 누적 51초 / 기존 95초 대비 대폭 단축). 포그라운드는 재연결 카운트다운 UI가 보이므로 기존 상한(30초) 유지',
+  ]},
   { version: 'v2.8.56', date: '2026-07-10', changes: [
     '[버그수정 치명] 통화 종료 후 알림에는 "재생 중"으로 표시되지만 실제로는 무음 — 앱을 재실행해야만 복구되던 문제. 원인: 백그라운드(hidden) 상태에서는 pause 핸들러 3곳 모두 "OS의 일반적인 백그라운드 pause와 통화 중단을 구분할 수 없다"는 이유로 S.playing 값을 의도적으로 건드리지 않는데, 통화로 실제 audio가 멈춘 경우에도 이 정책이 그대로 적용돼 S.playing=true로 남음. 통화 종료 감지의 핵심 트리거인 AudioContext statechange(running 복귀) 핸들러가 "!S.playing일 때만 재연결"하도록 조건이 걸려있어, 이 잔류된 S.playing=true가 통화 종료 후에도 재연결 자체를 막고 있었음 — 앱을 열었을 때만 작동하는 포그라운드 전용 "freeze 잔류" 보정 로직과 동일한 클래스의 문제였으나 백그라운드 경로에는 대응 코드가 없었음. AudioContext statechange 핸들러에서 audio.paused를 실측해 S.playing=true인데 실제로는 정지 상태면 즉시 정정 후 재연결하도록 수정',
     '[개선] 백그라운드 재생 감시(RLog.startBgWatch)에 2차 안전망 추가 — 기기별 AudioContext statechange 미발화 등으로 위 수정이 놓치는 경우를 대비해, audio.paused 상태가 4틱(약 12초) 이상 지속되면 통화 등 실제 중단으로 간주해 S.playing 잔류를 정정하고 안전한 재연결(소프트 재연결 우선)로 자동 전환',
@@ -2484,8 +2491,13 @@ function scheduleRetry() {
   // ★ 백그라운드에서는 더 짧은 간격으로 재시도 (사용자가 기다리지 않으므로)
   const isHidden = document.visibilityState === 'hidden';
   const baseDelay = isHidden ? 5000 : 2000;
-  // ★ 정리 v2.8.55 — 상한값이 hidden 여부와 무관하게 항상 30000이라 의미 없던 삼항연산자 제거
-  const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), 30000);
+  // ★ 개선 v2.8.57 — 백그라운드 재시도 상한을 hidden 여부로 재차등화 (v2.8.55에서
+  // 죽은 코드로 판단해 제거했던 삼항연산자를 실측 로그 근거로 다시 분리, 이번엔 실제로 다른 값)
+  // 실제 통화 로그 분석: retry 3회차(20초 대기) 도중 사용자가 참지 못하고 수동으로
+  // 앱을 재실행 — 그 시점(10.5초 후 예정된 4회차보다 앞섬)에 통화는 이미 종료되어 있었음.
+  // 백그라운드는 화면이 꺼져있어 카운트다운이 안 보이므로 상한을 낮춰 무음 구간을 줄임
+  // (5초→10초→12초→12초→12초, 5회 누적 51초 / 기존 5+10+20+30+30=95초 대비 대폭 단축)
+  const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), isHidden ? 12000 : 30000);
   RLog.warn(`재연결 대기 ${S.retryCount}회차${isHidden ? ' (백그라운드)' : ''}`, `${Math.round(delay/1000)}초 후 재시도`);
   if (!isHidden) showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
 
@@ -3163,6 +3175,12 @@ let _startCallWatch = () => {};
           RLog.call('소프트 재연결 성공 ✅');
           updateNowPlaying(); updateActiveCard(); updateMediaSession();
           startWatchdog();
+          // ★ 버그수정 v2.8.58 — 백그라운드 감시(startBgWatch) 재시작 누락
+          // 이 소프트 재연결 경로는 onOK()를 거치지 않아 startBgWatch()가 다시 켜지지 않았음.
+          // BG watch는 통화로 인한 재연결 이후 stopBgWatch()로 이미 꺼진 상태라, 이 시점에
+          // 다시 켜주지 않으면 그 다음 끊김(2차 통화·스트림 재실패 등)은 아무도 감시하지 못해
+          // 사용자가 앱을 열 때까지 무음이 지속됨 — 통화 후 "몇 초 뒤 다시 끊김" 재현의 원인
+          if (document.visibilityState === 'hidden') RLog.startBgWatch();
         }).catch(() => {
           // ★ play() 실패 → 전체 재연결로 폴백
           S.userPaused = false; // ★ 누락 시 userPaused 영구 잠금 방지

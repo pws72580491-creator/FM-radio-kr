@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.42</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.55</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,21 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.52';
+const APP_VERSION = 'v2.8.55';
 const CHANGELOG = [
+  { version: 'v2.8.55', date: '2026-07-10', changes: [
+    '[버그수정 핵심] FAB 버튼(＋ 방송추가, 📋 로그) 탭 반응 없음 — makeDraggable() touchend 핸들러가 e 파라미터 없이 선언돼 있는데 내부에서 e.preventDefault()를 호출해 탭할 때마다 ReferenceError 발생, onTap()이 실행되지 못함. v2.8.36에서 의도한 "touchend 즉시 반응"이 무력화되고 브라우저의 지연된 합성 click에만 의존해 겨우 동작하던 상태 — e 파라미터 추가로 수정',
+    '[보안] 로그 뷰어(renderLogUI) XSS 취약점 수정 — 로그 항목의 station/msg/detail 필드가 esc() 없이 innerHTML에 직접 삽입됨. station은 커스텀 방송국 이름(S.current.name)에서 오는데 "방송 추가" 입력에 문자 제한이 없어, 악성 이름의 커스텀 채널을 추가·재생 후 로그를 열면 스크립트가 실행될 수 있었음. 계정 동기화로 다른 기기의 커스텀 채널명이 유입되는 경로까지 고려해 모든 사용자 유래 로그 필드에 esc() 적용',
+    '[코드정리] resolveStreamUrl()의 KBS/MBC/SBS 전용 분기(streamApiType) 제거 — STATIONS 배열 어디에도 streamApiType이 설정된 항목이 없어 도달 불가능한 죽은 코드였음 (해당 방송사는 현재 bsod.kr 프록시로 통합 운영 중)',
+    '[코드정리] scheduleRetry() 재시도 지연시간 계산에서 의미 없는 삼항연산자(isHidden ? 30000 : 30000) 제거 — 상한값 30000으로 단순화',
+    '[코드정리] 버전 뱃지 초기 HTML 텍스트(v2.8.42)가 실제 APP_VERSION과 어긋나 있던 것을 동기화 — JS가 즉시 덮어써 사용자에게 노출된 적은 없으나 유지보수 시 혼동 소지가 있었음',
+  ]},
+  { version: 'v2.8.54', date: '2026-07-10', changes: [
+    '[버그수정] 재연결 대기 중 알림창(MediaSession) 자체가 사라지는 현상 — updateMediaSession()이 재시도 타이머 대기 중(S.playing=false, S.loading=false)에 playbackState를 \'paused\'로 세팅해왔음. Android가 이를 "재생 완전 중단"으로 판단해 잠금화면/알림 컨트롤을 강제 회수하는 것으로 추정. S.wasPlaying=true(재연결 예정)이고 S.userPaused가 아닐 때는 playbackState를 \'playing\'으로 유지하도록 수정 — 실제 정지(pause/stop 버튼)는 해당 핸들러에서 명시적으로 paused 세팅하므로 충돌 없음. v2.8.53의 manifestLoadError 복구 시간 단축과 함께 적용 시 알림 소실 빈도가 함께 줄어들 것으로 예상',
+  ]},
+  { version: 'v2.8.53', date: '2026-07-10', changes: [
+    '[버그수정 핵심] wifi→LTE 전환 시 manifestLoadError 연속 재발로 복구 지연 — HLS.js manifest 로딩 재시도 강화(1회→4회, 타임아웃 10s→15s). manifestLoadError 발생 시 인스턴스를 바로 파괴하지 않고 1.5초 후(IP 재할당 대기) 재연결 1회 선시도 — 세션당 1회로 제한(S._manifestPreRetried 플래그, 재생 성공/채널 재선택 시 리셋)해 무한 루프 방지. 실사용 로그에서 09:25:11 끊김→09:29:44 복구까지 약 4분 33초(대부분 freeze로 소비, 실 재시도는 3회) 걸리던 케이스의 원인 개선',
+  ]},
   { version: 'v2.8.52', date: '2026-07-09', changes: [
     '[버그수정] audio emptied 오판으로 인한 불필요한 재연결 — HLS 미디어 오류(bufferStalledError) 복구 시 hls.recoverMediaError()가 audio.src를 재설정하며 emptied를 자연 발생시키는데, 기존 emptied 핸들러가 audio.paused=true만 보고 즉시 OS 강제종료로 단정해 scheduleRetry를 호출. BG_PLAY 워치독은 동일 상황을 "정상 대기"로 판단하는 것과 모순됐음. emptied 핸들러에 2초 유예를 추가해 recoverMediaError의 자연 복구를 기다린 후에도 여전히 죽어있을 때만 재연결하도록 수정. 실사용 로그에서 재생 성공 0.4초 만에 재오류가 반복되던 현상의 원인',
   ]},
@@ -2003,41 +2016,10 @@ async function resolveStreamUrl(s, forceRefresh = false) {
   try {
     const res  = await fetch(s.streamApi, { cache: 'no-store' });
 
-    // KBS — JSON 응답에서 service_url 추출
-    if (s.streamApiType === 'kbs') {
-      const json = await res.json();
-      const url  = json?.channel_item?.[0]?.service_url || json?.channel?.item?.[0]?.service_url;
-      if (url) {
-        _streamCache[s.id] = { url, ts: Date.now() };
-        return url;
-      }
-      console.warn('KBS API: service_url을 찾지 못했습니다.');
-      return s.stream;
-    }
-
-    // MBC — 응답 텍스트가 곧 m3u8 URL
-    if (s.streamApiType === 'mbc') {
-      const url = (await res.text()).trim();
-      if (url && url.includes('.m3u8')) {
-        _streamCache[s.id] = { url, ts: Date.now() };
-        return url;
-      }
-      console.warn('MBC API: m3u8 URL을 찾지 못했습니다.');
-      return s.stream;
-    }
-
-    // SBS — 응답 텍스트가 곧 m3u8 URL
-    if (s.streamApiType === 'sbs') {
-      const url = (await res.text()).trim();
-      if (url && url.includes('.m3u8')) {
-        _streamCache[s.id] = { url, ts: Date.now() };
-        return url;
-      }
-      console.warn('SBS API: m3u8 URL을 찾지 못했습니다.');
-      return s.stream;
-    }
-
-    // 극동방송(기존) — 텍스트에서 m3u8 URL 정규식 추출
+    // ★ 정리 v2.8.55 — KBS/MBC/SBS 전용 분기(streamApiType) 제거
+    // STATIONS 배열의 어떤 항목도 streamApiType을 설정하지 않아 도달 불가능한 죽은 코드였음
+    // (해당 방송사들은 현재 bsod.kr 프록시(P)를 직접 사용 중 — 상단 STATIONS 참고)
+    // 극동방송 — 텍스트에서 m3u8 URL 정규식 추출
     const text = await res.text();
     const m    = text.match(/https?:\/\/[^\s"'<>]+\.m3u8[^\s"'<>]*/);
     if (m) {
@@ -2355,15 +2337,20 @@ function renderLogUI() {
     body.innerHTML = '<div class="log-empty">기록된 로그가 없습니다.</div>';
     return;
   }
+  // ★ 버그수정 v2.8.55 — station/msg/detail은 커스텀 방송국 이름 등 사용자 입력을 포함할 수 있음
+  // esc() 없이 innerHTML에 삽입되어 XSS로 이어질 수 있었음 (계정 동기화로 다른 기기의
+  // 커스텀 채널명이 유입되는 경로까지 포함). 모든 사용자 유래 필드에 esc() 적용
   body.innerHTML = logs.map(e => {
+    const station = esc(e.station);
+    const msg     = esc(e.msg);
     // 스냅샷 detail이 있으면 ║ 기준으로 분리해서 두 줄로 표시
     let msgHtml = '';
     if (e.detail && e.detail.includes(' ║ ')) {
-      const [userDetail, snap] = e.detail.split(' ║ ');
-      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${userDetail ? ' — ' + userDetail : ''}</span>`
+      const [userDetail, snap] = e.detail.split(' ║ ').map(esc);
+      msgHtml = `<span class="log-msg"> [${station}] ${msg}${userDetail ? ' — ' + userDetail : ''}</span>`
               + `<div class="log-snap">${snap}</div>`;
     } else {
-      msgHtml = `<span class="log-msg"> [${e.station}] ${e.msg}${e.detail ? ' — ' + e.detail : ''}</span>`;
+      msgHtml = `<span class="log-msg"> [${station}] ${msg}${e.detail ? ' — ' + esc(e.detail) : ''}</span>`;
     }
     return `<div class="log-entry ${e.level}">
       <span class="log-time">${e.date} ${e.time}</span>
@@ -2472,7 +2459,8 @@ function scheduleRetry() {
   // ★ 백그라운드에서는 더 짧은 간격으로 재시도 (사용자가 기다리지 않으므로)
   const isHidden = document.visibilityState === 'hidden';
   const baseDelay = isHidden ? 5000 : 2000;
-  const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), isHidden ? 30000 : 30000);
+  // ★ 정리 v2.8.55 — 상한값이 hidden 여부와 무관하게 항상 30000이라 의미 없던 삼항연산자 제거
+  const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), 30000);
   RLog.warn(`재연결 대기 ${S.retryCount}회차${isHidden ? ' (백그라운드)' : ''}`, `${Math.round(delay/1000)}초 후 재시도`);
   if (!isHidden) showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
 
@@ -2522,7 +2510,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
 
   showError(null); clearRetryTimer(); stopWatchdog();
   // ★ 수동 채널 선택 시에만 retryCount 리셋 — scheduleRetry 재시도 경로에서는 유지 (지수 백오프 작동)
-  if (!isRetry) S.retryCount = 0;
+  if (!isRetry) { S.retryCount = 0; S._manifestPreRetried = false; }
   S.loading = true; S.playing = false; S.current = s;
   localStorage.setItem('radio_last', s.id);
   updateNowPlaying(); updateActiveCard();
@@ -2548,6 +2536,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
     function onOK() {
       if (thisCall !== S.callId) return;
       S.playing    = true; S.loading = false; S.retryCount = 0;
+      S._manifestPreRetried = false; // ★ 재생 성공 시 리셋 — 다음 끊김에서 선시도 다시 사용 가능
       S.userPaused = false; // ★ pause 이벤트가 발생하지 않은 경우(이미 정지 상태에서 재생)에도 반드시 초기화
       S.wasPlaying = true;  // ★ 재생 성공 즉시 wasPlaying 보존 — 직후 화면 꺼짐/freeze 시 재연결 보장
       S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
@@ -2591,6 +2580,13 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         liveDurationInfinity:        true, // 라이브 스트림 duration을 Infinity로 유지
         startPosition:               -1,   // 항상 라이브 엣지에서 시작 (-1 = 최신 위치)
         enableWorker:                true,
+        // ★ manifest 로딩 재시도 강화 — 네트워크 전환(wifi↔LTE) 직후 IP 재할당/DNS
+        // 재해석이 끝나기 전 순간적으로 manifest 요청이 실패하는 경우를 HLS.js
+        // 내부에서 흡수. 기본값(재시도 1회, 1초 간격)은 전환 직후 순간 실패엔 부족
+        manifestLoadingTimeOut:      15000, // 10000 → 15000
+        manifestLoadingMaxRetry:     4,     // 1 → 4
+        manifestLoadingRetryDelay:   1000,
+        manifestLoadingMaxRetryTimeout: 8000,
       });
       S.hls = hls;
       hls.loadSource(url); hls.attachMedia(audio);
@@ -2654,6 +2650,27 @@ function playStation(s, forceRefresh = false, isRetry = false) {
                 S.wasPlaying = true;
                 playStation(S.current, true, true); // forceRefresh=true
               }
+              return;
+            }
+
+            // ★ manifestLoadError — manifest 요청 자체가 실패(네트워크 전환 직후 흔함)
+            //    HLS 인스턴스를 바로 죽이지 않고 1.5초 후 forceRefresh 재연결 1회 먼저 시도
+            //    wifi↔LTE 전환 시 IP 재할당/DNS 재해석이 아직 끝나기 전 요청이었을 가능성이 높음
+            //    S._manifestPreRetried 플래그로 세션당 정확히 1번만 선시도 — 재귀 호출로
+            //    새 hls 인스턴스가 생겨도 netErrCount/S.retryCount는 재사용될 수 있어
+            //    별도 플래그 없이는 무한 선시도 루프에 빠질 수 있음
+            if (d.details === 'manifestLoadError' && !S._manifestPreRetried) {
+              S._manifestPreRetried = true;
+              RLog.warn('manifestLoadError — 네트워크 전환 직후 가능성, 1.5초 후 재연결 1회 선시도');
+              if (S.hls === hls) S.hls = null;
+              hls.destroy();
+              netErrTimer = setTimeout(() => {
+                netErrTimer = null;
+                if (thisCall === S.callId && S.current) {
+                  S.wasPlaying = true;
+                  playStation(S.current, true, true);
+                }
+              }, 1500);
               return;
             }
 
@@ -3538,8 +3555,12 @@ function updateMediaSession() {
     try { navigator.mediaSession.setActionHandler(a, null); } catch(e) {}
   });
 
+  // ★ 재연결 대기 중(scheduleRetry 타이머 실행 중)엔 playbackState를 'paused'로
+  // 내리지 않고 'playing' 유지 — Android가 MediaSession을 "재생 중단됨"으로 판단해
+  // 알림 자체를 강제 회수(잠금화면/알림창에서 컨트롤이 완전히 사라짐)하는 것을 방지
+  // 실제 정지는 pause/stop 핸들러에서 명시적으로 'paused'를 세팅하므로 충돌 없음
   navigator.mediaSession.playbackState =
-    (S.playing || S.loading) ? 'playing' : 'paused';
+    (S.playing || S.loading || (S.wasPlaying && !S.userPaused)) ? 'playing' : 'paused';
 }
 
 /* ════════════════════════════════════════
@@ -4814,7 +4835,7 @@ function makeDraggable(el, storageKey, onTap) {
     }
   }, { passive: false });
 
-  el.addEventListener('touchend', () => {
+  el.addEventListener('touchend', (e) => {
     el.classList.remove('dragging');
     // ★ will-change 즉시 해제 — 드래그 종료 후 GPU 레이어 유지 비용 제거
     el.style.willChange = '';
@@ -4826,7 +4847,9 @@ function makeDraggable(el, storageKey, onTap) {
     }
     wasDragged = false;
     if (Date.now() - _lastDragTime >= 300) {
-      e.preventDefault?.();
+      // ★ 버그수정 v2.8.55 — e 파라미터 누락으로 ReferenceError 발생, onTap() 미실행
+      // 탭할 때마다 여기서 예외가 터져 브라우저의 지연된 합성 click에만 의존해 동작했음
+      e.preventDefault();
       onTap();
     }
   });

@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.55</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.56</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.55';
+const APP_VERSION = 'v2.8.56';
 const CHANGELOG = [
+  { version: 'v2.8.56', date: '2026-07-10', changes: [
+    '[버그수정 치명] 통화 종료 후 알림에는 "재생 중"으로 표시되지만 실제로는 무음 — 앱을 재실행해야만 복구되던 문제. 원인: 백그라운드(hidden) 상태에서는 pause 핸들러 3곳 모두 "OS의 일반적인 백그라운드 pause와 통화 중단을 구분할 수 없다"는 이유로 S.playing 값을 의도적으로 건드리지 않는데, 통화로 실제 audio가 멈춘 경우에도 이 정책이 그대로 적용돼 S.playing=true로 남음. 통화 종료 감지의 핵심 트리거인 AudioContext statechange(running 복귀) 핸들러가 "!S.playing일 때만 재연결"하도록 조건이 걸려있어, 이 잔류된 S.playing=true가 통화 종료 후에도 재연결 자체를 막고 있었음 — 앱을 열었을 때만 작동하는 포그라운드 전용 "freeze 잔류" 보정 로직과 동일한 클래스의 문제였으나 백그라운드 경로에는 대응 코드가 없었음. AudioContext statechange 핸들러에서 audio.paused를 실측해 S.playing=true인데 실제로는 정지 상태면 즉시 정정 후 재연결하도록 수정',
+    '[개선] 백그라운드 재생 감시(RLog.startBgWatch)에 2차 안전망 추가 — 기기별 AudioContext statechange 미발화 등으로 위 수정이 놓치는 경우를 대비해, audio.paused 상태가 4틱(약 12초) 이상 지속되면 통화 등 실제 중단으로 간주해 S.playing 잔류를 정정하고 안전한 재연결(소프트 재연결 우선)로 자동 전환',
+  ]},
   { version: 'v2.8.55', date: '2026-07-10', changes: [
     '[버그수정 핵심] FAB 버튼(＋ 방송추가, 📋 로그) 탭 반응 없음 — makeDraggable() touchend 핸들러가 e 파라미터 없이 선언돼 있는데 내부에서 e.preventDefault()를 호출해 탭할 때마다 ReferenceError 발생, onTap()이 실행되지 못함. v2.8.36에서 의도한 "touchend 즉시 반응"이 무력화되고 브라우저의 지연된 합성 click에만 의존해 겨우 동작하던 상태 — e 파라미터 추가로 수정',
     '[보안] 로그 뷰어(renderLogUI) XSS 취약점 수정 — 로그 항목의 station/msg/detail 필드가 esc() 없이 innerHTML에 직접 삽입됨. station은 커스텀 방송국 이름(S.current.name)에서 오는데 "방송 추가" 입력에 문자 제한이 없어, 악성 이름의 커스텀 채널을 추가·재생 후 로그를 열면 스크립트가 실행될 수 있었음. 계정 동기화로 다른 기기의 커스텀 채널명이 유입되는 경로까지 고려해 모든 사용자 유래 로그 필드에 esc() 적용',
@@ -2233,6 +2237,7 @@ const RLog = (() => {
   function startBgWatch() {
     stopBgWatch();
     let bgTick = 0;
+    let pausedStreak = 0; // ★ v2.8.56 — audio.paused 연속 틱 카운트 (장기 지속 감지용)
     // ★ window.audio → 직접 스코프 참조 (const audio는 window에 없으므로 window.audio는 undefined)
     // ★ lastTime을 호출 시점 currentTime으로 초기화 — tick=1 skip 조건 불필요
     // 이전에 tick===1 skip이 있었던 이유: lastTime=-1 초기화 시 첫 tick이 항상 "진행 중"으로
@@ -2250,6 +2255,7 @@ const RLog = (() => {
       const progressing = curTime !== lastTime; // currentTime이 변하면 실제 재생 중
       lastTime = curTime;
       if (progressing) {
+        pausedStreak = 0;
         write('BG_PLAY', `백그라운드 실제 재생 확인 [${bgTick}]`, `currentTime=${curTime.toFixed(2)}`);
       } else {
         // ★ Android Chrome은 백그라운드 진입 시 OS가 audio.pause()를 발화하지만
@@ -2257,8 +2263,27 @@ const RLog = (() => {
         // currentTime이 멈추므로 BG_FAIL로 오판 → scheduleRetry → 불필요한 재연결 발생.
         // audio.paused=true(OS pause)인 경우는 BG_FAIL 처리를 건너뜀.
         if (_a.paused) {
-          write('BG_PLAY', `백그라운드 OS pause 중 — 스트림 유지 확인 [${bgTick}]`, `currentTime=${curTime.toFixed(2)}`);
+          pausedStreak++;
+          // ★ 버그수정 v2.8.56 — 통화 등으로 audio가 정지된 채 AudioContext statechange가
+          // (기기/OS 특성상) 누락되면 이 "정상 대기"만 무한 반복하며 아무 조치도 없었음.
+          // 4틱(약 12초) 이상 pause가 지속되면 일시적 OS courtesy pause로 보기 어려우므로
+          // S.playing 잔류를 정정하고 안전한 재연결 경로(soft reconnect 우선)로 위임한다.
+          if (pausedStreak >= 4) {
+            write('BG_FAIL', `백그라운드 OS pause 장기 지속(${pausedStreak}틱) — 잔류 상태 정정 및 재연결 위임`, `currentTime=${curTime.toFixed(2)}`);
+            if (_S.current && !_S.sleepStopped) {
+              _S.playing = false;
+              _S.userPaused = false;
+              const canTryReconnect = typeof reconnectingCall !== 'undefined' && !reconnectingCall
+                && typeof _tryReconnectFromCtx === 'function';
+              if (canTryReconnect) _tryReconnectFromCtx();
+              else if (typeof scheduleRetry === 'function') scheduleRetry();
+            }
+            stopBgWatch();
+          } else {
+            write('BG_PLAY', `백그라운드 OS pause 중 — 스트림 유지 확인 [${bgTick}] (${pausedStreak}/4)`, `currentTime=${curTime.toFixed(2)}`);
+          }
         } else {
+          pausedStreak = 0;
           write('BG_FAIL', `백그라운드 재생 정지 감지 [${bgTick}]`, _snap(`currentTime=${curTime.toFixed(2)}`));
           // ★ audio.paused=false인데 currentTime이 멈춘 것 = 실제 stall/끊김
           // ★ currentTime=0은 HLS.js bufferStall 복구 중 스트림 리셋 — reconnectingCall 중에도 강제 재연결
@@ -3055,19 +3080,31 @@ function ensureAudioCtxWatch() {
     if (ctx !== _sharedAudioCtx || ctx.state === 'closed') return;
     // play 이벤트 중 suspended → resume 시도
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
-    // running 복귀 = 통화/음성입력 종료 → 재연결
-    if (ctx.state === 'running' && S.wasPlaying && S.current && !S.playing && !S.loading) {
-      if (S.sleepStopped) return; // 취침 타이머 종료 후 재시작 차단
-      S.userPaused = false; // 통화/외부 인터럽트 종료 — userPaused 잔류 해제
-      RLog.call('AudioContext running 복귀 (통화 종료 감지)');
-      // ★ 포그라운드: 즉시 재연결
-      // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
-      if (document.visibilityState !== 'hidden') {
-        S.wasPlaying = false; S.needReconnect = false;
-        playStation(S.current);
-      } else {
-        _tryReconnectFromCtx(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
-      }
+    if (ctx.state !== 'running') return;
+    if (!S.current || S.loading || !S.wasPlaying || S.sleepStopped) return;
+
+    // ★ 버그수정 v2.8.56 — 통화 중 hidden(백그라운드) 상태였다면 pause 핸들러 3곳 모두
+    // "hidden이면 S.playing을 건드리지 않는다" 정책 때문에 통화로 audio가 실제로 멈춰도
+    // S.playing=true로 남아있음. 기존에는 !S.playing 조건 때문에 통화가 끝나 ctx가
+    // 다시 running이 돼도 이 잔류 상태를 그대로 통과시켜 재연결이 전혀 발생하지 않았음
+    // (알림창엔 재생 중으로 표시되지만 실제로는 무음 — 앱을 재실행해야만 복구되던 원인).
+    // audio.paused를 실측해 S.playing 값 자체를 신뢰하지 않고 정정한다.
+    const staleFlag = S.playing && audio.paused;
+    if (S.playing && !staleFlag) return; // 실제로 재생 중이면 개입하지 않음
+    if (staleFlag) {
+      RLog.warn('AudioContext running 복귀 — S.playing=true인데 audio.paused=true (통화 중 잔류 상태) → 정정 후 재연결');
+      S.playing = false;
+    }
+
+    S.userPaused = false; // 통화/외부 인터럽트 종료 — userPaused 잔류 해제
+    RLog.call('AudioContext running 복귀 (통화 종료 감지)');
+    // ★ 포그라운드: 즉시 재연결
+    // ★ 백그라운드: tryReconnect에 위임 (소프트 재연결 → 전체 재연결 순서로 안전 처리)
+    if (document.visibilityState !== 'hidden') {
+      S.wasPlaying = false; S.needReconnect = false;
+      playStation(S.current);
+    } else {
+      _tryReconnectFromCtx(); // ★ 백그라운드에서 통화 종료 → 바로 재연결 허용
     }
   });
 }

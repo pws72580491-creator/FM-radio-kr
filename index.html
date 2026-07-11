@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.58</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.59</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.58';
+const APP_VERSION = 'v2.8.59';
 const CHANGELOG = [
+  { version: 'v2.8.59', date: '2026-07-11', changes: [
+    '[분석] 사용자 제보 로그(radio-log-2026-07-11, 1000건) 실측 분석 — 25분간 문제없이 배경 재생되던 중 스트림이 끊겨 scheduleRetry가 "10초 후 재시도"를 예약했는데, 실제로는 예정 시각보다 약 86초 늦은 96초 뒤에야 재시도가 실행됨. 마침 그 시점은 사용자가 앱을 다시 연 순간과 거의 일치 — Android/Chrome이 화면이 꺼진 채 오래 backgrounded된 탭의 setTimeout을 강하게 지연(스로틀링)시키고, 앱을 열어야(=탭이 다시 활성화돼야) 밀려있던 타이머가 실행되는 것으로 추정됨. 반면 재생이 살아있는 동안의 BG_PLAY 확인용 setInterval(3초)은 25분 내내 지연 없이 정확했음 — 재생이 끊긴 순간 그 interval도 자체 종료되고 setTimeout 체인만 남는데, 이 체인이 스로틀링에 특히 취약했던 것으로 보임',
+    '[개선] 백그라운드 재시도 워치독 추가 — scheduleRetry가 예정한 재시도 시각(S._retryDueAt)을 기록해두고, 별도의 4초 간격 setInterval이 "예정 시각 + 3초 유예"를 넘겨도 재시도가 발생하지 않으면 대신 재연결을 트리거. setTimeout 체인이 스로틀링으로 지연되더라도 이 워치독이 안전망 역할을 함. 단, 이 워치독의 interval 자체도 동일한 스로틀링 대상이 될 가능성은 있어 완전한 해결을 보장하지는 않음 — Android 설정에서 브라우저(Chrome 등) 배터리 사용량을 "제한 없음"으로 바꾸는 것이 더 근본적인 대응일 수 있음 (앱 내 로그로는 확인 불가한 OS 레벨 제약이라 사용자 확인 필요)',
+  ]},
   { version: 'v2.8.58', date: '2026-07-11', changes: [
     '[버그수정 치명] 통화 종료 후 정상 재생되다가 몇 초~몇 분 뒤 다시 무음으로 멈추던 문제 — 원인은 tryReconnect()의 소프트 재연결(HLS 인스턴스 재사용, play()만 재호출) 성공 경로가 공용 성공 처리 함수 onOK()를 거치지 않고 상태만 직접 갱신하다 보니, onOK()에만 있던 "백그라운드면 RLog.startBgWatch() 재시작" 호출이 누락됨. v2.8.56에서 추가한 백그라운드 감시(pausedStreak 안전망)는 통화 감지 시 stopBgWatch()로 이미 꺼진 상태였는데, 소프트 재연결 성공 후에도 다시 켜지지 않아 그 뒤에 이어진 두 번째 끊김은 아무도 감시하지 못한 채 방치되었음 — 실측 로그(radio-log-2026-07-11)에서 소프트 재연결 성공 후 BG_PLAY 로그가 완전히 끊기고, 3분 39초 뒤 앱을 열자마자 새 HLS 오류가 확인되며 발견. 소프트 재연결 성공 시에도 hidden 상태면 startBgWatch()를 재시작하도록 수정',
   ]},
@@ -1965,6 +1969,7 @@ const AppState = {
   userPaused:    false,
   sleepStopped:  false,  // ★ 취침 타이머 종료 후 모든 자동 재연결 차단 플래그
   _hiddenWasActive: false, // ★ 백그라운드 진입 시 활성 여부 저장 (포그라운드 복귀 재연결 보조)
+  _retryDueAt:   null,   // ★ v2.8.59 — scheduleRetry가 예정한 다음 재시도 시각(ms) — 백그라운드 워치독 판단 기준
 };
 
 const S = AppState;
@@ -2444,6 +2449,43 @@ function clearRetryTimer() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 }
 
+// ★ 신규 v2.8.59 — 백그라운드 재시도 워치독
+// 실측 로그(radio-log-2026-07-11)에서 scheduleRetry()의 setTimeout이 예정된 10초가 아니라
+// 실제로는 96초 뒤(≈9.6배 지연)에야 발화한 사례를 확인. 25분 넘게 백그라운드에 있던 상태에서
+// 스트림이 끊겨 audio가 정지된 순간부터 Android/Chrome이 탭을 타이머 스로틀링 대상으로 보기
+// 시작한 것으로 추정됨(재생 중엔 BG_PLAY용 setInterval이 25분간 3초 간격으로 정확히 동작했으나,
+// 정지 직후부터는 그 interval도 S.playing=false로 자체 종료되고 setTimeout 체인만 남았음).
+// setInterval은 동일 상황에서 상대적으로 스로틀링에 강하다는 실측 근거로, 저빈도(4초) interval을
+// 별도로 두어 setTimeout이 크게 지연되더라도 이 워치독이 대신 재연결을 트리거하도록 이중화.
+// ★ 주의: 무조건 4초마다 재시도하면 지수 백오프(12초 상한)와 5회 실패 후 60초 쿨다운을
+// 무력화하게 되므로, scheduleRetry가 기록한 예정 시각(S._retryDueAt) + 여유시간을 넘긴
+// 경우에만 개입한다 — setTimeout에게 항상 먼저 기회를 주는 "지연 감지 전용" 안전망
+// playStation()이 진입 즉시 S.callId를 증가시키고 clearRetryTimer()를 호출하므로,
+// 두 트리거가 겹쳐도 먼저 도착한 쪽이 이기고 나머지는 안전하게 무효화됨.
+let _bgRetryWatchTimer = null;
+const BG_RETRY_GRACE_MS = 3000; // setTimeout이 늦더라도 이 유예시간까지는 기다려줌
+
+function startBgRetryWatch() {
+  if (_bgRetryWatchTimer) return; // 이미 실행 중
+  _bgRetryWatchTimer = setInterval(() => {
+    if (document.visibilityState !== 'hidden') { stopBgRetryWatch(); return; }
+    if (!S.current || !S.wasPlaying || S.sleepStopped) { stopBgRetryWatch(); return; }
+    if (S.playing || S.loading) { stopBgRetryWatch(); return; } // 이미 재생/시도 중이면 할 일 없음
+    if (!S._retryDueAt) return; // scheduleRetry가 아직 예정 시각을 남기지 않음
+    if (Date.now() < S._retryDueAt + BG_RETRY_GRACE_MS) return; // 예정 시각 + 유예 전이면 대기
+    // ★ 살아있는 세션 흔적이 있으면 건드리지 않음 — scheduleRetry의 기존 정책과 동일
+    const isDead = !S.hls && (!audio.src || audio.src === location.href);
+    if (!isDead) return;
+    const delaySec = Math.round((Date.now() - S._retryDueAt) / 1000);
+    RLog.warn('백그라운드 재시도 워치독 — setTimeout 지연 감지, 대신 재연결', `retry=${S.retryCount}, 예정보다 ${delaySec}초 지연`);
+    playStation(S.current, true, true);
+  }, 4000);
+}
+
+function stopBgRetryWatch() {
+  if (_bgRetryWatchTimer) { clearInterval(_bgRetryWatchTimer); _bgRetryWatchTimer = null; }
+}
+
 function scheduleRetry() {
   if (S.retryTimer) { clearTimeout(S.retryTimer); S.retryTimer = null; }
 
@@ -2471,6 +2513,9 @@ function scheduleRetry() {
     if (S.hls) { try { S.hls.stopLoad(); } catch(e) {} }
   }
 
+  // ★ 신규 v2.8.59 — 백그라운드에서는 setTimeout 지연(스로틀링) 대비 워치독 병행 가동
+  if (document.visibilityState === 'hidden') startBgRetryWatch();
+
   if (S.retryCount >= 5) {
     RLog.error('재연결 5회 실패 — 방송 중단');
     if (document.visibilityState !== 'hidden') {
@@ -2478,6 +2523,7 @@ function scheduleRetry() {
     }
     // ★ 포기하지 않음 — 60초 후 재시도 (백그라운드 포함)
     S.retryCount = 0;
+    S._retryDueAt = Date.now() + 60000; // ★ v2.8.59 — 워치독이 지연 여부 판단할 기준 시각
     S.retryTimer = setTimeout(() => {
       if (!S.current || !S.wasPlaying) return;
       RLog.reconnect('5회 실패 후 60초 대기 완료 — 재연결 재시작');
@@ -2498,6 +2544,7 @@ function scheduleRetry() {
   // 백그라운드는 화면이 꺼져있어 카운트다운이 안 보이므로 상한을 낮춰 무음 구간을 줄임
   // (5초→10초→12초→12초→12초, 5회 누적 51초 / 기존 5+10+20+30+30=95초 대비 대폭 단축)
   const delay = Math.min(baseDelay * Math.pow(2, S.retryCount - 1), isHidden ? 12000 : 30000);
+  S._retryDueAt = Date.now() + delay; // ★ v2.8.59 — 워치독이 지연 여부 판단할 기준 시각
   RLog.warn(`재연결 대기 ${S.retryCount}회차${isHidden ? ' (백그라운드)' : ''}`, `${Math.round(delay/1000)}초 후 재시도`);
   if (!isHidden) showError(`연결이 끊겼습니다. ${Math.round(delay/1000)}초 후 재연결 (${S.retryCount}/5)`);
 
@@ -2546,6 +2593,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
   stopCallWatch();
 
   showError(null); clearRetryTimer(); stopWatchdog();
+  stopBgRetryWatch(); // ★ v2.8.59 — 새 시도가 시작됐으니 대기 중이던 워치독은 정지 (실패 시 scheduleRetry가 재가동)
   // ★ 수동 채널 선택 시에만 retryCount 리셋 — scheduleRetry 재시도 경로에서는 유지 (지수 백오프 작동)
   if (!isRetry) { S.retryCount = 0; S._manifestPreRetried = false; }
   S.loading = true; S.playing = false; S.current = s;
@@ -2581,6 +2629,8 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       // 백그라운드 재시도 중 재생이 성공했는데 이전 타이머가 살아있어
       // 계속 playStation을 재호출하며 불필요한 재연결 루프를 유발하던 핵심 원인
       clearRetryTimer();
+      stopBgRetryWatch(); // ★ v2.8.59 — 재연결 성공 시 재시도 워치독도 함께 정지
+      S._retryDueAt = null;
       RLog.play('재생 시작 성공');
       // 재생 성공 시 실제 재생 감시 + keepalive 시작
       // ★ keepalive는 항상 시작 — WakeLock 획득 성공 시 requestWakeLock()에서 stopAudioKeepAlive() 호출

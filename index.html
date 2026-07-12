@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.60</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.61</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,12 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.60';
+const APP_VERSION = 'v2.8.61';
 const CHANGELOG = [
+  { version: 'v2.8.61', date: '2026-07-11', changes: [
+    '[개선] 핀치줌 방지를 touchmove뿐 아니라 touchstart 단계에서도 차단하도록 보강 — 두 번째 손가락이 닿는 순간(touchstart)에 브라우저가 이미 확대 제스처 인식을 시작할 수 있어, touchmove 시점의 차단만으로는 그 사이에 확대가 새어나갈 여지가 있었음. 두 손가락이 감지되는 즉시(touchstart) 선제적으로 preventDefault() 호출',
+    '[참고] 그래도 가끔 확대되는 경우가 있다면: (1) 정확히 핀치(두 손가락)인지 더블탭인지, (2) 어느 화면/버튼 위에서 발생하는지 확인이 더 필요함. 또한 Android 설정 → 접근성 → "확대(Magnification)" 기능이 켜져 있으면 이는 OS 레벨 제스처라 어떤 웹앱도 막을 수 없으니, 증상이 계속되면 해당 설정도 확인 필요',
+  ]},
   { version: 'v2.8.60', date: '2026-07-11', changes: [
     '[분석] 사용자 제보 로그(radio-log-2026-07-11 오후분, 1000건) 분석 — 6시간 구간 전체적으로는 양호(통화 중단 1건도 2.7초 만에 정상 복구). 다만 17:56~18:19 사이 배경 재생이 원인 불명으로 조용히 멈춘 흔적(BG_PLAY 틱 중단 후 freeze 시점에 playing=false/wasPlaying=false)을 발견했으나, 그 사이 구간에 원인을 설명할 로그가 하나도 없음. 로그 저장이 최대 1000개 링버퍼(LOG_MAX)인데, 실측상 연결 불안정 구간에서 네트워크 change 이벤트가 같은 밀리초에 50개 이상 몰아치는 경우가 다수 확인됨 — 이런 폭주가 한 번 발생하면 그 앞뒤의 실제 진단 정보가 버퍼에서 밀려날 수 있음. 즉 이번 공백은 문제가 재발했다는 증거라기보다, 로그 용량 부족으로 원인 기록이 유실됐을 가능성이 높음',
     '[개선] 네트워크 change 이벤트 로그 스로틀링(500ms) 추가 — 재연결 판단 로직 자체는 이전과 동일하게 매 이벤트마다 실행되지만, 로그 기록만 짧은 간격 내 중복을 걸러 폭주 시 버퍼 낭비를 줄임. 다음번 문제 재현 시 원인 구간이 버퍼에서 밀려날 가능성을 낮춤',
@@ -5278,6 +5282,13 @@ function closeChangelog(e) {
    JS로 직접 차단
 ════════════════════════════════════════ */
 (function preventZoom() {
+  // ★ 개선 v2.8.61 — 핀치줌은 두 번째 손가락이 닿는 touchstart 시점에 브라우저가
+  // 제스처 인식을 시작할 수 있음. touchmove에서만 막으면 그 사이(touchstart~첫 touchmove)에
+  // 이미 확대가 시작돼버리는 경우를 놓칠 수 있어, touchstart 단계에서도 동일하게 차단
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
   // 핀치줌 — touches 2개 이상이면 preventDefault
   document.addEventListener('touchmove', (e) => {
     if (e.touches.length > 1) e.preventDefault();

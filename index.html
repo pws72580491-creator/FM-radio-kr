@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.65</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.66</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.65';
+const APP_VERSION = 'v2.8.66';
 const CHANGELOG = [
+  { version: 'v2.8.66', date: '2026-07-24', changes: [
+    '[버그수정] 취침 타이머 페이드아웃 도중 취소 시 볼륨 미복원 — 종료 30초 전 볼륨을 서서히 낮추는 도중 "타이머 취소"를 누르거나 새 타이머를 재설정하면, 자연 종료(stop())와 달리 clear()가 audio.volume을 원래 값으로 되돌리지 않아 볼륨 슬라이더 표시값과 실제 재생 볼륨이 어긋난 채 남아있던 문제 수정',
+  ]},
   { version: 'v2.8.65', date: '2026-07-22', changes: [
     '[분석] "제한없음" 적용 후에도 문제가 재현된다는 제보로 통화/네트워크전환/백그라운드 재생 관련 코드 전면 재검토. pause 이벤트 핸들러가 3곳, AudioContext 상태를 감시하는 폴링 루프가 2곳(각각 2초 간격)에 중복 존재함을 확인 — 서로 다른 시점에 추가된 안전망들이 겹쳐진 구조. 실제 오작동 재현 없이는 안전하게 통합하기 어려워 이번엔 손대지 않고 기록만 남김(향후 조사 대상)',
     '[분석] 네트워크 전환(와이파이↔LTE) 실패 시 재시도용 setTimeout이 지연되는 경우, 별도 워치독은 없지만 백그라운드 감시(startBgWatch)의 "audio.paused=false인데 currentTime 정지" 분기가 3초 안에 대신 감지해 scheduleRetry로 넘기는 것을 확인 — 이 경로도 결국 동일한 백그라운드 타이머 스로틀링에 종속되므로, 스로틀링이 심할 땐 이 안전망도 함께 지연됨(구조적 한계, 아래 참고)',
@@ -3920,7 +3923,13 @@ const SleepTimer = (() => {
   // 내부 정리
   function clear() {
     if (_ticker)    { clearInterval(_ticker);    _ticker    = null; }
-    if (_fadeTimer) { clearInterval(_fadeTimer); _fadeTimer = null; }
+    if (_fadeTimer) {
+      clearInterval(_fadeTimer); _fadeTimer = null;
+      // ★ 버그수정 v2.8.66 — 페이드아웃 도중 취소/재설정 시 audio.volume이 줄어든 채로
+      // 복원되지 않던 문제. stop()은 정상 종료 시 _origVol로 복원하지만 cancel()/재설정 시
+      // 호출되는 clear()는 볼륨을 건드리지 않아, 취소 후에도 소리가 작게 남아있었음
+      audio.volume = _origVol;
+    }
     _endTime = 0;
     const btn = document.getElementById('sleepBtn');
     if (btn) {

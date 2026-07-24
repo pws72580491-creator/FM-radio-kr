@@ -40,13 +40,17 @@
   if (t === 'light') {
     document.documentElement.setAttribute('data-theme','light');
   } else if (t === 'auto') {
-    // 자동: 시스템 prefers-color-scheme 우선.
-    // prefers-color-scheme:dark이면 무조건 다크.
-    // 시스템 설정이 없거나 light이면 시간대(6시~18시 라이트)로 판단.
-    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // 자동: 시스템이 명시적으로 라이트를 선택한 경우만 라이트 우선.
+    // 시스템이 다크거나 명시적 설정이 없으면 시간대(6시~18시 라이트)로 판단.
+    // ★ 버그수정 v2.8.67 — 이전엔 여기가 "dark 선호→무조건 다크"였고 본문의
+    // _getAutoTheme()은 "light 선호→무조건 라이트"로 서로 반대 기준이었음.
+    // 그 결과 (다크 선호+낮) 또는 (라이트 선호+밤) 조합에서 초기 렌더와 JS 로드 후
+    // 판정이 어긋나 이 스크립트가 막으려던 FOUC가 그대로 재현됐음. 두 곳은 항상 같은
+    // 기준(라이트 명시 선호만 강제)으로 맞춰야 함 — 한쪽만 고치면 다시 어긋남.
+    var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
     var h = new Date().getHours();
     var isDay = h >= 6 && h < 18;
-    var autoLight = prefersDark ? false : isDay;
+    var autoLight = prefersLight ? true : isDay;
     if (autoLight) document.documentElement.setAttribute('data-theme','light');
   }  // dark는 기본값이므로 setAttribute 불필요
 
@@ -1336,7 +1340,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.66</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.67</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1421,14 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.66';
+const APP_VERSION = 'v2.8.67';
 const CHANGELOG = [
+  { version: 'v2.8.67', date: '2026-07-24', changes: [
+    '[버그수정] 자동 테마 FOUC 방지 스크립트(head)와 실제 판정 로직(_getAutoTheme)의 기준이 서로 반대였던 문제 — (다크 선호+낮) 또는 (라이트 선호+밤) 조합에서 초기 렌더 후 테마가 튀던 현상 수정, 두 곳 모두 "라이트 명시 선호만 강제" 기준으로 통일',
+    '[개선] 전역 uncaught 예외 / unhandledrejection을 RLog에 기록하도록 추가 — 기존엔 콘솔에만 남고 export 로그에는 안 잡히던 사각지대',
+    '[버그수정] exportLog()에서 다운로드 트리거 직후 즉시 revokeObjectURL 호출 — 일부 브라우저에서 다운로드 실패 가능성 있어 1초 지연으로 변경',
+    '[버그수정] 설치 프롬프트를 거절해도 설치 버튼이 계속 남아있어 재클릭 시 무반응이던 문제 — 거절 시에도 버튼 숨김',
+  ]},
   { version: 'v2.8.66', date: '2026-07-24', changes: [
     '[버그수정] 취침 타이머 페이드아웃 도중 취소 시 볼륨 미복원 — 종료 30초 전 볼륨을 서서히 낮추는 도중 "타이머 취소"를 누르거나 새 타이머를 재설정하면, 자연 종료(stop())와 달리 clear()가 audio.volume을 원래 값으로 되돌리지 않아 볼륨 슬라이더 표시값과 실제 재생 볼륨이 어긋난 채 남아있던 문제 수정',
   ]},
@@ -2370,6 +2380,19 @@ const RLog = (() => {
   };
 })();
 
+// ★ 버그수정 v2.8.67 — RLog 인프라를 갖춰놓고도 uncaught 예외/unhandled promise
+// rejection은 콘솔에만 찍히고 로그엔 안 남던 사각지대를 메움. 배포 후엔 사용자가
+// export한 로그로만 진단하므로, 여기 안 잡히는 에러는 사실상 원인 파악이 불가능했음.
+window.addEventListener('error', (e) => {
+  RLog.error('전역 uncaught 예외', `${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const reason = e.reason instanceof Error
+    ? (e.reason.message + (e.reason.stack ? '\n' + e.reason.stack : ''))
+    : String(e.reason);
+  RLog.error('전역 unhandled promise rejection', reason);
+});
+
 // 로그 뷰어 UI
 function openLog() {
   renderLogUI();
@@ -2462,7 +2485,9 @@ function exportLog() {
   const _localDate = `${_nd.getFullYear()}-${String(_nd.getMonth()+1).padStart(2,'0')}-${String(_nd.getDate()).padStart(2,'0')}`;
   a.download = `radio-log-${_localDate}.txt`;
   a.click();
-  URL.revokeObjectURL(url);
+  // ★ 버그수정 v2.8.67 — click() 직후 즉시 revoke하면 다운로드가 아직 URL을 읽는
+  // 도중일 수 있어 일부 브라우저(Firefox 등)에서 다운로드가 실패/빈 파일로 이어짐
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 async function clearLog() {
   if (!confirm('로그를 모두 삭제할까요?')) return;
@@ -5127,7 +5152,15 @@ window.addEventListener('appinstalled', () => {
 function installApp() {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  deferredPrompt.userChoice.then((choice) => {
+    deferredPrompt = null;
+    // ★ 버그수정 v2.8.67 — 거절해도 설치 버튼이 계속 남아있어 재클릭하면 조용히
+    // 무반응이던 문제. 다음에 beforeinstallprompt가 다시 뜨면 그때 버튼도 다시 보임.
+    if (choice.outcome !== 'accepted') {
+      const btn = document.getElementById('installBtn');
+      if (btn) btn.style.display = 'none';
+    }
+  });
 }
 
 /* ════════════════════════════════════════

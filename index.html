@@ -1336,7 +1336,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.64</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.65</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1417,8 +1417,14 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.64';
+const APP_VERSION = 'v2.8.65';
 const CHANGELOG = [
+  { version: 'v2.8.65', date: '2026-07-22', changes: [
+    '[분석] "제한없음" 적용 후에도 문제가 재현된다는 제보로 통화/네트워크전환/백그라운드 재생 관련 코드 전면 재검토. pause 이벤트 핸들러가 3곳, AudioContext 상태를 감시하는 폴링 루프가 2곳(각각 2초 간격)에 중복 존재함을 확인 — 서로 다른 시점에 추가된 안전망들이 겹쳐진 구조. 실제 오작동 재현 없이는 안전하게 통합하기 어려워 이번엔 손대지 않고 기록만 남김(향후 조사 대상)',
+    '[분석] 네트워크 전환(와이파이↔LTE) 실패 시 재시도용 setTimeout이 지연되는 경우, 별도 워치독은 없지만 백그라운드 감시(startBgWatch)의 "audio.paused=false인데 currentTime 정지" 분기가 3초 안에 대신 감지해 scheduleRetry로 넘기는 것을 확인 — 이 경로도 결국 동일한 백그라운드 타이머 스로틀링에 종속되므로, 스로틀링이 심할 땐 이 안전망도 함께 지연됨(구조적 한계, 아래 참고)',
+    '[개선] keepalive 오실레이터 볼륨 -60dB→-40dB — 문턱값에 너무 가깝게 붙어있던 기존 값 대신 여유폭 확보. 재연결 대기 중(실제 스트림 끊긴 뒤)이 이 오실레이터가 유일한 소리로 남는, 면제가 가장 필요한 순간이라 더 확실한 값으로 조정',
+    '[분석/한계] 구조적 결론 — 이 앱은 PWA(브라우저 탭)이라 안드로이드의 진짜 "포그라운드 서비스"(알림 상시 표시하는 네이티브 앱들이 쓰는, Doze 완전 면제되는 방식)를 쓸 수 없음. 지금까지 추가한 모든 안전망(워치독 다중화, keepalive 오디오, 백그라운드 감시)은 전부 자바스크립트 타이머이고, 이 타이머들은 OS/브라우저가 강하게 스로틀링을 걸면 다 같이 지연됨 — 안전망을 아무리 추가해도 이 한계 자체는 못 넘음. 남은 변수는 OS 배터리 제한 해제 범위(특히 제조사별 자체 절전 기능)로 보임',
+  ]},
   { version: 'v2.8.64', date: '2026-07-21', changes: [
     '[분석] v2.8.63 공백 감지 기능이 실전에서 정상 작동 확인 — radio-log-2026-07-21에서 02:34:41(freeze) 이후 6:14:27(앱 시작)까지 13186초(약 3.7시간) 공백을 정확히 감지·기록함',
     '[버그수정] 공백 감지 오탐지 수정 — 같은 로그에서 "재생 중이 아니었던(wasPlaying=false) 유휴 상태"의 탭이 회수된 경우까지 강제종료로 잘못 표시되는 사례 발견. 재생 중이었어야 했던 경우(wasPlaying=true 또는 BG_PLAY 직후)로만 조건 한정 — 실제로 끊긴 재생만 의미 있게 표시',
@@ -3726,10 +3732,15 @@ function startAudioKeepAlive() {
     // 사람 귀에는 들리지 않을 만큼 작지만 0은 아닌 볼륨(-60dB) + 가청 범위 최상단에
     // 가까운 주파수(대부분 성인이 듣기 어려운 18kHz)로 설정해 실제로 스로틀링 면제를
     // 받으면서도 청취 경험에는 영향이 없도록 함
+    // ★ 버그수정 v2.8.65 — -60dB는 Chrome의 오디오 감지 문턱값에 너무 가깝게 붙어있어
+    // 기기/드라이버에 따라 "무음"으로 판정될 위험이 있음(v2.8.62 이후에도 8~14분급 백그라운드
+    // 지연이 재현됨 — 특히 실제 스트림이 끊겨 이 오실레이터가 유일한 소리로 남는 "재연결 대기
+    // 중" 구간이 바로 면제가 가장 절실한 순간이라, 문턱값 근처의 애매한 볼륨은 위험함).
+    // -40dB로 올려 여전히 사람 귀에는 사실상 들리지 않으면서 판정 여유폭을 확보
     const oscillator = ctx.createOscillator();
     const gainNode   = ctx.createGain();
     oscillator.frequency.value = 18000; // 가청 범위 최상단 — 대부분 기기/사람에게 들리지 않음
-    gainNode.gain.value = 0.001;        // 완전 무음(0)이 아닌 -60dB — Chrome의 "오디오 재생 중" 판정 기준 통과 목적
+    gainNode.gain.value = 0.01;         // -40dB — "오디오 재생 중" 판정 여유폭 확보 (기존 -60dB에서 상향)
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
     oscillator.start();

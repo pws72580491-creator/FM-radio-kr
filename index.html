@@ -1340,7 +1340,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.69</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.70</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1421,8 +1421,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.69';
+const APP_VERSION = 'v2.8.70';
 const CHANGELOG = [
+  { version: 'v2.8.70', date: '2026-07-25', changes: [
+    '[버그수정 치명] v2.8.68/69에서 도입한 "배경 재연결 7분 게이트"를 전면 되돌림 — 실사용 확인 결과 유튜브를 보지 않은 상태에서도 게이트가 걸려 통화 종료 후 자동 재생 복구가 안 되는 회귀가 발생했음(7분 넘는 통화는 앱/다른 앱을 직접 열어야만 재개). 웹 API로는 "전화 통화"와 "다른 오디오 앱 사용"을 시간만으로 구분할 방법이 없어, 확인된 핵심 기능 회귀(통화 복구)를 확인되지 않은 문제(유튜브 포커스 뺏기, 재현 로그 미확보)보다 우선해 9개 경로 모두 v2.8.67 이전의 "즉시 무조건 재연결" 동작으로 복원. BG_RECONNECT_MAX_MS 상수 제거, S._bgInterruptedAt은 추적만 남기고 판단에는 미사용 — 추후 더 나은 구분 신호를 찾으면 재사용 가능',
+  ]},
   { version: 'v2.8.69', date: '2026-07-25', changes: [
     '[버그수정 치명] v2.8.68 배경 재연결 게이트가 일부 경로에만 적용돼 있어 "유튜브 등 사용 중 라디오가 포커스를 뺏어오는" 문제가 재현됐음. 전수 조사 결과 playStation()을 배경에서 무조건 호출하는 경로가 총 7곳 더 있었음: scheduleRetry() 자체 재시도 타이머, 5회 실패 후 60초 재시도 루프, startBgRetryWatch() 백업 워치독, _scheduleNetReconnect(네트워크 전환), 블루투스 devicechange 재연결, resume(freeze 해제, hidden 체크조차 없었음), pageshow(bfcache 복원). 모두 동일한 BG_RECONNECT_MAX_MS 게이트로 통일 — 총 9개 경로가 이제 일관되게 "중단 7분 이내면 배경에서도 재연결, 넘으면 포그라운드 복귀까지 대기"를 따름',
   ]},
@@ -2015,7 +2018,7 @@ const AppState = {
   sleepStopped:  false,  // ★ 취침 타이머 종료 후 모든 자동 재연결 차단 플래그
   _hiddenWasActive: false, // ★ 백그라운드 진입 시 활성 여부 저장 (포그라운드 복귀 재연결 보조)
   _retryDueAt:   null,   // ★ v2.8.59 — scheduleRetry가 예정한 다음 재시도 시각(ms) — 백그라운드 워치독 판단 기준
-  _bgInterruptedAt: 0,   // ★ v2.8.68 — 백그라운드에서 audio가 외부(통화/다른 앱)로 중단된 시작 시각(ms). 0이면 중단 없음
+  _bgInterruptedAt: 0,   // ★ v2.8.68에서 도입, v2.8.70에서 게이트 로직 제거 — 현재는 기록만 하고 판단엔 미사용(향후 재사용 대비 보류)
 };
 
 const S = AppState;
@@ -2028,10 +2031,6 @@ let favLocked = localStorage.getItem('radio_fav_locked') === '1';
 ════════════════════════════════════════ */
 // ★ bsod.kr 프록시 경유 — CORS 우회 및 토큰 갱신 처리
 const P = 'https://radio.bsod.kr/stream/';
-// ★ v2.8.68 — AudioContext running 복귀만으로 백그라운드에서 즉시 재연결을 허용할
-// 최대 중단 시간. 통화는 대부분 이 안에 끝나지만, 유튜브 등 다른 오디오 앱을 한동안
-// 사용 중인 경우까지 여기 포함되면 그쪽 재생을 강제로 뺏어오게 되므로 상한을 둔다.
-const BG_RECONNECT_MAX_MS = 7 * 60 * 1000; // 7분
 const STATIONS = [
   { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
   { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },
@@ -2331,23 +2330,19 @@ const RLog = (() => {
           // 4틱(약 12초) 이상 pause가 지속되면 일시적 OS courtesy pause로 보기 어려우므로
           // S.playing 잔류를 정정하고 안전한 재연결 경로(soft reconnect 우선)로 위임한다.
           if (pausedStreak >= 4) {
-            // ★ 버그수정 v2.8.68 — 여기도 AudioContext statechange 경로와 같은 문제:
-            // 12초 pause 지속만으로 무조건 재연결하면, 유튜브 등 다른 오디오 앱을 사용
-            // 중이어도 play()를 강제 호출해 포커스를 뺏어옴. 동일한 중단시간 게이트 적용.
-            const interruptedMs = _S._bgInterruptedAt ? (Date.now() - _S._bgInterruptedAt) : 0;
-            if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-              write('BG_FAIL', `배경 재연결 보류 — 중단 ${Math.round(interruptedMs/1000)}초 경과(임계값 ${BG_RECONNECT_MAX_MS/1000}초), 포그라운드 복귀 시 재생`);
-            } else {
-              write('BG_FAIL', `백그라운드 OS pause 장기 지속(${pausedStreak}틱) — 잔류 상태 정정 및 재연결 위임`, `currentTime=${curTime.toFixed(2)}`);
-              if (_S.current && !_S.sleepStopped) {
-                _S.playing = false;
-                _S.userPaused = false;
-                _S._bgInterruptedAt = 0;
-                const canTryReconnect = typeof reconnectingCall !== 'undefined' && !reconnectingCall
-                  && typeof _tryReconnectFromCtx === 'function';
-                if (canTryReconnect) _tryReconnectFromCtx();
-                else if (typeof scheduleRetry === 'function') scheduleRetry();
-              }
+            // ★ v2.8.70 — v2.8.68/69의 7분 게이트를 되돌림. 통화가 7분을 넘기면
+            // 그때부터 자동 복구가 안 되는 회귀가 발생해, 유튜브 포커스 문제(빈도 낮고
+            // 미확인)보다 통화 복구(핵심 기능, 확인된 회귀)를 우선했다. 시간만으로는
+            // "통화"와 "다른 오디오 앱 사용"을 구분할 수 없다는 게 근본 한계.
+            write('BG_FAIL', `백그라운드 OS pause 장기 지속(${pausedStreak}틱) — 잔류 상태 정정 및 재연결 위임`, `currentTime=${curTime.toFixed(2)}`);
+            if (_S.current && !_S.sleepStopped) {
+              _S.playing = false;
+              _S.userPaused = false;
+              _S._bgInterruptedAt = 0;
+              const canTryReconnect = typeof reconnectingCall !== 'undefined' && !reconnectingCall
+                && typeof _tryReconnectFromCtx === 'function';
+              if (canTryReconnect) _tryReconnectFromCtx();
+              else if (typeof scheduleRetry === 'function') scheduleRetry();
             }
             stopBgWatch();
           } else {
@@ -2550,14 +2545,6 @@ function startBgRetryWatch() {
     // ★ 살아있는 세션 흔적이 있으면 건드리지 않음 — scheduleRetry의 기존 정책과 동일
     const isDead = !S.hls && (!audio.src || audio.src === location.href);
     if (!isDead) return;
-    // ★ 버그수정 v2.8.69 — scheduleRetry()의 백업 안전망이라 거기 건 게이트를 그대로
-    // 우회할 수 있었음. 동일하게 중단시간을 확인해 오래된 외부 인터럽트면 대기.
-    const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-    if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-      RLog.call(`백그라운드 재시도 워치독 — 중단 ${Math.round(interruptedMs/1000)}초 경과, 재연결 보류`);
-      stopBgRetryWatch();
-      return;
-    }
     const delaySec = Math.round((Date.now() - S._retryDueAt) / 1000);
     RLog.warn('백그라운드 재시도 워치독 — setTimeout 지연 감지, 대신 재연결', `retry=${S.retryCount}, 예정보다 ${delaySec}초 지연`);
     S._bgInterruptedAt = 0;
@@ -2609,17 +2596,6 @@ function scheduleRetry() {
     S._retryDueAt = Date.now() + 60000; // ★ v2.8.59 — 워치독이 지연 여부 판단할 기준 시각
     S.retryTimer = setTimeout(() => {
       if (!S.current || !S.wasPlaying) return;
-      // ★ 버그수정 v2.8.69 — 이 60초 루프는 hidden 여부 자체를 체크하지 않고 무조건
-      // playStation()을 호출하고 있었음. 5회 실패가 유튜브 사용 중 반복 재시도로
-      // 쌓인 경우, 여기서도 그대로 포커스를 뺏어옴 — 동일 게이트 적용.
-      if (document.visibilityState === 'hidden') {
-        const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-        if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-          RLog.call(`백그라운드 재연결 보류(5회 실패 후) — 중단 ${Math.round(interruptedMs/1000)}초 경과, 포그라운드 복귀 시 재생`);
-          S.retryCount = 0;
-          return;
-        }
-      }
       RLog.reconnect('5회 실패 후 60초 대기 완료 — 재연결 재시작');
       S.retryCount = 0;
       S._bgInterruptedAt = 0;
@@ -2646,17 +2622,8 @@ function scheduleRetry() {
   S.retryTimer = setTimeout(() => {
     if (!S.current || !S.wasPlaying) return;
     if (document.visibilityState === 'hidden') {
-      // ★ 버그수정 v2.8.69 — emptied/stalled/error 등 여러 이벤트가 결국 여기로 모여
-      // playStation()을 직접 호출하는데, AudioContext statechange·BG_FAIL 두 경로만
-      // 중단시간 게이트를 걸었더니 이 경로(특히 emptied → scheduleRetry)가 그대로
-      // 뚫려있어 유튜브 등 다른 오디오 앱 사용 중에도 여기서 재생을 재개해버렸음.
-      // pause 없이 순수 네트워크 에러로 들어온 경우(_bgInterruptedAt=0)는 그대로 재시도.
-      const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-      if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-        RLog.call(`백그라운드 재연결 보류 — 중단 ${Math.round(interruptedMs/1000)}초 경과(임계값 ${BG_RECONNECT_MAX_MS/1000}초), 포그라운드 복귀 시 재생`);
-        return;
-      }
       S.wasPlaying = true;
+      S._bgInterruptedAt = 0;
       // ★ 이미 완전히 죽은 세션(hls 없음 + src 없음)만 백그라운드에서 재시작 허용
       // 살아있는 hls를 destroy하는 게 위험한 것이지, 죽은 걸 살리는 건 안전함
       // Android는 hidden 중 오디오 세션이 이미 종료된 상태이므로
@@ -2664,7 +2631,6 @@ function scheduleRetry() {
       const isDead = !S.hls && (!audio.src || audio.src === location.href);
       if (isDead) {
         RLog.warn('백그라운드 재연결 시도 — 세션 완전 종료 상태 감지', `retry=${S.retryCount}`);
-        S._bgInterruptedAt = 0;
         playStation(S.current, true, true);
       } else {
         // 살아있는 것처럼 보이면 건드리지 않고 포그라운드 복귀에 위임
@@ -3093,14 +3059,6 @@ function _scheduleNetReconnect(reason) {
         RLog.net(`네트워크 전환 감지 — 백그라운드+재생 흔적 있음, defer (${reason})`);
         return;
       }
-      // ★ 버그수정 v2.8.69 — audio.paused=true(=우리 세션이 끊긴 상태)이면 여기까지 왔는데,
-      // 이 상태는 유튜브 등 다른 앱이 오디오 포커스를 가져간 경우와 구분이 안 됨.
-      // 네트워크 전환이 우연히 그 시점에 겹치면 동일한 문제가 재현되므로 같은 게이트 적용.
-      const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-      if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-        RLog.net(`네트워크 전환 감지 — 배경 재연결 보류, 중단 ${Math.round(interruptedMs/1000)}초 경과 (${reason})`);
-        return;
-      }
       RLog.net(`네트워크 전환 후 백그라운드 재연결 실행 — 세션 종료 상태 (${reason})`);
     } else {
       RLog.net(`네트워크 전환 후 재연결 실행 (${reason})`);
@@ -3287,24 +3245,14 @@ function ensureAudioCtxWatch() {
 
     S.userPaused = false; // 통화/외부 인터럽트 종료 — userPaused 잔류 해제
     RLog.call('AudioContext running 복귀 (통화 종료 감지)');
-    // ★ 포그라운드: 즉시 재연결
-    // ★ 백그라운드: 중단 시간이 짧으면(통화 가능성) tryReconnect에 위임해 바로 재연결.
-    //   길면(v2.8.68) 다른 오디오 앱을 사용 중일 가능성이 높다고 보고 배경 재연결을
-    //   보류한다 — 유튜브 등 재생 중에 AudioContext가 running으로 돌아온 것만으로
-    //   우리가 play()를 호출하면 그쪽 오디오 포커스를 강제로 뺏어와 "다른 앱이 갑자기
-    //   멈추고 라디오가 대신 재생되는" 현상이 발생했음. wasPlaying=true만 유지하고
-    //   실제 재연결은 사용자가 앱으로 돌아왔을 때(visibilitychange)에 맡긴다.
+    // ★ v2.8.70 — v2.8.68에서 걸었던 배경 재연결 시간 게이트를 되돌림.
+    // 시간만으로 "통화"와 "다른 오디오 앱 사용"을 구분할 수 없어, 7분 넘는 통화가
+    // 자동 복구 안 되는 회귀가 실사용에서 확인됨. 포그라운드/백그라운드 모두 즉시 재연결.
+    S.wasPlaying = false; S.needReconnect = false; S._bgInterruptedAt = 0;
     if (document.visibilityState !== 'hidden') {
-      S.wasPlaying = false; S.needReconnect = false; S._bgInterruptedAt = 0;
       playStation(S.current);
     } else {
-      const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-      if (interruptedMs < BG_RECONNECT_MAX_MS) {
-        S._bgInterruptedAt = 0;
-        _tryReconnectFromCtx(); // 짧은 중단 — 백그라운드에서도 바로 재연결 허용
-      } else {
-        RLog.call(`배경 재연결 보류 — 중단 ${Math.round(interruptedMs/1000)}초 경과(임계값 ${BG_RECONNECT_MAX_MS/1000}초), 포그라운드 복귀 시 재생`);
-      }
+      _tryReconnectFromCtx();
     }
   });
 }
@@ -3568,15 +3516,6 @@ let _startCallWatch = () => {};
     if (S.wasPlaying && hasAudioOut) {
       setTimeout(() => {
         if (S.wasPlaying && S.current) {
-          // ★ 버그수정 v2.8.69 — 여기도 hidden 여부와 무관하게 무조건 재연결하고 있었음.
-          // 블루투스 전환이 다른 오디오 앱 사용 중에 우연히 겹치면 동일 문제 재현.
-          if (document.visibilityState === 'hidden') {
-            const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-            if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-              RLog.net(`블루투스 전환 — 배경 재연결 보류, 중단 ${Math.round(interruptedMs/1000)}초 경과`);
-              return;
-            }
-          }
           S.wasPlaying = false; S.needReconnect = false; S._bgInterruptedAt = 0;
           // ★ forceRefresh=true — 블루투스 전환 후 캐시 URL이 만료됐을 경우 manifestParsingError 방지
           playStation(S.current, true);
@@ -5633,20 +5572,7 @@ window.addEventListener('pageshow', (e) => {
   if (S.sleepStopped) { RLog.info('bfcache 복원 재연결 차단 (취침 타이머 종료)'); return; }
   if (S.current && (S.wasPlaying || localStorage.getItem('radio_playing') === '1')) {
     S.wasPlaying = false;
-    setTimeout(() => {
-      if (S.playing || S.loading || !S.current) return;
-      // ★ 버그수정 v2.8.69 — pageshow(bfcache)는 대부분 포그라운드 복귀와 함께 오지만,
-      // 이론상 hidden 상태에서도 발생 가능해 나머지 경로와 동일하게 방어.
-      if (document.visibilityState === 'hidden') {
-        const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-        if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-          RLog.call(`bfcache 복원 — 배경 재연결 보류, 중단 ${Math.round(interruptedMs/1000)}초 경과`);
-          return;
-        }
-      }
-      S._bgInterruptedAt = 0;
-      playStation(S.current, true, true);
-    }, 300);
+    setTimeout(() => { if (!S.playing && !S.loading && S.current) playStation(S.current, true, true); }, 300);
   }
 });
 
@@ -5697,20 +5623,8 @@ window.addEventListener('pageshow', (e) => {
           return;
         }
         if (!S.playing && !S.loading && S.current) {
-          // ★ 버그수정 v2.8.69 — 이 핸들러는 visibilityState조차 확인하지 않고
-          // 무조건 playStation()을 호출하고 있었음. freeze/resume은 탭이 백그라운드에
-          // 있어도 발생할 수 있어(강제로 화면에 돌아온 게 아님), 유튜브 등 다른 앱
-          // 사용 중에도 여기서 재생을 재개해 포커스를 뺏어올 수 있었음.
-          if (document.visibilityState === 'hidden') {
-            const interruptedMs = S._bgInterruptedAt ? (Date.now() - S._bgInterruptedAt) : 0;
-            if (interruptedMs >= BG_RECONNECT_MAX_MS) {
-              RLog.call(`resume — 배경 재연결 보류, 중단 ${Math.round(interruptedMs/1000)}초 경과`);
-              return;
-            }
-          }
           RLog.reconnect('resume 후 재연결');
           S.wasPlaying = false;
-          S._bgInterruptedAt = 0;
           playStation(S.current, true);
         }
       }, 500);

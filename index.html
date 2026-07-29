@@ -1342,7 +1342,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.71</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.72</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1423,8 +1423,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.71';
+const APP_VERSION = 'v2.8.72';
 const CHANGELOG = [
+  { version: 'v2.8.72', date: '2026-07-29', changes: [
+    '[버그수정 치명] manifestParsingError 발생 시 딜레이·재시도횟수 제한 없이 playStation()을 즉시 재호출하고 있었음 — URL 재발급으로도 안 풀리는 상황에서는 실패→즉시 재시도가 무한 반복되며 약 200ms 간격으로 스트림 서버를 두드리는 폭주 루프가 됨. 실사용 로그에서 최소 6분 이상 지속 확인(1000줄 로그 버퍼가 이 루프만으로 가득 차 원인 추적도 어려웠음). 같은 파일의 manifestLoadError/기타 치명 오류는 이미 scheduleRetry()의 지수 백오프+5회 실패 후 60초 대기를 거치는데 이 경로만 예외였던 게 원인 — scheduleRetry()로 위임해 통일. forceRefresh=true 동작은 그대로 유지',
+  ]},
   { version: 'v2.8.71', date: '2026-07-25', changes: [
     '[개선] 반복 로그 압축 — 사용자 제안. 직전 항목과 종류(태그+메시지 틀, 숫자만 다른 경우 포함)가 같으면 새 줄을 쌓지 않고 직전 항목을 갱신(반복 횟수·최초~최근 시각·최신 detail)하도록 변경. BG_PLAY처럼 3초마다 거의 동일한 내용이 반복되는 항목이 1000줄 한도를 금방 채워 정작 오래전 기록(앱 시작, 드문 에러 등)이 밀려나가던 문제를 완화 — 같은 한도로 훨씬 더 긴 기간을 커버 가능. 로그 뷰어/내보내기에 "최초시각~최근시각 ×N회" 표시, 필터바 카운트도 압축 전 실제 발생 횟수 기준으로 표시',
   ]},
@@ -2846,14 +2849,22 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
 
             // ★ manifestParsingError — 캐시된 URL이 만료돼 서버가 잘못된 manifest 반환
-            //    같은 URL로 재시도해도 동일 실패 → forceRefresh=true로 새 URL 즉시 재요청
+            //    같은 URL로 재시도해도 동일 실패 → forceRefresh=true로 새 URL 재요청
             if (d.details === 'manifestParsingError') {
-              RLog.warn('manifestParsingError — URL 만료 가능성, forceRefresh=true 재시도');
               if (S.hls === hls) S.hls = null;
               hls.destroy();
               if (thisCall === S.callId && S.current) {
+                // ★ 버그수정 v2.8.72 (치명) — 여기서 딜레이 없이 즉시 playStation()을
+                // 재호출하고 있었음. manifestParsingError가 URL 재발급으로도 안 풀리는
+                // 상황(스트림 자체 문제, 서버 장애 등)이면 실패→즉시 재시도→실패가 무한
+                // 반복되며 약 200ms 간격으로 스트림 서버를 두드리는 폭주 루프가 됨 —
+                // 실사용 로그에서 6분 이상 지속 확인(배터리/데이터 소모, 서버 레이트리밋
+                // 위험, 로그 버퍼도 이 루프로 가득 참). scheduleRetry()로 위임해 지수
+                // 백오프와 5회 실패 후 60초 대기를 적용. forceRefresh=true는 scheduleRetry
+                // 재시도 콜백에서 그대로 유지됨.
                 S.wasPlaying = true;
-                playStation(S.current, true, true); // forceRefresh=true
+                RLog.warn('manifestParsingError — URL 만료 가능성, 백오프 후 forceRefresh 재시도', `retry=${S.retryCount}`);
+                scheduleRetry();
               }
               return;
             }

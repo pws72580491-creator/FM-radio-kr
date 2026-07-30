@@ -1342,7 +1342,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.72</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.73</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1423,8 +1423,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.72';
+const APP_VERSION = 'v2.8.73';
 const CHANGELOG = [
+  { version: 'v2.8.73', date: '2026-07-30', changes: [
+    '[버그수정 치명] v2.8.72에서 manifestParsingError를 scheduleRetry() 백오프로 넘겼는데도, 실사용 로그에서 여전히 ~1.2~1.7초 간격의 빠른 재시도가 관찰됨 — 원인은 음성입력(마이크) 재연결 폴링(2초 간격)이 같은 pause 이벤트에 반응해 별도로 doReconnect()를 호출하고 있었기 때문. AudioContext가 대개 running 상태라 이 폴링이 매번 bare playStation(S.current)를 즉시 호출(isRetry 인자 없음 → forceRefresh=false + retryCount=0으로 리셋)해, scheduleRetry의 지수 백오프와 5회 실패 후 60초 대기를 사실상 무력화시키고 있었음. doReconnect()에 "S.retryTimer가 이미 있으면(scheduleRetry 재시도 예약 중) 끼어들지 않음" 가드 추가 — 음성입력 시나리오(진짜 마이크 종료) 자체 동작은 그대로 유지, HLS 에러 재시도 중일 때만 양보',
+  ]},
   { version: 'v2.8.72', date: '2026-07-29', changes: [
     '[버그수정 치명] manifestParsingError 발생 시 딜레이·재시도횟수 제한 없이 playStation()을 즉시 재호출하고 있었음 — URL 재발급으로도 안 풀리는 상황에서는 실패→즉시 재시도가 무한 반복되며 약 200ms 간격으로 스트림 서버를 두드리는 폭주 루프가 됨. 실사용 로그에서 최소 6분 이상 지속 확인(1000줄 로그 버퍼가 이 루프만으로 가득 차 원인 추적도 어려웠음). 같은 파일의 manifestLoadError/기타 치명 오류는 이미 scheduleRetry()의 지수 백오프+5회 실패 후 60초 대기를 거치는데 이 경로만 예외였던 게 원인 — scheduleRetry()로 위임해 통일. forceRefresh=true 동작은 그대로 유지',
   ]},
@@ -3684,6 +3687,15 @@ window.addEventListener('offline', () => {
     // ★ initCallReconnect가 이미 재연결 처리 중이면 중복 실행 방지
     // visibilitychange 경로에서 tryReconnect와 doReconnect가 동시에 playStation을 호출하는 경쟁 차단
     if (reconnectingCall) { RLog.info(`doReconnect 차단 (reconnectingCall 진행 중) — ${reason}`); return; }
+    // ★ 버그수정 v2.8.73 (치명) — scheduleRetry()가 이미 백오프 타이머를 걸어둔 상태(HLS
+    // 오류로 인한 재시도 진행 중)면 여기서 끼어들지 않는다. 이 폴링은 pause 이벤트마다
+    // 시작되는데, manifestParsingError 등으로 scheduleRetry가 재시도 중일 때도 AudioContext는
+    // 대개 'running'이라 이 폴링이 2초마다 bare playStation(S.current)를 호출해버렸음.
+    // isRetry 인자를 안 넘기는 호출이라 S.retryCount가 매번 0으로 리셋되고 forceRefresh도
+    // 꺼진 채로 재시도돼, scheduleRetry의 지수 백오프·5회 실패 후 60초 대기가 사실상
+    // 무력화되고 있었음 (실사용 로그에서 확인). scheduleRetry가 이미 재시도를 예약해뒀으면
+    // 그 사이클에 맡기고 여기선 아무것도 하지 않는다.
+    if (S.retryTimer) { RLog.info(`doReconnect 차단 (scheduleRetry 진행 중) — ${reason}`); return; }
     stopVoiceTimer();
     console.info('[VoiceInput]', reason, '→ 재연결');
     const ctx = getSharedAudioCtx();

@@ -1342,7 +1342,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.73</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.74</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1423,8 +1423,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.73';
+const APP_VERSION = 'v2.8.74';
 const CHANGELOG = [
+  { version: 'v2.8.74', date: '2026-08-08', changes: [
+    '[버그수정 치명] v2.8.73에서 음성입력 폴링(doReconnect)에만 "scheduleRetry 진행 중이면 개입 안 함" 가드를 걸었는데, 실사용 로그(manifestParsingError 스톰)에서 AudioContext statechange 핸들러("통화 종료 감지")도 동일하게 끼어들어 백오프를 무력화시키는 게 확인됨. AudioContext가 running으로 바뀌는 건 통화 종료뿐 아니라 HLS가 새 세션을 만들 때도 흔히 발생하는데 이 핸들러가 그걸 구분 못 하고 즉시 재연결을 강행해왔음. 같은 원인이라 audio play 이벤트 핸들러에도 동일 가드 추가 — 이제 scheduleRetry가 이미 재시도를 예약해뒀으면(S.retryTimer) 세 경로(음성입력 폴링/AudioContext statechange/play 이벤트) 모두 양보함',
+  ]},
   { version: 'v2.8.73', date: '2026-07-30', changes: [
     '[버그수정 치명] v2.8.72에서 manifestParsingError를 scheduleRetry() 백오프로 넘겼는데도, 실사용 로그에서 여전히 ~1.2~1.7초 간격의 빠른 재시도가 관찰됨 — 원인은 음성입력(마이크) 재연결 폴링(2초 간격)이 같은 pause 이벤트에 반응해 별도로 doReconnect()를 호출하고 있었기 때문. AudioContext가 대개 running 상태라 이 폴링이 매번 bare playStation(S.current)를 즉시 호출(isRetry 인자 없음 → forceRefresh=false + retryCount=0으로 리셋)해, scheduleRetry의 지수 백오프와 5회 실패 후 60초 대기를 사실상 무력화시키고 있었음. doReconnect()에 "S.retryTimer가 이미 있으면(scheduleRetry 재시도 예약 중) 끼어들지 않음" 가드 추가 — 음성입력 시나리오(진짜 마이크 종료) 자체 동작은 그대로 유지, HLS 에러 재시도 중일 때만 양보',
   ]},
@@ -3229,6 +3232,9 @@ audio.addEventListener('play', () => {
   }
   // needReconnect: 통화/음성입력으로 인한 외부 중단 상태
   if (S.needReconnect && S.current && !reconnectingCall) {
+    // ★ 버그수정 v2.8.74 — 다른 재연결 경로들과 동일하게, scheduleRetry가 이미 재시도를
+    // 예약해뒀으면(S.retryTimer) 여기서 끼어들지 않는다.
+    if (S.retryTimer) { RLog.info('audio play 이벤트 — scheduleRetry 진행 중이라 개입 안 함'); return; }
     S.needReconnect = false;
     S.wasPlaying    = true;  // ★ false → true: 재연결 트리거가 wasPlaying을 필요로 함
     S.userPaused    = true;
@@ -3297,6 +3303,17 @@ function ensureAudioCtxWatch() {
     // audio.paused를 실측해 S.playing 값 자체를 신뢰하지 않고 정정한다.
     const staleFlag = S.playing && audio.paused;
     if (S.playing && !staleFlag) return; // 실제로 재생 중이면 개입하지 않음
+    // ★ 버그수정 v2.8.74 (치명) — v2.8.73에서 음성입력 폴링(doReconnect)에만 이 가드를
+    // 걸었는데, 실사용 로그에서 이 statechange 핸들러도 똑같이 manifestParsingError
+    // 재시도 스톰 중에 끼어들고 있었음이 확인됨. AudioContext가 running으로 바뀌는 건
+    // 통화 종료뿐 아니라 HLS가 새 세션을 만들 때도 흔히 발생하는데, 이 핸들러는 그걸
+    // 구분 못 하고 scheduleRetry의 백오프 사이클과 무관하게 즉시 playStation을 재호출해
+    // forceRefresh=false로 초기화된 채 retryCount까지 0으로 되돌리고 있었음. scheduleRetry가
+    // 이미 재시도를 예약해뒀으면(S.retryTimer 존재) 여기서 끼어들지 않는다.
+    if (S.retryTimer) {
+      RLog.info('AudioContext statechange — scheduleRetry 진행 중이라 개입 안 함');
+      return;
+    }
     if (staleFlag) {
       RLog.warn('AudioContext running 복귀 — S.playing=true인데 audio.paused=true (통화 중 잔류 상태) → 정정 후 재연결');
       S.playing = false;

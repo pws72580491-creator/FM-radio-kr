@@ -1342,7 +1342,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <!-- 버전 뱃지 -->
-<div id="versionBadge" onclick="openChangelog()">v2.8.74</div>
+<div id="versionBadge" onclick="openChangelog()">v2.8.75</div>
 
 <!-- 변경 이력 시트 -->
 <div class="changelog-bg" id="changelogBg" onclick="closeChangelog(event)">
@@ -1423,8 +1423,11 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.74';
+const APP_VERSION = 'v2.8.75';
 const CHANGELOG = [
+  { version: 'v2.8.75', date: '2026-08-10', changes: [
+    '[정리] 스트림 프록시 기본 주소(P)에서 불필요한 트레일링 슬래시 제거 — radio.bsod.kr이 자체 안내하는 "고정 URL"(https://radio.bsod.kr/stream?stn=...)과 앱이 실제 요청하는 주소(.../stream/?stn=...)가 슬래시 한 글자 달랐던 것을 발견해 일치시킴. 다만 이 슬래시 차이로도 그동안 정상 재생돼온 기록이 많아 이번 장시간 장애(CBS 계열 등 프록시 경유 방송 전체 실패, 극동방송/EBS만 정상)의 근본 원인은 아닐 가능성이 높음 — 서버가 공식 안내하는 주소와 완전히 동일하게 맞춰 불확실성을 하나 제거하는 차원',
+  ]},
   { version: 'v2.8.74', date: '2026-08-08', changes: [
     '[버그수정 치명] v2.8.73에서 음성입력 폴링(doReconnect)에만 "scheduleRetry 진행 중이면 개입 안 함" 가드를 걸었는데, 실사용 로그(manifestParsingError 스톰)에서 AudioContext statechange 핸들러("통화 종료 감지")도 동일하게 끼어들어 백오프를 무력화시키는 게 확인됨. AudioContext가 running으로 바뀌는 건 통화 종료뿐 아니라 HLS가 새 세션을 만들 때도 흔히 발생하는데 이 핸들러가 그걸 구분 못 하고 즉시 재연결을 강행해왔음. 같은 원인이라 audio play 이벤트 핸들러에도 동일 가드 추가 — 이제 scheduleRetry가 이미 재시도를 예약해뒀으면(S.retryTimer) 세 경로(음성입력 폴링/AudioContext statechange/play 이벤트) 모두 양보함',
   ]},
@@ -2045,7 +2048,13 @@ let favLocked = localStorage.getItem('radio_fav_locked') === '1';
    채널 데이터
 ════════════════════════════════════════ */
 // ★ bsod.kr 프록시 경유 — CORS 우회 및 토큰 갱신 처리
-const P = 'https://radio.bsod.kr/stream/';
+// ★ 버그수정 v2.8.75 — radio.bsod.kr 사이트가 자체적으로 안내하는 "고정 URL"은
+// 'https://radio.bsod.kr/stream?stn=...' (stream 뒤에 슬래시 없음)인데, 이 앱은
+// 'https://radio.bsod.kr/stream/?stn=...' (슬래시 있음)를 쓰고 있었음. 그동안은
+// 문제없이 동작해온 것으로 보아 이게 근본 원인은 아닐 가능성이 높지만(트레일링
+// 슬래시는 서버가 알아서 같은 경로로 처리해주는 경우가 대부분), 사이트가 공식으로
+// 안내하는 주소와 완전히 동일하게 맞춰 불필요한 변수를 제거한다.
+const P = 'https://radio.bsod.kr/stream';
 const STATIONS = [
   { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
   { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },

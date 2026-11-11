@@ -1267,6 +1267,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="add-station-field">
       <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
       <input id="asi-url" type="url" placeholder="https://...m3u8">
+      <div style="font-size:11px;opacity:.7;margin-top:4px;line-height:1.4">MBC 표준FM·FM4U 재생 주소를 붙여넣으면 새 채널 대신 해당 방송의 주소가 교체됩니다 (이름 입력 불필요)</div>
     </div>
     <div class="add-station-field">
       <label>색상 (선택)</label>
@@ -1423,8 +1424,24 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.78';
+const APP_VERSION = 'v2.8.81';
 const CHANGELOG = [
+  { version: 'v2.8.81', date: '2026-11-11', changes: [
+    '[개선] MBC 대응 — 11/11 현재 KBS·SBS는 재생되고 MBC만 안 되는 상황. MBC는 주소를 받는 방송사 API(sminiplay.imbc.com)와 재생 서버(minisw·minimw.imbc.com)가 브라우저의 직접 접근(CORS)을 막고 있을 가능성이 가장 큼. 앱을 배포한 서버(Vercel)에 중계 함수(api/stream.js)를 두고 앱이 먼저 그 함수로 주소를 받는 "relay" 경로 추가 — 서버끼리 통신하므로 CORS 제한이 없고, 방송사 주소 목록은 함수 안에 고정(임의 주소 중계 불가). 함수가 없으면 404로 바로 다음 경로로 넘어가므로 배포 전에도 동작은 기존과 같음',
+    '[개선] 방송3사 주소 확보 순서: ① relay(자체 중계 함수) ② radio.bsod.kr/api/url ③ 방송사 공식 API ④ 기존 /stream. 성공한 경로는 기억하고, 실패하면 같은 시도 안에서 다음 경로로 이동',
+    '[개선] 내장 HLS 폴백 조건 확대 — 기존엔 매니페스트 로딩 실패(HTTP 0)만 대상이었으나, 재생목록(level)·세그먼트(frag) 로딩이 HTTP 0으로 치명 실패한 경우도 대상에 포함. MBC처럼 주소는 받아도 재생 서버가 CORS를 막아 세그먼트에서 실패하는 경우 대응',
+    '[참고] 이 환경에서는 MBC 서버에 접속할 수 없어 어느 쪽이 막혔는지는 확인하지 못함 — 로그의 "주소 확보 실패(경로명)" 사유와 "HLS 네트워크 오류(치명)"의 HTTP 코드로 구분 가능',
+  ]},
+  { version: 'v2.8.80', date: '2026-11-11', changes: [
+    '[개선] 방송3사(KBS·MBC·SBS) 방송사 공식 API 직접 조회 경로 추가 — "고정 주소로 교체" 요청에 대한 대응. 8월에 받은 원본 주소들은 모두 토큰이 붙은 주소(SBS JWT 약 12시간, KBS CloudFront 서명 약 1.5일, MBC _lsu_sa_)라 그대로 박아 넣으면 곧 만료되므로, 대신 프록시가 서버에서 하던 일(방송사 API에서 새 주소 받기)을 앱이 직접 하도록 함: KBS cfpwwwapi.kbs.co.kr(JSON), MBC sminiplay.imbc.com·SBS apis.sbs.co.kr(텍스트 한 줄). 출처는 radio.bsod.kr 저장소의 kbs.js·mbc.js·sbs.js',
+    '[개선] 주소 확보 경로 순서 — 방송3사: ① radio.bsod.kr/api/url ② 방송사 공식 API ③ 기존 /stream. 앞 경로가 실패하면 같은 시도 안에서 바로 다음 경로로 넘어가고(로그: "주소 확보 실패(api) → bcast" 등), 성공한 경로는 기억. 방송사 API가 이 앱의 출처(CORS)를 허용하지 않으면 실패하고 다음 경로로 넘어갈 뿐이라 기존보다 나빠지지는 않음. radio.bsod.kr 쪽 인프라(별도 워커 포함)는 건드리지 않음',
+    '[참고] 이 환경에서는 방송사 API에 접속할 수 없어 실제 응답과 CORS 허용 여부는 확인하지 못함. 로그에 "스트림 경로 bcast — 방송명"이 보이면 이 경로로 주소를 받은 것',
+  ]},
+  { version: 'v2.8.79', date: '2026-11-11', changes: [
+    '[버그수정] "radio.bsod.kr 사이트에서는 되는데 앱에서는 안 되는" 방송(방송3사) 대응 — radio.bsod.kr 저장소 확인 결과 공식 플레이어는 브라우저가 HLS를 지원하면(안드로이드 크롬 등) hls.js 대신 브라우저 내장 재생(<audio src=m3u8>)을 먼저 쓰는데, 이 앱은 항상 hls.js만 사용. hls.js는 XHR로 매니페스트·세그먼트를 받기 때문에 방송사 서버가 CORS 허용 헤더를 주지 않으면 HTTP 0으로 즉시 실패(11/11 로그의 70~280ms 즉시 치명 오류와 부합)하지만 내장 재생은 CORS 검사가 없음',
+    '[개선] 재생 엔진 폴백 — hls.js가 매니페스트를 HTTP 0(CORS·차단 의심)으로 같은 방송에서 2회 연속 못 받으면 그 방송만 다음 시도부터 내장 HLS로 전환(crossorigin 속성은 내장 재생 때만 제거, hls.js 복귀 시 복원). 내장 재생도 실패하면 자동으로 hls.js로 되돌림. 403/404/5xx 등 서버·토큰 문제는 내장 재생으로 해결되지 않으므로 전환하지 않음. 정상 방송은 기존처럼 hls.js 유지',
+    '[참고] 이 환경에서는 실제 재생을 시험할 수 없어 전환 조건·복귀 로직은 코드와 단위 테스트로만 검증함. 로그에 "내장 HLS로 재생 시도"가 보이면 이 폴백이 작동한 것',
+  ]},
   { version: 'v2.8.78', date: '2026-11-11', changes: [
     '[개선] 방송3사(KBS·MBC·SBS) 주소 응답 보강 — 이 세 곳은 방송사 토큰 주소를 프록시가 대신 받아오는 구조라 고정 주소 보조 경로가 없고, 프록시는 SBS·MBC 방송사 API의 응답 본문을 검증 없이 그대로 최대 12시간 캐시함(저장소 sbs.js/mbc.js 확인). 줄바꿈·HTML 껍데기 등이 섞인 응답이 저장돼도 문자열 안의 첫 http(s) 주소만 뽑아 재생하도록 변경하고, 가공이 일어나면 로그에 남김. 주소 형식이 이상하면 응답 앞 40자를 로그에 기록해 원인 구분 가능',
     '[참고] 방송3사만 안 되는 원인은 이 환경에서 방송사·프록시 서버에 접속할 수 없어 확정하지 못함 — 프록시 코드상 방송3사 템플릿은 11/10 폴더 정리 외에 변경이 없었음. sw.js(서비스워커)는 이 대화에 없어 확인하지 못함',
@@ -2076,14 +2093,32 @@ const P = 'https://radio.bsod.kr/stream';
 // 프록시 경유 방송이 전부 동시에 죽었음 → /api/url → 직접 주소 → /stream 순으로 경로를 바꿔가며 시도
 const API_URL = 'https://radio.bsod.kr/api/url';
 const STATIONS = [
-  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio'  },
-  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio'  },
-  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98', stream:P+'?stn=kbs&ch=2fm'     },
-  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212', stream:P+'?stn=kbs&ch=1fm'     },
-  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b', stream:P+'?stn=mbc&ch=sfm'     },
-  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c', stream:P+'?stn=mbc&ch=fm4u'    },
-  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400', stream:P+'?stn=sbs&ch=lovefm'  },
-  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22', stream:P+'?stn=sbs&ch=powerfm' },
+  // ★ v2.8.80 — bcast: 방송3사는 토큰이 붙은 주소(SBS JWT 약 12시간, KBS CloudFront 서명 약 1.5일, MBC _lsu_sa_)라
+  //   고정 주소로 바꿀 수 없음. 프록시(radio.bsod.kr)가 하는 일을 앱이 직접 하도록, 방송사 공식 API에서
+  //   매번 새 주소를 받아오는 보조 경로 (출처: radio.bsod.kr 저장소 kbs.js / mbc.js / sbs.js, 2026-11-10 기준)
+  { id:1,  name:'KBS 1라디오',  freq:'97.3 MHz',  genre:'종합',       color:'#1a5276', stream:P+'?stn=kbs&ch=1radio',
+    bcast:{ kind:'kbs', code:'21' } },
+  { id:2,  name:'KBS 해피FM',   freq:'106.1 MHz', genre:'종합',       color:'#1e8449', stream:P+'?stn=kbs&ch=2radio',
+    bcast:{ kind:'kbs', code:'22' } },
+  { id:3,  name:'KBS 쿨FM',     freq:'89.1 MHz',  genre:'음악/예능',  color:'#7d3c98', stream:P+'?stn=kbs&ch=2fm',
+    bcast:{ kind:'kbs', code:'25' } },
+  { id:4,  name:'KBS 클래식FM', freq:'93.1 MHz',  genre:'클래식',     color:'#784212', stream:P+'?stn=kbs&ch=1fm',
+    bcast:{ kind:'kbs', code:'24' } },
+  // ★ v2.8.82 — MBC: 11/11 20:36 로그에서 relay(1ms, 앱에서 나가지도 못함)·api·bcast(24ms, CORS 의심)가 모두 즉시 실패.
+  //   사용자가 확인한 재생 주소를 direct 보조 경로로 보유(토큰 _lsu_sa_ 가 만료되면 4xx로 실패하고 다음 경로로 넘어감).
+  //   만료 시에는 "＋ 방송 추가"에 새 주소를 붙여넣으면 match 로 방송을 찾아 주소를 교체(수동 주소, 최우선 경로)
+  { id:5,  name:'MBC 표준FM',   freq:'95.9 MHz',  genre:'종합',       color:'#c0392b', stream:P+'?stn=mbc&ch=sfm',
+    bcast:{ kind:'text', url:'https://sminiplay.imbc.com/aacplay.ashx?agent=webapp&channel=sfm' },
+    match:/imbc\.com\/[^?]*\bsfm\.stream\//i,
+    direct:'https://minisw.imbc.com/dsfm/_definst_/sfm.stream/playlist.m3u8?_lsu_sa_=65D1501B83393C742145F5563B81CC40D5843D45CF01C2D63F50C1a0C621387643aA73EF34226D4000673FA1EBb66119BECBFA3BDBF03370DDA7DA049E2F330C0BD8484526850EDFA760958C15B1ABF8ED17275E11910210055214237923DC6A95504B432282B86D6B66070CCDD72460' },
+  { id:6,  name:'MBC FM4U',     freq:'91.9 MHz',  genre:'음악',       color:'#e74c3c', stream:P+'?stn=mbc&ch=fm4u',
+    bcast:{ kind:'text', url:'https://sminiplay.imbc.com/aacplay.ashx?agent=webapp&channel=mfm' },
+    match:/imbc\.com\/[^?]*\bmfm\.stream\//i,
+    direct:'https://minimw.imbc.com/dmfm/_definst_/mfm.stream/playlist.m3u8?_lsu_sa_=65011C1023E833E41841A5BF39D1F94085FB30D57C0472603F7000aD06323D864CaB739E38126C45E0A634412Cb311C17ABA12DFB5410ACACD786403F2E4F6391FC9508BB85CB8C96763F0E120DA3FD631F4EDA60223E976252FE8074AFEEC3BAAAF12335582ADF6476EA8E01CCA9DBC' },
+  { id:7,  name:'SBS 러브FM',   freq:'103.5 MHz', genre:'종합',       color:'#d35400', stream:P+'?stn=sbs&ch=lovefm',
+    bcast:{ kind:'text', url:'https://apis.sbs.co.kr/play-api/1.0/livestream/lovepc/lovefm?protocol=hls&ssl=Y' } },
+  { id:8,  name:'SBS 파워FM',   freq:'107.7 MHz', genre:'음악/예능',  color:'#e67e22', stream:P+'?stn=sbs&ch=powerfm',
+    bcast:{ kind:'text', url:'https://apis.sbs.co.kr/play-api/1.0/livestream/powerpc/powerfm?protocol=hls&ssl=Y' } },
   // ★ v2.8.77 — direct: 방송사가 고정 주소로 제공하는 방송은 프록시가 막혀도 재생되도록 원본 주소를 보조 경로로 보유
   //   (출처: radio.bsod.kr 저장소 functions/api/template, 2026-11-10 기준)
   { id:9,  name:'CBS 음악FM',   freq:'93.9 MHz',  genre:'기독교음악', color:'#2471a3', stream:P+'?stn=cbs&ch=mfm',
@@ -2134,10 +2169,55 @@ const _pathPref = {};       // { [방송 id]: 'api' | 'direct' | 'legacy' } — 
 const _lastMode = {};       // { [방송 id]: 직전에 실제로 쓴 경로 }
 const API_TIMEOUT_MS = 5000;
 
+/* ★ v2.8.79 — 재생 엔진 폴백: hls.js(MSE) → 브라우저 내장 HLS
+   radio.bsod.kr 공식 플레이어는 브라우저가 HLS를 지원하면(안드로이드 크롬 등) hls.js 대신 내장
+   재생(<audio src=m3u8>)을 먼저 쓴다. 내장 재생은 방송사 서버의 CORS 헤더가 필요 없지만, hls.js는
+   XHR로 매니페스트·세그먼트를 받아 CORS 허용 헤더가 없으면 HTTP 0으로 즉시 실패한다.
+   이 앱은 항상 hls.js만 써서 "사이트에서는 되는데 앱에서는 안 되는" 차이가 생길 수 있음.
+   → hls.js가 매니페스트를 CORS 의심(HTTP 0) 상태로 2회 연속 못 받으면 그 방송만 내장 HLS로 전환 */
+const _nativeFirst = new Set(); // 내장 HLS로 먼저 시도할 방송 id
+const _mfail = {};              // { [방송 id]: hls.js 매니페스트 연속 실패 횟수 }
+function canNativeHls() {
+  try { return !!audio.canPlayType('application/vnd.apple.mpegurl'); } catch (e) { return false; }
+}
+function markNativeIfCorsSuspect(s, d) {
+  if (!s) return;
+  _mfail[s.id] = (_mfail[s.id] || 0) + 1;
+  const code = d && d.response ? d.response.code : undefined;
+  // 403/404/5xx 는 서버·토큰 문제라 내장 재생으로도 해결되지 않음 — HTTP 0(CORS·차단 의심)일 때만 전환
+  if (_mfail[s.id] >= 2 && !code && navigator.onLine && canNativeHls() && !_nativeFirst.has(s.id)) {
+    _nativeFirst.add(s.id);
+    RLog.warn('hls.js 매니페스트 연속 실패(HTTP 0, CORS·차단 의심) — 다음 시도부터 내장 HLS로 전환', s.name);
+  }
+}
+
+/* ★ v2.8.82 — 수동 주소: 사용자가 "＋ 방송 추가"에 붙여넣은 방송사 토큰 주소를 방송별로 저장해 두고 최우선으로 사용.
+   토큰 주소는 시간이 지나면 만료되므로 이 기기에만 저장(계정 동기화 제외)하고, 4xx로 실패하면 자동 삭제 */
+const OVERRIDE_KEY = 'radio_url_override';
+function loadOverrides() {
+  try { const o = JSON.parse(localStorage.getItem(OVERRIDE_KEY) || '{}'); return (o && typeof o === 'object') ? o : {}; }
+  catch (e) { return {}; }
+}
+function saveOverrides(o) { try { localStorage.setItem(OVERRIDE_KEY, JSON.stringify(o)); } catch (e) {} }
+function getOverride(s) {
+  const o = s && loadOverrides()[s.id];
+  return (o && typeof o.url === 'string' && /^https?:\/\//i.test(o.url)) ? o.url : null;
+}
+function setOverride(s, url) { const o = loadOverrides(); o[s.id] = { url, at: Date.now() }; saveOverrides(o); }
+function clearOverride(s) { const o = loadOverrides(); if (o[s.id]) { delete o[s.id]; saveOverrides(o); } }
+function findBuiltinByUrl(url) {
+  return (typeof url === 'string' && /^https?:\/\//i.test(url))
+    ? (STATIONS.find(x => !x.custom && x.match && x.match.test(url)) || null) : null;
+}
+
 function streamModes(s) {
   // 프록시 주소(P?...)가 아닌 방송(극동방송·사용자 추가 등)은 기존 방식 하나뿐
   if (!s.stream || !s.stream.startsWith(P + '?')) return ['legacy'];
-  const m = ['api'];
+  const m = [];
+  if (getOverride(s)) m.push('manual'); // ★ v2.8.82 — 수동 주소가 있으면 최우선
+  if (s.bcast) m.push('relay');   // ★ v2.8.81 — 이 앱과 같은 서버의 중계 함수(/api/stream). 없으면 404로 바로 다음 경로
+  m.push('api');
+  if (s.bcast) m.push('bcast');   // ★ v2.8.80 — 방송사 공식 API에서 직접 받기 (방송3사)
   if (s.direct) m.push('direct');
   m.push('legacy');
   return m;
@@ -2153,25 +2233,58 @@ function rotateStreamPath(s) {
   RLog.warn('스트림 경로 전환', `${cur} → ${next} (다음 시도부터)`);
 }
 
-async function fetchApiUrl(s) {
-  const qs = s.stream.slice(P.length + 1); // 'stn=cbs&ch=joy4u'
+/* 응답 문자열 안의 첫 http(s) 주소만 추출 — 줄바꿈·HTML 껍데기 대응
+   ★ v2.8.78 — 프록시는 SBS·MBC 방송사 API의 응답 본문(text)을 검증 없이 그대로 최대 12시간 캐시한다
+   (radio.bsod.kr 저장소 sbs.js/mbc.js: response.text() 그대로 반환). 방송사가 줄바꿈·HTML 껍데기를
+   붙여 보내면 그 값이 통째로 저장되므로 주소 부분만 뽑아 쓴다. */
+function extractStreamUrl(raw) {
+  const m = (typeof raw === 'string') ? raw.match(/https?:\/\/[^\s"'<>]+/i) : null;
+  if (!m) throw new Error('응답 url 형식 이상: ' + String(raw).replace(/\s+/g, ' ').slice(0, 40));
+  const u = m[0];
+  if (u !== raw.trim()) RLog.warn('주소 응답 정리', `원본 ${raw.length}자 → 주소 ${u.length}자`);
+  if (/^http:/i.test(u) && location.protocol === 'https:') throw new Error('http 주소(혼합 콘텐츠)');
+  return u;
+}
+
+async function fetchBody(url, kind, extra) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_URL}?${qs}`, { cache: 'no-store', signal: ctrl.signal });
+    const res = await fetch(url, Object.assign({ signal: ctrl.signal }, extra));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const j = await res.json();
-    const raw = j && j.url;
-    // ★ v2.8.78 — 프록시는 SBS·MBC 방송사 API의 응답 본문(text)을 검증 없이 그대로 최대 12시간 캐시한다
-    //   (radio.bsod.kr 저장소 sbs.js/mbc.js: response.text() 그대로 반환). 방송사가 줄바꿈·HTML 껍데기를
-    //   붙여 보내면 그 값이 통째로 저장되므로, 문자열 안의 첫 http(s) 주소만 뽑아 쓴다.
-    const m = (typeof raw === 'string') ? raw.match(/https?:\/\/[^\s"'<>]+/i) : null;
-    if (!m) throw new Error('응답 url 형식 이상: ' + String(raw).replace(/\s+/g, ' ').slice(0, 40));
-    const u = m[0];
-    if (u !== raw.trim()) RLog.warn('주소 API 응답 정리', `원본 ${raw.length}자 → 주소 ${u.length}자`);
-    if (/^http:/i.test(u) && location.protocol === 'https:') throw new Error('http 주소(혼합 콘텐츠)');
-    return u;
+    return kind === 'json' ? await res.json() : await res.text();
   } finally { clearTimeout(timer); }
+}
+
+async function fetchApiUrl(s) {
+  const qs = s.stream.slice(P.length + 1); // 'stn=cbs&ch=joy4u'
+  const j = await fetchBody(`${API_URL}?${qs}`, 'json', { cache: 'no-store' });
+  return extractStreamUrl(j && j.url);
+}
+
+// ★ v2.8.81 — 이 앱을 배포한 서버(Vercel)에 둔 중계 함수(api/stream.js)로 주소 받기
+//   서버끼리 통신하므로 방송사 API의 CORS 제한을 받지 않음. 중계 함수가 배포돼 있지 않으면
+//   404(또는 HTML 응답)로 실패하고 바로 다음 경로로 넘어감
+//   ★ v2.8.82 — 앱과 다른 서버에 중계 함수를 둘 때는 콘솔에서 localStorage.radio_relay_url='https://내중계주소/api/stream' 로 지정
+//   (중계 함수는 CORS를 허용). 11/11 로그에서 relay 가 1ms 만에 "Failed to fetch"로 끝난 것은 404가 아니라
+//   요청이 앱 밖으로 나가지도 못했다는 뜻이라, 이 앱이 열린 곳(origin)에는 /api/stream 이 없는 것으로 보임
+const RELAY_URL = (() => { try { return localStorage.getItem('radio_relay_url') || '/api/stream'; } catch (e) { return '/api/stream'; } })();
+async function fetchRelayUrl(s) {
+  const qs = s.stream.slice(P.length + 1);
+  const j = await fetchBody(`${RELAY_URL}?${qs}`, 'json', { cache: 'no-store' });
+  return extractStreamUrl(j && j.url);
+}
+
+// ★ v2.8.80 — 방송사 공식 API에서 직접 받기 (프록시가 서버에서 하던 일을 앱이 대신)
+//   방송사 서버가 이 앱의 출처(CORS)를 허용하지 않으면 여기서 실패하고 다음 경로로 넘어감
+async function fetchBcastUrl(s) {
+  const b = s.bcast;
+  if (b.kind === 'kbs') {
+    const j = await fetchBody(`https://cfpwwwapi.kbs.co.kr/api/v1/landing/live/channel_code/${b.code}`, 'json');
+    const item = (j && j.channel_item && j.channel_item[0]) || (j && j.channel && j.channel.item && j.channel.item[0]);
+    return extractStreamUrl(item && item.service_url);
+  }
+  return extractStreamUrl(await fetchBody(b.url, 'text'));
 }
 
 async function resolveStreamUrl(s, forceRefresh = false) {
@@ -2179,25 +2292,42 @@ async function resolveStreamUrl(s, forceRefresh = false) {
     const modes = streamModes(s);
     if (modes.length === 1) { _lastMode[s.id] = 'legacy'; return forceRefresh ? bustUrl(s.stream) : s.stream; }
 
-    let mode = modes.includes(_pathPref[s.id]) ? _pathPref[s.id] : modes[0];
-    if (mode === 'api') {
-      try {
-        const u = await fetchApiUrl(s);
-        if (_lastMode[s.id] !== 'api') RLog.info('스트림 경로', `api — ${s.name}`);
-        _lastMode[s.id] = 'api';
-        return u;
-      } catch (e) {
-        // 주소 API 자체가 안 되는 경우(차단·장애·CORS·타임아웃) — 같은 시도에서 바로 다음 경로로
-        const reason = (e && e.name === 'AbortError') ? `타임아웃 ${API_TIMEOUT_MS}ms` : (e && e.message) || String(e);
-        mode = modes[1];
-        _pathPref[s.id] = mode;
-        RLog.warn('주소 API 실패 — 다음 경로로 전환', `${reason} → ${mode} | online=${navigator.onLine}`);
+    // 선호 경로부터 시작해 순서대로 시도. 주소를 받아오는 경로(api·bcast)가 실패하면 같은 시도 안에서
+    // 바로 다음 경로로 넘어가고(차단·장애·CORS·타임아웃), direct·legacy는 항상 주소를 돌려줌
+    const startIdx = Math.max(0, modes.indexOf(_pathPref[s.id]));
+    for (let i = 0; i < modes.length; i++) {
+      const idx = (startIdx + i) % modes.length;
+      const mode = modes[idx];
+      if (mode === 'api' || mode === 'bcast' || mode === 'relay') {
+        try {
+          const u = mode === 'api' ? await fetchApiUrl(s)
+                  : mode === 'relay' ? await fetchRelayUrl(s)
+                  : await fetchBcastUrl(s);
+          if (_lastMode[s.id] !== mode) RLog.info('스트림 경로', `${mode} — ${s.name}`);
+          _lastMode[s.id] = mode;
+          return u;
+        } catch (e) {
+          const reason = (e && e.name === 'AbortError') ? `타임아웃 ${API_TIMEOUT_MS}ms` : (e && e.message) || String(e);
+          const next = modes[(idx + 1) % modes.length];
+          _pathPref[s.id] = next;
+          RLog.warn(`주소 확보 실패(${mode}) — 다음 경로로 전환`, `${s.name} | ${reason} → ${next} | online=${navigator.onLine}`);
+          continue;
+        }
       }
+      if (mode === 'manual') {
+        const mu = getOverride(s);
+        if (mu) {
+          if (_lastMode[s.id] !== mode) RLog.info('스트림 경로', `manual(수동 주소) — ${s.name}`);
+          _lastMode[s.id] = mode;
+          return mu; // 수동 주소는 토큰이 붙어 있어 캐시 우회 파라미터를 붙이지 않음
+        }
+        continue;
+      }
+      if (_lastMode[s.id] !== mode) RLog.info('스트림 경로', `${mode} — ${s.name}`);
+      _lastMode[s.id] = mode;
+      if (mode === 'direct') return s.direct; // 고정 주소는 캐시 우회 파라미터를 붙이지 않음
+      return forceRefresh ? bustUrl(s.stream) : s.stream;
     }
-    if (_lastMode[s.id] !== mode) RLog.info('스트림 경로', `${mode} — ${s.name}`);
-    _lastMode[s.id] = mode;
-    if (mode === 'direct') return s.direct; // 고정 주소는 캐시 우회 파라미터를 붙이지 않음
-    return forceRefresh ? bustUrl(s.stream) : s.stream;
   }
   // ★ 캐시 TTL 체크 — 만료됐거나 forceRefresh면 재요청
   const cached = _streamCache[s.id];
@@ -2662,9 +2792,20 @@ function exportLog() {
   const countLine = totalOccurrences > logs.length
     ? `총 ${logs.length}개 항목 (반복 압축 전 실제 ${totalOccurrences}회 발생)`
     : `총 ${logs.length}개 항목`;
+  // ★ v2.8.82 — 접속 환경 한 줄: 경로별 실패 양상(relay 1ms 즉시 실패 등)을 해석하는 데 필요
+  let envLines = [];
+  try {
+    const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    const swOn = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+    envLines = [
+      `환경: ${location.origin} | ${standalone ? 'PWA(독립창)' : '브라우저'} | hls.js=${(window.Hls && window.Hls.isSupported()) ? 'O' : 'X'} | 내장HLS=${canNativeHls() ? 'O' : 'X'} | SW=${swOn ? '제어중' : '없음'} | ${APP_VERSION}`,
+      `UA: ${navigator.userAgent}`
+    ];
+  } catch (e) {}
   const header = [
     `KOREA FM 라디오 — 재생 로그`,
     `내보내기: ${new Date().toLocaleString('ko-KR')}`,
+    ...envLines,
     countLine,
     '═'.repeat(80),
     ''
@@ -2893,6 +3034,7 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       S.wasPlaying = true;  // ★ 재생 성공 즉시 wasPlaying 보존 — 직후 화면 꺼짐/freeze 시 재연결 보장
       S._bgInterruptedAt = 0; // ★ v2.8.68 — 재연결 성공 시 중단 추적 초기화
       if (_lastMode[s.id]) _pathPref[s.id] = _lastMode[s.id]; // ★ v2.8.77 — 재생에 성공한 주소 경로를 기억
+      _mfail[s.id] = 0; // ★ v2.8.79 — 재생 성공 시 매니페스트 연속 실패 횟수 초기화
       S.justStarted = Date.now(); // ★ 재생 직후 pause 오발동 방지 — 1500ms 동안 pause 핸들러 억제
       // ★ 재생 성공 시 이전 scheduleRetry 타이머 즉시 취소
       // 백그라운드 재시도 중 재생이 성공했는데 이전 타이머가 살아있어
@@ -2925,7 +3067,10 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       if (retry) scheduleRetry();
     }
 
-    if (window.Hls && window.Hls.isSupported()) {
+    const useNativeFallback = _nativeFirst.has(s.id) && canNativeHls(); // ★ v2.8.79
+    if (!useNativeFallback && window.Hls && window.Hls.isSupported()) {
+      // hls.js(MSE)는 blob 소스라 crossorigin 속성이 의미 없지만, 원래 설정으로 복구해 둠
+      if (!audio.hasAttribute('crossorigin')) audio.setAttribute('crossorigin', 'anonymous');
       const hls = new window.Hls({
         // ★ 라이브 엣지 즉시 재생 설정 — 버퍼를 최소화해 항상 현재 시점 방송 재생
         maxBufferLength:              10,  // ★ 5→10: bufferStalledError 반복 방지 (Joy4U 세그먼트 여유)
@@ -2997,7 +3142,20 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             if (netErrTimer) { clearTimeout(netErrTimer); netErrTimer = null; }
             // ★ v2.8.77 — 매니페스트 자체를 못 받은 경우만 주소 경로를 바꿔 다음 시도에 반영
             //   (세그먼트 오류·버퍼 정체 같은 일시 오류에는 경로를 건드리지 않음)
-            if (/^manifest/.test(d.details || '')) rotateStreamPath(S.current);
+            if (/^manifest/.test(d.details || '')) {
+              // ★ v2.8.82 — 수동 주소가 4xx(토큰 만료·거부)로 실패하면 저장된 주소를 지워 다음 재생부터 일반 경로를 쓰게 함
+              const _rc = d.response ? d.response.code : 0;
+              if (S.current && _lastMode[S.current.id] === 'manual' && [401, 403, 404, 410].includes(_rc)) {
+                clearOverride(S.current);
+                RLog.warn('수동 주소 만료 추정 — 저장된 주소 삭제', `${S.current.name} | HTTP ${_rc} | "＋ 방송 추가"에 새 주소를 붙여넣어 주세요`);
+                try { showToast(`⚠️ ${S.current.name} 저장 주소가 만료됐습니다. 새 주소를 붙여넣어 주세요`); } catch (e) {}
+              }
+              rotateStreamPath(S.current);
+              markNativeIfCorsSuspect(S.current, d); // ★ v2.8.79 — CORS 의심이면 내장 HLS 폴백 예약
+            } else if (/^(level|frag)LoadError$/.test(d.details || '') && d.response && d.response.code === 0) {
+              // ★ v2.8.81 — 매니페스트는 받았지만 하위 재생목록·세그먼트가 HTTP 0(CORS·차단 의심)으로 막힌 경우도 같은 폴백 대상
+              markNativeIfCorsSuspect(S.current, d);
+            }
 
             // ★ manifestParsingError — 캐시된 URL이 만료돼 서버가 잘못된 manifest 반환
             //    같은 URL로 재시도해도 동일 실패 → forceRefresh=true로 새 URL 재요청
@@ -3134,9 +3292,15 @@ function playStation(s, forceRefresh = false, isRetry = false) {
         }
       });
     } else if (audio.canPlayType('application/vnd.apple.mpegurl')) {
+      if (useNativeFallback) {
+        // ★ v2.8.79 — 공식 플레이어와 같은 조건: crossorigin 없이 내장 재생 (CORS 검사 없이 로드)
+        audio.removeAttribute('crossorigin');
+        RLog.info('내장 HLS로 재생 시도 (hls.js 폴백)', s.name);
+      }
       audio.src = url; audio.volume = S.volume;
       audio.play().then(onOK).catch(e => {
         RLog.warn('네이티브 HLS play() 실패', e?.message || '');
+        _nativeFirst.delete(s.id); // ★ v2.8.79 — 내장 재생도 실패하면 다음 시도는 hls.js로 되돌림
         onFail(true);
       });
     } else {
@@ -3180,6 +3344,7 @@ audio.addEventListener('ended',   () => {
 audio.addEventListener('error',   () => {
   // ★ src가 없거나 빈 문자열이면 HLS.js 세팅 전 초기 상태 — 무시
   if (!audio.src || audio.src === '' || audio.src === location.href) return;
+  if (S.current && !S.hls) _nativeFirst.delete(S.current.id); // ★ v2.8.79 — 내장 재생 오류 시 다음 시도는 hls.js로
   if (S.current && S.playing && !S.loading && !S.hls) {
     RLog.kill('audio error (native) — 재연결');
     scheduleRetry();
@@ -5505,6 +5670,19 @@ function confirmAddStation() {
   const genre = document.getElementById('asi-genre').value.trim() || '기타';
   const url   = document.getElementById('asi-url').value.trim();
   const color = document.getElementById('asi-color').value;
+
+  // ★ v2.8.82 — 내장 방송(MBC 표준FM·FM4U)의 토큰 주소를 붙여넣은 경우: 새 채널을 만들지 않고 그 방송의 주소를 교체
+  const builtin = findBuiltinByUrl(url);
+  if (builtin) {
+    setOverride(builtin, url);
+    _pathPref[builtin.id] = 'manual';
+    _mfail[builtin.id] = 0; _nativeFirst.delete(builtin.id);
+    RLog.info('수동 주소 저장', builtin.name);
+    closeAddStation();
+    showToast(`✅ ${builtin.name} 주소를 교체했습니다`);
+    if (S.current && S.current.id === builtin.id) playStation(builtin, true);
+    return;
+  }
 
   if (!name) { showToast('⚠️ 방송국 이름을 입력해주세요.'); return; }
   if (!url)  { showToast('⚠️ 스트림 URL을 입력해주세요.'); return; }

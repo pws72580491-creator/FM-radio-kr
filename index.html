@@ -1267,7 +1267,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="add-station-field">
       <label>스트림 URL * (.m3u8 또는 오디오 직접 링크)</label>
       <input id="asi-url" type="url" placeholder="https://...m3u8">
-      <div style="font-size:11px;opacity:.7;margin-top:4px;line-height:1.4">MBC 표준FM·FM4U 재생 주소를 붙여넣으면 새 채널 대신 해당 방송의 주소가 교체됩니다 (이름 입력 불필요)</div>
+      <div style="font-size:11px;opacity:.7;margin-top:4px;line-height:1.4">MBC 표준FM·FM4U 재생 주소를 붙여넣으면 새 채널 대신 해당 방송의 주소가 교체됩니다. 중계 서버 주소(…workers.dev)를 붙여넣으면 중계 주소로 저장됩니다 (이름 입력 불필요)</div>
     </div>
     <div class="add-station-field">
       <label>색상 (선택)</label>
@@ -1424,8 +1424,15 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.83';
+const APP_VERSION = 'v2.8.84';
 const CHANGELOG = [
+  { version: 'v2.8.84', date: '2026-11-12', changes: [
+    '[분석] 11/12 12:22 로그 — ① 내장 MBC 주소(어젯밤 받은 것)가 HTTP 400 으로 실패: 06:22 에는 재생됐고 12:17 에는 400 이므로 토큰(_lsu_sa_)이 약 12시간짜리로 보임(radio.bsod.kr 이 주소를 11시간 59분 캐시하는 것과 일치). MBC 재생 서버가 이 앱을 막은 것이 아니라 "새 토큰을 받는 경로"가 막힌 상태. ② 같은 서버의 중계 함수는 MBC 에서만 "HTTP 502 — Network connection lost" — 방송사 서버가 응답 없이 연결을 끊은 것으로, 해외·클라우드 서버 접속 차단에서 흔한 증상(확정 아님). 이 문구에 [region=…] 이 없어 배포된 api/stream.js 는 v2.8.82 이전 버전. ③ 방송사 API 직접 호출(bcast)은 CORS 로, radio.bsod.kr/api/url 은 이 앱 접속 거부로 계속 실패',
+    '[신기능] 중계 서버 주소 지정 — "＋ 방송 추가"의 URL 칸에 https://….workers.dev/ 또는 …/api/stream 주소를 붙여넣으면 채널을 만들지 않고 중계 주소로 저장(PWA 에는 콘솔이 없어서). 이후 방송3사는 그 서버에서 주소를 받음. Cloudflare Worker 용 중계 코드(cloudflare-worker.js) 추가 — radio.bsod.kr 이 MBC 주소를 받는 곳과 같은 Cloudflare 환경',
+    '[수정] MBC 토큰 만료 판정에 HTTP 400 추가 — 이전에는 401·403·404·410 만 만료로 봐서 400 인 이번 로그에서 안내가 뜨지 않았음. 만료로 확인된 내장 주소는 이번 실행 중 다시 시도하지 않음',
+    '[수정] 내장 HLS 폴백 표시를 남긴 경로에서만 적용 — legacy(radio.bsod.kr/stream)의 HTTP 0 실패로 표시된 뒤 hls.js 로 잘 되던 direct 경로까지 내장 HLS 로 재생하려던 문제',
+    '[참고] 이 환경에서는 MBC 서버에 접속할 수 없어 Cloudflare Worker 에서 MBC API 가 열리는지는 확인하지 못함 — 단위 테스트는 앱 로직과 Worker 코드의 응답 처리까지만 검증',
+  ]},
   { version: 'v2.8.83', date: '2026-11-12', changes: [
     '[분석] 11/12 06:22 로그(앱 주소 fm-radio-kr.vercel.app, 안드로이드 크롬 PWA) — ① MBC 표준FM이 내장 주소(direct)로 hls.js 재생에 성공: MBC 재생 서버는 CORS를 허용하고, 어제 저녁에 받은 주소의 토큰이 약 7시간 뒤에도 유효함(최대 유효 시간은 미확인). ② 중계 함수(/api/stream)는 배포돼 있고 KBS 쿨FM·클래식FM은 relay 로 주소를 받아 재생 성공. ③ MBC만 relay 가 HTTP 502 — 서버끼리 호출했는데도 MBC API가 거부했다는 뜻이며, MBC API가 해외·특정 IP를 막는 것으로 보임(radio.bsod.kr 의 Cloudflare 서버는 통과). ④ radio.bsod.kr/api/url 은 모든 방송에서 계속 실패하고, TBS·YTN은 내장 주소(direct)로 재생됨',
     '[개선] 실패 응답 본문을 로그에 기록 — "주소 확보 실패(relay) … HTTP 502 — Upstream error: upstream HTTP 403 … [region=iad1]" 처럼 방송사가 준 상태 코드·본문 앞부분·중계 함수가 실행된 Vercel 지역이 보임. 이전 로그는 "HTTP 502" 만 있어 원인 구분이 불가능했음',
@@ -2192,6 +2199,10 @@ const API_TIMEOUT_MS = 5000;
    → hls.js가 매니페스트를 CORS 의심(HTTP 0) 상태로 2회 연속 못 받으면 그 방송만 내장 HLS로 전환 */
 const _nativeFirst = new Set(); // 내장 HLS로 먼저 시도할 방송 id
 const _mfail = {};              // { [방송 id]: hls.js 매니페스트 연속 실패 횟수 }
+// ★ v2.8.84 — 내장 HLS 전환을 "그 표시를 남긴 경로"에서만 적용. 11/12 12:17 로그에서 legacy(radio.bsod.kr/stream)가
+//   HTTP 0 으로 실패해 표시된 뒤, hls.js 로 잘 되던 direct 경로까지 내장 HLS 로 재생하려다 실패함
+const _nativeMode = {};         // { [방송 id]: 전환 표시를 남긴 경로(legacy/direct/...) }
+const _directDead = new Set();  // 토큰이 만료된 내장 주소(direct) 방송 id — 이번 실행 중에는 다시 시도하지 않음
 function canNativeHls() {
   try { return !!audio.canPlayType('application/vnd.apple.mpegurl'); } catch (e) { return false; }
 }
@@ -2202,7 +2213,8 @@ function markNativeIfCorsSuspect(s, d) {
   // 403/404/5xx 는 서버·토큰 문제라 내장 재생으로도 해결되지 않음 — HTTP 0(CORS·차단 의심)일 때만 전환
   if (_mfail[s.id] >= 2 && !code && navigator.onLine && canNativeHls() && !_nativeFirst.has(s.id)) {
     _nativeFirst.add(s.id);
-    RLog.warn('hls.js 매니페스트 연속 실패(HTTP 0, CORS·차단 의심) — 다음 시도부터 내장 HLS로 전환', s.name);
+    _nativeMode[s.id] = _lastMode[s.id] || 'legacy';
+    RLog.warn('hls.js 매니페스트 연속 실패(HTTP 0, CORS·차단 의심) — 다음 시도부터 내장 HLS로 전환', `${s.name} | 경로=${_nativeMode[s.id]}`);
   }
 }
 
@@ -2233,7 +2245,7 @@ function streamModes(s) {
   if (s.bcast) m.push('relay');   // ★ v2.8.81 — 이 앱과 같은 서버의 중계 함수(/api/stream). 없으면 404로 바로 다음 경로
   m.push('api');
   if (s.bcast) m.push('bcast');   // ★ v2.8.80 — 방송사 공식 API에서 직접 받기 (방송3사)
-  if (s.direct) m.push('direct');
+  if (s.direct && !_directDead.has(s.id)) m.push('direct'); // ★ v2.8.84 — 만료로 확인된 내장 주소는 제외
   m.push('legacy');
   return m;
 }
@@ -2285,13 +2297,30 @@ async function fetchApiUrl(s) {
 // ★ v2.8.81 — 이 앱을 배포한 서버(Vercel)에 둔 중계 함수(api/stream.js)로 주소 받기
 //   서버끼리 통신하므로 방송사 API의 CORS 제한을 받지 않음. 중계 함수가 배포돼 있지 않으면
 //   404(또는 HTML 응답)로 실패하고 바로 다음 경로로 넘어감
-//   ★ v2.8.82 — 앱과 다른 서버에 중계 함수를 둘 때는 콘솔에서 localStorage.radio_relay_url='https://내중계주소/api/stream' 로 지정
-//   (중계 함수는 CORS를 허용). 11/11 로그에서 relay 가 1ms 만에 "Failed to fetch"로 끝난 것은 404가 아니라
-//   요청이 앱 밖으로 나가지도 못했다는 뜻이라, 이 앱이 열린 곳(origin)에는 /api/stream 이 없는 것으로 보임
-const RELAY_URL = (() => { try { return localStorage.getItem('radio_relay_url') || '/api/stream'; } catch (e) { return '/api/stream'; } })();
+//   ★ v2.8.84 — 11/12 로그: 같은 서버의 중계 함수는 KBS 는 받아오지만 MBC 만 "HTTP 502 — Network connection lost"
+//   (방송사 서버가 응답 없이 연결을 끊음 = 해외·클라우드 서버 접속 차단에서 흔한 증상). 그래서 중계 서버를 다른 곳
+//   (예: Cloudflare Worker — radio.bsod.kr 이 MBC 주소를 받는 곳과 같은 환경)에 둘 수 있게 함.
+//   설정: "＋ 방송 추가"의 URL 칸에 중계 주소(https://….workers.dev/ 또는 …/api/stream)를 붙여넣으면 저장됨
+//   (PWA 에는 콘솔이 없어 이 방법을 씀). 콘솔에서는 localStorage.radio_relay_url 로도 지정 가능
+const RELAY_DEFAULT = '/api/stream';
+function relayBase() {
+  try { return localStorage.getItem('radio_relay_url') || RELAY_DEFAULT; } catch (e) { return RELAY_DEFAULT; }
+}
+// 붙여넣은 주소가 "중계 주소"인지 판별: workers.dev 루트 또는 /api/stream 으로 끝나는 주소 (재생 파일 확장자는 제외)
+function normalizeRelayUrl(u) {
+  try {
+    const x = new URL(String(u).trim());
+    if (x.protocol !== 'https:' && x.protocol !== 'http:') return null;
+    if (/\.(m3u8|aac|mp3|mp4|pls|ogg|m4a)$/i.test(x.pathname)) return null;
+    const isWorkerRoot = /\.workers\.dev$/i.test(x.hostname) && (x.pathname === '/' || x.pathname === '');
+    const isApiStream = /\/api\/stream\/?$/i.test(x.pathname);
+    if (!isWorkerRoot && !isApiStream) return null;
+    return x.origin + x.pathname.replace(/\/$/, '');
+  } catch (e) { return null; }
+}
 async function fetchRelayUrl(s) {
   const qs = s.stream.slice(P.length + 1);
-  const j = await fetchBody(`${RELAY_URL}?${qs}`, 'json', { cache: 'no-store' });
+  const j = await fetchBody(`${relayBase()}?${qs}`, 'json', { cache: 'no-store' });
   return extractStreamUrl(j && j.url);
 }
 
@@ -3087,7 +3116,8 @@ function playStation(s, forceRefresh = false, isRetry = false) {
       if (retry) scheduleRetry();
     }
 
-    const useNativeFallback = _nativeFirst.has(s.id) && canNativeHls(); // ★ v2.8.79
+    const useNativeFallback = _nativeFirst.has(s.id) && canNativeHls()
+      && (!_nativeMode[s.id] || _nativeMode[s.id] === _lastMode[s.id]); // ★ v2.8.79 / v2.8.84 — 표시를 남긴 경로에서만
     if (!useNativeFallback && window.Hls && window.Hls.isSupported()) {
       // hls.js(MSE)는 blob 소스라 crossorigin 속성이 의미 없지만, 원래 설정으로 복구해 둠
       if (!audio.hasAttribute('crossorigin')) audio.setAttribute('crossorigin', 'anonymous');
@@ -3165,12 +3195,16 @@ function playStation(s, forceRefresh = false, isRetry = false) {
             if (/^manifest/.test(d.details || '')) {
               // ★ v2.8.82 — 수동 주소가 4xx(토큰 만료·거부)로 실패하면 저장된 주소를 지워 다음 재생부터 일반 경로를 쓰게 함
               const _rc = d.response ? d.response.code : 0;
-              if (S.current && _lastMode[S.current.id] === 'manual' && [401, 403, 404, 410].includes(_rc)) {
+              // ★ v2.8.84 — MBC 는 만료된 토큰에 401/403 이 아니라 HTTP 400 을 돌려줌(11/12 12:17 로그: 06:22 에는 재생되던 주소가
+              //   약 6시간 뒤 400). 토큰 주소에 한해 400 도 만료로 판정
+              const _expired = [400, 401, 403, 404, 410].includes(_rc);
+              if (S.current && _lastMode[S.current.id] === 'manual' && _expired) {
                 clearOverride(S.current);
                 RLog.warn('수동 주소 만료 추정 — 저장된 주소 삭제', `${S.current.name} | HTTP ${_rc} | "＋ 방송 추가"에 새 주소를 붙여넣어 주세요`);
                 try { showToast(`⚠️ ${S.current.name} 저장 주소가 만료됐습니다. 새 주소를 붙여넣어 주세요`); } catch (e) {}
-              } else if (S.current && S.current.match && _lastMode[S.current.id] === 'direct' && [401, 403, 404, 410].includes(_rc)) {
-                // ★ v2.8.83 — 앱에 내장된 토큰 주소(MBC)가 만료된 경우: 삭제할 저장값은 없으므로 안내만
+              } else if (S.current && S.current.match && _lastMode[S.current.id] === 'direct' && _expired) {
+                // 앱에 내장된 토큰 주소(MBC)가 만료된 경우: 삭제할 저장값은 없으므로 이번 실행 중 다시 시도하지 않고 안내만
+                _directDead.add(S.current.id);
                 RLog.warn('내장 주소 만료 추정', `${S.current.name} | HTTP ${_rc} | "＋ 방송 추가"에 새 재생 주소를 붙여넣어 주세요`);
                 try { showToast(`⚠️ ${S.current.name} 내장 주소가 만료됐습니다. "＋ 방송 추가"에 새 주소를 붙여넣어 주세요`); } catch (e) {}
               }
@@ -5694,6 +5728,16 @@ function confirmAddStation() {
   const genre = document.getElementById('asi-genre').value.trim() || '기타';
   const url   = document.getElementById('asi-url').value.trim();
   const color = document.getElementById('asi-color').value;
+
+  // ★ v2.8.84 — 중계 서버 주소(workers.dev 또는 /api/stream)를 붙여넣은 경우: 채널을 만들지 않고 중계 주소로 저장
+  const relayUrl = normalizeRelayUrl(url);
+  if (relayUrl) {
+    try { localStorage.setItem('radio_relay_url', relayUrl); } catch (e) {}
+    RLog.info('중계 주소 저장', relayUrl);
+    closeAddStation();
+    showToast('✅ 중계 서버 주소를 저장했습니다. MBC를 다시 선택해 보세요');
+    return;
+  }
 
   // ★ v2.8.82 — 내장 방송(MBC 표준FM·FM4U)의 토큰 주소를 붙여넣은 경우: 새 채널을 만들지 않고 그 방송의 주소를 교체
   const builtin = findBuiltinByUrl(url);

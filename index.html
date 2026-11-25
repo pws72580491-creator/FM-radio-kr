@@ -1424,8 +1424,15 @@ input[type=range]::-webkit-slider-thumb {
 /* ════════════════════════════════════════
    버전 정보
 ════════════════════════════════════════ */
-const APP_VERSION = 'v2.8.84';
+const APP_VERSION = 'v2.8.85';
 const CHANGELOG = [
+  { version: 'v2.8.85', date: '2026-11-25', changes: [
+    '[분석] 11/25 로그(Joy4U, 안드로이드 크롬 PWA) 끊김 3건 — ① 12:42:22~12:50 약 8분 무음(복구 실패): 화면이 꺼진 상태에서 OS가 pause 한 1.7초 뒤 AudioContext 가 running 으로 복귀했고, 이 핸들러가 S.wasPlaying=false 로 지운 직후 tryReconnect() 를 호출 → tryReconnect 첫 줄(!S.wasPlaying 이면 조용히 반환)에 걸려 재연결이 한 번도 실행되지 않음. 같은 시점에 S.playing 도 false 로 정정돼 백그라운드 감시까지 꺼졌고, 앱으로 돌아와도 wasPlaying=false 라 자동 재개되지 않음. 이후 로그가 한 줄도 없던 것이 그 증거 ② 11:10:33 OS pause → 약 14초 뒤 OS가 스스로 재개(BG watch 4틱=12초 직전). 통화 자동복구 우선 정책(v2.8.70 확정)과 YouTube 간섭 사이의 합의된 12초라 변경하지 않음 ③ 12:41:41 포그라운드 복귀 직후 offline→online 이 31ms 만에 끝났는데 스트림을 즉시 파괴하고 2초(IP 재할당 대기) + connection.change 중복 이벤트(타이머 재설정)로 3.4초 뒤 재생',
+    '[버그수정 치명] AudioContext statechange(통화 종료 감지) 백그라운드 경로에서 wasPlaying 을 지우지 않도록 수정 — 통화·알림·다른 앱 때문에 화면이 꺼진 채 멈춘 방송이 약 1초 뒤 소프트 재연결(play())로 복구됨. 포그라운드 경로는 기존과 동일',
+    '[개선] 위 재연결이 어떤 이유로든 시작되지 못했을 때를 위한 안전망 — 5초 뒤에도 "끊긴 채 재연결 미진행"이면 한 번 더 시도(재생·로딩·재시도 예약·통화 재연결 진행 중이거나 사용자가 정지한 경우는 개입 안 함). tryReconnect 가 조용히 반환하던 경로를 로그("tryReconnect 건너뜀")로 남김',
+    '[개선] 포그라운드 재생 중 offline 이벤트를 1.5초 유예 — 그 안에 네트워크가 돌아오고 재생이 유지되면 스트림 파괴·재연결 없이 계속 재생(순간 끊김 3.4초 무음 제거). 1.5초 뒤에도 offline 이거나 재생이 멈춰 있으면 기존 처리(정리 → online 대기 → 3초 자체 재연결)를 그대로 실행. 백그라운드·재생 중이 아닌 경우는 즉시 기존 처리',
+    '[참고] 이 환경에서는 실기기를 쓸 수 없어 안드로이드의 오디오 포커스 동작은 확인하지 못함 — 위 수정은 로그에 나타난 코드 경로를 목업으로 재현해 검증',
+  ]},
   { version: 'v2.8.84', date: '2026-11-12', changes: [
     '[분석] 11/12 12:22 로그 — ① 내장 MBC 주소(어젯밤 받은 것)가 HTTP 400 으로 실패: 06:22 에는 재생됐고 12:17 에는 400 이므로 토큰(_lsu_sa_)이 약 12시간짜리로 보임(radio.bsod.kr 이 주소를 11시간 59분 캐시하는 것과 일치). MBC 재생 서버가 이 앱을 막은 것이 아니라 "새 토큰을 받는 경로"가 막힌 상태. ② 같은 서버의 중계 함수는 MBC 에서만 "HTTP 502 — Network connection lost" — 방송사 서버가 응답 없이 연결을 끊은 것으로, 해외·클라우드 서버 접속 차단에서 흔한 증상(확정 아님). 이 문구에 [region=…] 이 없어 배포된 api/stream.js 는 v2.8.82 이전 버전. ③ 방송사 API 직접 호출(bcast)은 CORS 로, radio.bsod.kr/api/url 은 이 앱 접속 거부로 계속 실패',
     '[신기능] 중계 서버 주소 지정 — "＋ 방송 추가"의 URL 칸에 https://….workers.dev/ 또는 …/api/stream 주소를 붙여넣으면 채널을 만들지 않고 중계 주소로 저장(PWA 에는 콘솔이 없어서). 이후 방송3사는 그 서버에서 주소를 받음. Cloudflare Worker 용 중계 코드(cloudflare-worker.js) 추가 — radio.bsod.kr 이 MBC 주소를 받는 곳과 같은 Cloudflare 환경',
@@ -3692,13 +3699,34 @@ function ensureAudioCtxWatch() {
     // ★ v2.8.70 — v2.8.68에서 걸었던 배경 재연결 시간 게이트를 되돌림.
     // 시간만으로 "통화"와 "다른 오디오 앱 사용"을 구분할 수 없어, 7분 넘는 통화가
     // 자동 복구 안 되는 회귀가 실사용에서 확인됨. 포그라운드/백그라운드 모두 즉시 재연결.
-    S.wasPlaying = false; S.needReconnect = false; S._bgInterruptedAt = 0;
+    S.needReconnect = false; S._bgInterruptedAt = 0;
     if (document.visibilityState !== 'hidden') {
+      S.wasPlaying = false;
       playStation(S.current);
     } else {
+      // ★ v2.8.85 (치명) — 백그라운드에서 이 핸들러가 위에서 S.wasPlaying=false 를 먼저 해버려서, 바로 아래 호출하는
+      //   tryReconnect() 의 첫 줄(!S.wasPlaying 이면 조용히 반환)에 걸려 재연결이 한 번도 실행되지 않았음.
+      //   11/25 로그: 12:42:22 "AudioContext running 복귀" 이후 로그 한 줄 없이 12:50 까지 약 8분간 무음. 같은 조건에서 S.playing 도
+      //   false 가 돼 백그라운드 감시(startBgWatch)까지 꺼졌고, 앱으로 돌아와도 wasPlaying=false 라 자동 재개되지 않았음.
+      //   wasPlaying 은 tryReconnect 가 통과 조건으로 쓰고 스스로 지우므로 여기서는 건드리지 않는다
       _tryReconnectFromCtx();
+      _verifyCtxReconnect();
     }
   });
+}
+
+// ★ v2.8.85 — 위 재연결이 어떤 이유로든 시작되지 못했을 때를 위한 안전망: 5초 뒤에도 "끊긴 채 재연결 미진행"이면 한 번 더 시도.
+//   재생/로딩/재시도 예약/통화 재연결이 진행 중이거나 사용자가 멈춘 경우(wasPlaying=false)에는 개입하지 않음
+let _ctxVerifyTimer = null;
+function _verifyCtxReconnect() {
+  if (_ctxVerifyTimer) clearTimeout(_ctxVerifyTimer);
+  _ctxVerifyTimer = setTimeout(() => {
+    _ctxVerifyTimer = null;
+    if (!S.current || S.sleepStopped || !S.wasPlaying) return;
+    if (S.playing || S.loading || S.retryTimer || reconnectingCall) return;
+    RLog.warn('AudioContext 복귀 후 5초 지나도 재연결 미진행 — 재시도', `${S.current.name} | audio.paused=${audio.paused} | hidden=${document.visibilityState === 'hidden'}`);
+    _tryReconnectFromCtx();
+  }, 5000);
 }
 
 // ★ 앱 시작 즉시 AudioContext 생성 + statechange 등록
@@ -3728,7 +3756,11 @@ let _startCallWatch = () => {};
   let callSuspect = false;
 
   function tryReconnect() {
-    if (reconnectingCall || !S.current || !S.wasPlaying) return;
+    if (reconnectingCall || !S.current || !S.wasPlaying) {
+      // ★ v2.8.85 — 조용히 반환하던 경로를 로그로 남김 (11/25 로그: 이 반환 때문에 8분간 무음이었는데 원인 흔적이 전혀 없었음)
+      if (S.current) RLog.info('tryReconnect 건너뜀', `reconnectingCall=${reconnectingCall} | wasPlaying=${S.wasPlaying} | playing=${S.playing}`);
+      return;
+    }
     if (S.sleepStopped) { RLog.info('tryReconnect 차단 (취침 타이머 종료)'); return; }
     // ★ 수동 재생/로딩 중이면 중복 실행 방지 — wasPlaying은 건드리지 않음
     // wasPlaying=false로 덮어쓰면 scheduleRetry 타이머 콜백이 재시도를 포기하는 원인이 됨
@@ -3999,15 +4031,16 @@ document.addEventListener('visibilitychange', () => {
   else _bgHiddenAt = 0;
 }, true); // capture 단계로 등록 — 다른 핸들러보다 먼저 실행
 
-window.addEventListener('offline', () => {
+// ★ v2.8.85 — 포그라운드에서 재생 중일 때 offline 이 수십 ms 만에 끝나는 순간 끊김(화면 켜질 때 Wi-Fi 절전 해제 등)이 흔함.
+//   11/25 12:41 로그: offline→online 이 31ms 였는데 스트림을 바로 파괴하고 2초 대기 후 재연결해 3.4초 무음.
+//   그래서 offline 직후 바로 정리하지 않고 유예 시간 뒤에도 offline 이거나 재생이 멈춰 있을 때만 기존 처리를 실행
+//   (유예 동안 버퍼에 남은 소리는 계속 재생됨). 백그라운드·재생 중이 아닌 경우는 기존과 동일하게 즉시 처리
+let _offlineGraceTimer = null;
+const OFFLINE_GRACE_MS = 1500;
+
+function _handleOffline() {
   if (!S.current) return;
   if (!S.playing && !S.wasPlaying) return;
-
-  // ★ 백그라운드 진입 직후 500ms 이내 offline은 OS 절전 오감지로 무시
-  if (_bgHiddenAt && Date.now() - _bgHiddenAt < 500) {
-    RLog.net('offline 이벤트 무시 (백그라운드 진입 직후 OS 절전 오감지)');
-    return;
-  }
 
   RLog.net('네트워크 오프라인 감지 (LTE↔WiFi 전환 또는 실제 단절)');
   // ★ wasPlaying 즉시 보존
@@ -4049,6 +4082,34 @@ window.addEventListener('offline', () => {
     RLog.net('offline 후 online 미수신 — 자체 재연결 시도');
     _scheduleNetReconnect('offline-fallback');
   }, 3000);
+}
+
+window.addEventListener('offline', () => {
+  if (!S.current) return;
+  if (!S.playing && !S.wasPlaying) return;
+
+  // ★ 백그라운드 진입 직후 500ms 이내 offline은 OS 절전 오감지로 무시
+  if (_bgHiddenAt && Date.now() - _bgHiddenAt < 500) {
+    RLog.net('offline 이벤트 무시 (백그라운드 진입 직후 OS 절전 오감지)');
+    return;
+  }
+
+  // ★ v2.8.85 — 포그라운드 + 실제 재생 중이면 유예 (순간 끊김이면 재생 유지)
+  if (document.visibilityState !== 'hidden' && S.playing && S.hls && !audio.paused) {
+    if (_offlineGraceTimer) return; // 이미 유예 중
+    RLog.net(`네트워크 오프라인 감지 — ${OFFLINE_GRACE_MS}ms 유예 (순간 끊김이면 재생 유지)`);
+    _offlineGraceTimer = setTimeout(() => {
+      _offlineGraceTimer = null;
+      if (navigator.onLine && S.playing && S.hls && !audio.paused) {
+        RLog.net('offline 유예 종료 — 네트워크 복귀·재생 유지, 재연결 생략');
+        return;
+      }
+      _handleOffline();
+    }, OFFLINE_GRACE_MS);
+    return;
+  }
+
+  _handleOffline();
 });
 
 /* ════════════════════════════════════════
